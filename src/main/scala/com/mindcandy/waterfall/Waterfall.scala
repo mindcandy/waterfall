@@ -18,7 +18,7 @@ object Waterfall extends App {
   println("Waterfall running")
   
   val test = MemoryIntermediate[TestFormat]("mem:test")
-  val source = SqlSource[TestFormat](SqlIOConfig("jdbc:postgresql:waterfall", "org.postgresql.Driver", "kevin.schmidt", "", ""))
+  val source = SqlSource[TestFormat](SqlIOConfig("jdbc:postgresql:waterfall", "org.postgresql.Driver", "kevin.schmidt", "", "select * from test_table"))
   source.retrieveInto(test)
   
   println(test.read.toList)

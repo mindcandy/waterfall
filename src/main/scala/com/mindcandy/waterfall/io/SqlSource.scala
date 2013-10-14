@@ -5,7 +5,6 @@ import com.jolbox.bonecp.BoneCPDataSource
 import scala.slick.session.Database
 import scala.slick.session.Database.threadLocalSession
 import scala.slick.jdbc.{ GetResult, StaticQuery }
-import scala.slick.jdbc.StaticQuery.interpolation
 import scala.slick.driver.PostgresDriver.simple._
 import scala.slick.session.PositionedResult
 
@@ -23,8 +22,8 @@ case class SqlSource[A](config: SqlIOConfig) extends IOSource[A, SqlIOConfig] {
           loop(Seq[String](), r)
         })
       }
-      val q = sql"select * from test_table".as[Seq[String]]
-      val result = q.list.map { toConverter(_) }
+      val q = StaticQuery.queryNA(config.query).to[Seq]
+      val result = q.map { toConverter(_) }
       intermediate.write(result.iterator)(fromConverter)
     }
   }
