@@ -6,6 +6,7 @@ import com.mindcandy.waterfall.io.IntermediateFormat
 import scala.language.implicitConversions
 import scala.slick.driver.PostgresDriver.simple._
 import com.mindcandy.waterfall.io.MemoryIntermediate
+import com.mindcandy.waterfall.io.FileIntermediate
 
 case class TestFormat(id: Int, name: String)
 
@@ -21,6 +22,17 @@ object Waterfall extends App {
   val source = SqlSource[TestFormat](SqlIOConfig("jdbc:postgresql:waterfall", "org.postgresql.Driver", "kevin.schmidt", "", "select * from test_table"))
   source.retrieveInto(test)
   
-  println(test.read.toList)
+  val man = test.read
+  val res = man.acquireFor(_.foreach(println))
+  
+  res match {
+    case Left(exception) => exception.foreach(println)
+    case Right(result) => println("Works!")
+  }
+  
+  val testfile = FileIntermediate[TestFormat]("file:///tmp/test1.tsv")
+  source.retrieveInto(testfile)
+  
+  testfile.read.acquireFor(_.foreach(println))
 }
 
