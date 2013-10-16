@@ -4,14 +4,14 @@ trait IOConfig {
   def url: String
 }
 
-trait IOBase[CONF <: IOConfig] {
-  def config: CONF
+trait IOBase {
+  def config: IOConfig
 }
 
-trait IOSource[A, CONF <: IOConfig] extends IOBase[CONF] {
+trait IOSource[A] extends IOBase {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Unit
 }
 
-trait IOSink[A, CONF <: IOConfig] extends IOBase[CONF] {
+trait IOSink[A] extends IOBase {
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Unit
 }

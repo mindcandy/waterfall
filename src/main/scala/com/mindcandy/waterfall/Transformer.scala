@@ -1,10 +1,12 @@
 package com.mindcandy.waterfall
 
-trait Transformer[A, SOURCECONF <: IOConfig, SINKCONF <: IOConfig] {
-  def source: IOSource[A, SOURCECONF]
+import java.io.File
+
+trait Transformer[A] {
+  def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   
-  def sink: IOSink[A, SINKCONF]
+  def sink: IOSink[A]
   def sinkIntermediate: Intermediate[A]
   
   def transform(): Unit
@@ -14,4 +16,16 @@ trait Transformer[A, SOURCECONF <: IOConfig, SINKCONF <: IOConfig] {
     transform()
     sink.storeFrom(sinkIntermediate)
   }
+}
+
+trait PassThroughTransformer[A] extends Transformer[A] {
+  def sharedIntermediate = FileIntermediate[A](File.createTempFile("waterfall", ".tsv").toURI().toString())
+  
+  def source: IOSource[A]
+  def sourceIntermediate = sharedIntermediate
+  
+  def sink: IOSink[A]
+  def sinkIntermediate = sharedIntermediate
+  
+  def transform(): Unit = () 
 }

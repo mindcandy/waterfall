@@ -14,7 +14,7 @@ import com.mindcandy.waterfall.IOSource
 
 case class SqlIOConfig(val url: String, val driver: String, val username: String, val password: String, val query: String) extends IOConfig
 
-case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A, SqlIOConfig] {
+case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A] {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     Database.forURL(config.url, driver = config.driver) withSession {
       //def query(): Stream[A] = sql"select * from test_table".as[A].toStream

@@ -10,8 +10,8 @@ import com.mindcandy.waterfall.IOSink
 case class FileIOConfig(url: String) extends IOConfig
 
 case class FileIO[A](config: FileIOConfig)
-  extends IOSource[A, FileIOConfig]
-  with IOSink[A, FileIOConfig]{
+  extends IOSource[A]
+  with IOSink[A]{
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file reading
