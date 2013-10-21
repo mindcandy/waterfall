@@ -1,4 +1,4 @@
-package com.mindcandy.waterfall.transform
+package com.mindcandy.waterfall.drop
 import com.mindcandy.waterfall.IntermediateFormat
 import scala.slick.driver.PostgresDriver.simple._
 import com.mindcandy.waterfall.IntermediateFormatCompanion

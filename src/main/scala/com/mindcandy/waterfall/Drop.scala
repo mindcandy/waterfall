@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall
 
-import java.io.File
+import java.nio.file.Files
 
-trait Transformer[A] {
+trait WaterfallDrop[A] {
   def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   
@@ -18,8 +18,8 @@ trait Transformer[A] {
   }
 }
 
-trait PassThroughTransformer[A] extends Transformer[A] {
-  def sharedIntermediate = FileIntermediate[A](File.createTempFile("waterfall", ".tsv").toURI().toString())
+trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A] {
+  val sharedIntermediate = FileIntermediate[A](Files.createTempFile("waterfall-", ".tsv").toUri().toString())
   
   def source: IOSource[A]
   def sourceIntermediate = sharedIntermediate
