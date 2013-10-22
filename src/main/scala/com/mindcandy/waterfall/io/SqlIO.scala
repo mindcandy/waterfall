@@ -1,7 +1,5 @@
 package com.mindcandy.waterfall.io
 
-import com.jolbox.bonecp.BoneCPConfig
-import com.jolbox.bonecp.BoneCPDataSource
 import scala.slick.session.Database
 import scala.slick.session.Database.threadLocalSession
 import scala.slick.jdbc.{ GetResult, StaticQuery }

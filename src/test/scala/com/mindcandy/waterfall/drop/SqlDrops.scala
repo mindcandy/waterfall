@@ -1,6 +1,5 @@
 package com.mindcandy.waterfall.drop
 
-import org.specs2.mutable._
 import com.mindcandy.waterfall.io.SqlIOConfig
 import com.mindcandy.waterfall.io.FileIOConfig
 import com.mindcandy.waterfall.IntermediateFormatCompanion
@@ -8,6 +7,8 @@ import com.mindcandy.waterfall.IntermediateFormat
 import com.github.nscala_time.time.Imports._
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
+import com.mindcandy.waterfall.TestFormat
+import org.specs2.mutable.Specification
 
 @RunWith(classOf[JUnitRunner])
 class SqlDropsSpec extends Specification {
