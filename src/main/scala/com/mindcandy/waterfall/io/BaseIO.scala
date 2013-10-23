@@ -22,7 +22,7 @@ case class FileIO[A](config: FileIOConfig)
     val inputFile = FileIntermediate[A](config.url)
     inputFile.read.acquireFor(intermediate.write(_)) match {
       case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s completed".format(intermediate))
+      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     }
   }
   
@@ -31,7 +31,7 @@ case class FileIO[A](config: FileIOConfig)
     val outputFile = FileIntermediate[A](config.url)
     intermediate.read.acquireFor(outputFile.write(_)) match {
       case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Store from %s completed".format(intermediate))
+      case Right(result) => logger.info("Store from %s into %s completed".format(intermediate, config))
     }
   }
 }

@@ -2,23 +2,23 @@ package com.mindcandy.waterfall
 
 import java.nio.file.Files
 
-trait WaterfallDrop[A] {
+trait WaterfallDrop[A, B] {
   def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   
-  def sink: IOSink[A]
-  def sinkIntermediate: Intermediate[A]
+  def sink: IOSink[B]
+  def sinkIntermediate: Intermediate[B]
   
   def transform(): Unit
   
-  def run(implicit format: IntermediateFormat[A]): Unit = {
+  def run(implicit formatSource: IntermediateFormat[A], formatSink: IntermediateFormat[B]): Unit = {
     source.retrieveInto(sourceIntermediate)
     transform()
     sink.storeFrom(sinkIntermediate)
   }
 }
 
-trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A] {
+trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
   val sharedIntermediate = FileIntermediate[A](Files.createTempFile("waterfall-", ".tsv").toUri().toString())
   
   def source: IOSource[A]
