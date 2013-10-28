@@ -7,6 +7,14 @@ trait IOConfig {
   def url: String
 }
 
+trait IOOps[A] {
+  def columnSeparator = "\t"
+  def toLine(input: A)(implicit format: IntermediateFormat[A]) = {
+    val rawInput = format.convertFrom(input)
+    rawInput.tail.foldLeft(rawInput.head)("%s%s%s".format(_, columnSeparator, _))
+  }
+}
+
 trait IOBase extends Logging {
   def config: IOConfig
   def handleErrors(exceptions: List[Throwable]) = {

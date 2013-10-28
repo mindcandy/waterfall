@@ -23,35 +23,35 @@ class IntermediateSpec extends Specification with Mockito {
         }
       }
 
-      val testData = List.tabulate(10000)(n => TestFormat(n, "middleware-" + n, DateTime.now))
+      val testData = List.tabulate(10000)(n => TestFormat(n, "middleware-" + n, new DateTime(1989, 11, 9, 12, 18, 57, 0, DateTimeZone.UTC)))
       intermediate.write(testData.iterator)
       
       val captureFile = capture[File]
-      there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-1.tsv"), captureFile)
+      there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-0.tsv"), captureFile)
       captureFile.value must not be (null)
-      captureFile.value.length must be_== (507780)
+      captureFile.value.length must be_== (457780)
     }
     
     "write a large dataset as two files to S3 with proper filenames" in {
       val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
         "secret-key", "waterfall-testing", "testfile") {
-        override val fileChunkSize = 500000
+        override val fileChunkSize = 400000
         override lazy val amazonS3Client = {
           val client = mock[AmazonS3Client]
           client
         }
       }
 
-      val testData = List.tabulate(10000)(n => TestFormat(n, "middleware-" + n, DateTime.now))
+      val testData = List.tabulate(10000)(n => TestFormat(n, "middleware-" + n, new DateTime(1989, 11, 9, 12, 18, 57, 0, DateTimeZone.UTC)))
       intermediate.write(testData.iterator)
       
       val captureFile = capture[File]
+      there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-0.tsv"), captureFile)
+      captureFile.value must not be (null)
+      captureFile.value.length must be_== (400004)
       there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-1.tsv"), captureFile)
       captureFile.value must not be (null)
-      captureFile.value.length must be_== (500028)
-      there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-2.tsv"), captureFile)
-      captureFile.value must not be (null)
-      captureFile.value.length must be_== (7701)
+      captureFile.value.length must be_== (57776)
     }
   }
 }
