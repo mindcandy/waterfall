@@ -23,8 +23,8 @@ import scala.collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
 class BaseIOSpec extends Specification with Mockito {
-  val jsonTestData = """{ "test1" : "value1", "test2" : 45 }
-{ "test1" : "value2", "test2" : 67 }"""
+  val jsonTestData = """|{ "test1" : "value1", "test2" : 45 }
+                        |{ "test1" : "value2", "test2" : 67 }""".stripMargin
 
   case class FailingIntermediate[A](url: String) extends Intermediate[A] {
     val data = Seq[Seq[String]]()
