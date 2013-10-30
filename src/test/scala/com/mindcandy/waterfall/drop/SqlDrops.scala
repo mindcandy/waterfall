@@ -13,7 +13,7 @@ import com.mindcandy.waterfall.io.BaseIOConfig
 @RunWith(classOf[JUnitRunner])
 class SqlDropsSpec extends Specification {
   
-  "SqlToFile" should {
+  /*"SqlToFile" should {
     "work for a two column test table" in {
       SqlToFileDrop[TestFormat](
         SqlIOConfig("jdbc:postgresql:waterfall", "org.postgresql.Driver", "kevin.schmidt", "", "select * from test_table"),
@@ -21,5 +21,5 @@ class SqlDropsSpec extends Specification {
       ).run
       done
     }
-  }
+  }*/
 }

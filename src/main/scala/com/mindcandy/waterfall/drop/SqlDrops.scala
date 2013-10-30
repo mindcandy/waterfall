@@ -11,12 +11,16 @@ import com.mindcandy.waterfall.PassThroughWaterfallDrop
 import com.mindcandy.waterfall.io.S3IO
 import com.mindcandy.waterfall.io.S3IOConfig
 
-case class SqlToFileDrop[A](sourceConfig: SqlIOConfig, sinkConfig: IOConfig) extends PassThroughWaterfallDrop[A] {  
+trait SqlToFileDrop[A] extends PassThroughWaterfallDrop[A] {  
+  def sourceConfig : SqlIOConfig
   def source = SqlIOSource[A](sourceConfig)
+  def sinkConfig : IOConfig
   def sink = FileIO[A](sinkConfig)
 }
 
-case class SqlToS3Drop[A](sourceConfig: SqlIOConfig, sinkConfig: S3IOConfig) extends PassThroughWaterfallDrop[A] {  
+trait SqlToS3Drop[A] extends PassThroughWaterfallDrop[A] {
+  def sourceConfig : SqlIOConfig
   def source = SqlIOSource[A](sourceConfig)
+  def sinkConfig : S3IOConfig
   def sink = S3IO[A](sinkConfig)
 }
