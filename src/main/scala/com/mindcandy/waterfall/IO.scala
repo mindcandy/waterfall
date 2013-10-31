@@ -14,11 +14,6 @@ trait IOOps[A] {
     val rawInput = format.convertFrom(input)
     rawInput.tail.foldLeft(rawInput.head)("%s%s%s".format(_, columnSeparator, _))
   }
-  def newTempFileUrl() = {
-    val file = Files.createTempFile("waterfall-", ".tsv")
-    file.toFile.deleteOnExit()
-    file.toUri.toString
-  }
 }
 
 trait IOBase extends Logging {

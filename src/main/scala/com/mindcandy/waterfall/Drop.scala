@@ -16,9 +16,15 @@ trait WaterfallDrop[A, B] {
     transform()
     sink.storeFrom(sinkIntermediate)
   }
+  
+  def newTempFileUrl() = {
+    val file = Files.createTempFile("waterfall-", ".tsv")
+    file.toFile.deleteOnExit()
+    file.toUri.toString
+  }
 }
 
-trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] with IOOps[A] {
+trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
   val sharedIntermediate = FileIntermediate[A](newTempFileUrl())
   
   def source: IOSource[A]

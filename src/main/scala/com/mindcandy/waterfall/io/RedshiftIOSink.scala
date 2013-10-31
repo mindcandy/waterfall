@@ -11,10 +11,9 @@ import scala.slick.session.Database.threadLocalSession
 import scala.slick.jdbc.StaticQuery
 import com.typesafe.scalalogging.slf4j.Logging
 
-case class RedshiftIOConfig(url: String, driver: String, username: String, password: String, tableName: String, s3Url: Option[String] = None,
-  awsAccessKey: Option[String] = None, awsSecretKey: Option[String] = None, bucketName: Option[String] = None, keyPrefix: Option[String] = None) extends IOConfig
+case class RedshiftIOConfig(url: String, driver: String, username: String, password: String, tableName: String) extends IOConfig
 
-case class RedshiftIOSink[A](config: RedshiftIOConfig)
+case class RedshiftIOSink[A](config: RedshiftIOConfig, s3Config: Option[S3IOConfig] = None)
   extends IOSink[A]
   with Logging {
 
