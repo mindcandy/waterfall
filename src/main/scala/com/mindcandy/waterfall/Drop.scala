@@ -1,8 +1,9 @@
 package com.mindcandy.waterfall
 
 import java.nio.file.Files
+import com.typesafe.scalalogging.slf4j.Logging
 
-trait WaterfallDrop[A, B] {
+trait WaterfallDrop[A, B] extends Logging {
   def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   
@@ -21,6 +22,16 @@ trait WaterfallDrop[A, B] {
     val file = Files.createTempFile("waterfall-", ".tsv")
     file.toFile.deleteOnExit()
     file.toUri.toString
+  }
+  
+  def handleErrors(exceptions: List[Throwable]) = {
+    exceptions match {
+      case Nil => throw new Exception("Unknown error during drop transform")
+      case (head :: tail) => { 
+        tail.foreach(logger.error("Exception during drop transform", _))
+        throw new Exception("Exception during drop transform", head)
+      }
+    }
   }
 }
 
