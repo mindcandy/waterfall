@@ -18,8 +18,8 @@ trait WaterfallDrop[A, B] {
   }
 }
 
-trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
-  val sharedIntermediate = FileIntermediate[A](Files.createTempFile("waterfall-", ".tsv").toUri().toString())
+trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] with IOOps[A] {
+  val sharedIntermediate = FileIntermediate[A](newTempFileUrl())
   
   def source: IOSource[A]
   def sourceIntermediate = sharedIntermediate

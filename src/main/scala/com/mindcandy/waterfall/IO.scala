@@ -2,6 +2,7 @@ package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
 import java.io.IOException
+import java.nio.file.Files
 
 trait IOConfig {
   def url: String
@@ -12,6 +13,11 @@ trait IOOps[A] {
   def toLine(input: A)(implicit format: IntermediateFormat[A]) = {
     val rawInput = format.convertFrom(input)
     rawInput.tail.foldLeft(rawInput.head)("%s%s%s".format(_, columnSeparator, _))
+  }
+  def newTempFileUrl() = {
+    val file = Files.createTempFile("waterfall-", ".tsv")
+    file.toFile.deleteOnExit()
+    file.toUri.toString
   }
 }
 

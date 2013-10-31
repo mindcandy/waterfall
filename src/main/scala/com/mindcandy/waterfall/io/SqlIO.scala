@@ -21,7 +21,7 @@ case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A] with Logging 
     Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withSession {
       val getResult = {
         GetResult(r => {
-          loop(Seq[String](), r)
+          processResultSet(Seq[String](), r)
         })
       }
       val result = managed(StaticQuery.queryNA(config.query)(getResult).elements)
@@ -37,9 +37,9 @@ case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A] with Logging 
   }
 
   @annotation.tailrec
-  private def loop(result: Seq[String], resultSet: PositionedResult): Seq[String] = {
+  private def processResultSet(result: Seq[String], resultSet: PositionedResult): Seq[String] = {
     if (resultSet.hasMoreColumns)
-      loop(result :+ resultSet.nextString, resultSet)
+      processResultSet(result :+ resultSet.nextString, resultSet)
     else
       result
   }
