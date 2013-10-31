@@ -88,12 +88,12 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
   }
 
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Unit = {
-    logger.info("Starting upload to S3 intermediate with endpoint %s, starting write with file chunk size %d".format(url, fileChunkSize))
+    logger.info(s"Starting upload to S3 with endpoint ${url}, starting write with file chunk size ${fileChunkSize}")
     val numFiles = writeChunkToS3(stream, 0)
-    logger.info("Upload to S3 intermediate completed, %d files written with file chunk size %d".format(numFiles, fileChunkSize))
+    logger.info(s"Upload to S3 completed, ${numFiles} files written with file chunk size ${fileChunkSize}")
   }
 
-  lazy val amazonS3Client = {
+  val amazonS3Client = {
     val awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey)
     val s3Client = new AmazonS3Client(awsCredentials)
     s3Client.setEndpoint(url)
@@ -116,9 +116,9 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
         }
       }
 
-      logger.info("Finished writing %d bytes to temporary file %s".format(byteCounter, uploadFile))
+      logger.info(s"Finished writing ${byteCounter} bytes to temporary file ${uploadFile}")
       val keyName = "%s-%d.tsv".format(keyPrefix, counter)
-      logger.info("Starting S3 upload to bucket/key: %s/%s".format(bucketName, keyName))
+      logger.info(s"Starting S3 upload to bucket/key: ${bucketName}/${keyName}")
       amazonS3Client.putObject(bucketName, keyName, uploadFile.toFile)
 
       writeChunkToS3(stream, counter + 1)

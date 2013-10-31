@@ -8,7 +8,7 @@ trait IOConfig {
 }
 
 trait IOOps[A] {
-  def columnSeparator = "\t"
+  val columnSeparator = "\t"
   def toLine(input: A)(implicit format: IntermediateFormat[A]) = {
     val rawInput = format.convertFrom(input)
     rawInput.tail.foldLeft(rawInput.head)("%s%s%s".format(_, columnSeparator, _))
@@ -18,8 +18,13 @@ trait IOOps[A] {
 trait IOBase extends Logging {
   def config: IOConfig
   def handleErrors(exceptions: List[Throwable]) = {
-    exceptions.foreach(logger.error("Exception during IO operation", _))
-    throw new IOException("Exception during IO operation", exceptions(0))
+    exceptions match {
+      case Nil => throw new IOException("Unknown error during IO operation")
+      case (head :: tail) => { 
+        tail.foreach(logger.error("Exception during IO operation", _))
+        throw new IOException("Exception during IO operation", head)
+      }
+    }
   }
 }
 

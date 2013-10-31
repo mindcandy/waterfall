@@ -17,7 +17,7 @@ class IntermediateSpec extends Specification with Mockito {
     "write a single small file to S3 with a proper filename" in {
       val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
         "secret-key", "waterfall-testing", "testfile") {
-        override lazy val amazonS3Client = {
+        override val amazonS3Client = {
           val client = mock[AmazonS3Client]
           client
         }
@@ -36,7 +36,7 @@ class IntermediateSpec extends Specification with Mockito {
       val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
         "secret-key", "waterfall-testing", "testfile") {
         override val fileChunkSize = 400000
-        override lazy val amazonS3Client = {
+        override val amazonS3Client = {
           val client = mock[AmazonS3Client]
           client
         }
