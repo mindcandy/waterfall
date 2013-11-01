@@ -75,6 +75,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
 
   val fileChunkSize = 100 * 1024 * 1024 // 100MB
   val dateFormat = DateTimeFormat.forPattern("yyyyMMdd");
+  val datedKeyPrefix = s"${keyPrefix}-${keyDate.toString(dateFormat)}"
 
   def read(implicit format: IntermediateFormat[A]): ManagedResource[Iterator[A]] = {
     val path = Paths.get(new URI(url))
@@ -119,7 +120,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
       }
 
       logger.info(s"Finished writing ${byteCounter} bytes to temporary file ${uploadFile}")
-      val keyName = s"${keyPrefix}-${keyDate.toString(dateFormat)}-${counter}.tsv"
+      val keyName = s"${datedKeyPrefix}-${counter}.tsv"
       logger.info(s"Starting S3 upload to bucket/key: ${bucketName}/${keyName}")
       amazonS3Client.putObject(bucketName, keyName, uploadFile.toFile)
 
