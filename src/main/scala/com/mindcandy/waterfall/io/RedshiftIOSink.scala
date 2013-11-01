@@ -23,7 +23,7 @@ case class RedshiftIOSink[A](config: RedshiftIOConfig, s3Config: Option[S3IOConf
       case _ => throw new IllegalArgumentException("currently only S3Intermediate supported")
     }
     val combinedS3Url = s"s3://${s3Intermediate.bucketName}/${s3Intermediate.keyPrefix}"
-    logger.info("Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url}")
+    logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url}")
     Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withSession {
       StaticQuery.updateNA(
         s"COPY ${config.tableName} FROM '${combinedS3Url}' credentials 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"

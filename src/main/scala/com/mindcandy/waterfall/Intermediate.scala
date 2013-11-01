@@ -1,6 +1,7 @@
 package com.mindcandy.waterfall
 
 import resource._
+import com.github.nscala_time.time.Imports._
 import java.nio.file.Files
 import java.nio.charset.Charset
 import java.nio.file.Paths
@@ -67,12 +68,13 @@ case class FileIntermediate[A](url: String) extends Intermediate[A] with IOOps[A
   }
 }
 
-case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String)
+case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String, keyDate: DateTime = DateTime.now)
   extends Intermediate[A]
   with IOOps[A]
   with Logging {
 
-  def fileChunkSize = 100 * 1024 * 1024 // 100MB
+  val fileChunkSize = 100 * 1024 * 1024 // 100MB
+  val dateFormat = DateTimeFormat.forPattern("yyyyMMdd");
 
   def read(implicit format: IntermediateFormat[A]): ManagedResource[Iterator[A]] = {
     val path = Paths.get(new URI(url))
@@ -117,7 +119,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
       }
 
       logger.info(s"Finished writing ${byteCounter} bytes to temporary file ${uploadFile}")
-      val keyName = "%s-%d.tsv".format(keyPrefix, counter)
+      val keyName = s"${keyPrefix}-${keyDate.toString(dateFormat)}-${counter}.tsv"
       logger.info(s"Starting S3 upload to bucket/key: ${bucketName}/${keyName}")
       amazonS3Client.putObject(bucketName, keyName, uploadFile.toFile)
 
