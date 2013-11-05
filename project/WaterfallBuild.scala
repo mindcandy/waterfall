@@ -1,5 +1,8 @@
 import sbt._
 import sbt.Keys._
+import sbtrelease._
+import sbtrelease.ReleasePlugin._
+import sbtrelease.ReleasePlugin.ReleaseKeys._
 
 object WaterfallBuild extends Build {
 
@@ -21,13 +24,28 @@ object WaterfallBuild extends Build {
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4",
     libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5")
 
+  def vcsNumber: String = {
+    val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
+    if (vcsBuildNumber == null) "" else vcsBuildNumber
+  }
+
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ testDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy",
       version := "0.1-SNAPSHOT",
-      scalaVersion := "2.10.2"
+      scalaVersion := "2.10.2",
+      publishTo <<= (version) { version: String =>
+        val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
+        val revisionProperty = if (!vcsNumber.isEmpty) ";revision=" + vcsNumber else ""
+        val timestampProperty = ";build.timestamp=" + new java.util.Date().getTime
+        val props = timestampProperty + revisionProperty
+        if (version.trim.endsWith("SNAPSHOT"))
+          Some("snapshots" at repo + "libs-snapshot-local" + props)
+        else
+          Some("releases" at repo + "libs-release-local" + props)
+      }
       ))
 }
