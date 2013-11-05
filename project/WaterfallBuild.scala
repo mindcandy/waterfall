@@ -35,7 +35,6 @@ object WaterfallBuild extends Build {
     settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy",
-      version := "0.1-SNAPSHOT",
       scalaVersion := "2.10.2",
       publishTo <<= (version) { version: String =>
         val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
