@@ -17,17 +17,19 @@ import resource._
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
+import com.github.nscala_time.time.Imports._
 
 case class BaseIOConfig(url: String) extends IOConfig
-case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String) extends IOConfig
+case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
+    keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig
 
-case class FileIO[A](config: IOConfig)
+case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
   extends IOSource[A]
   with IOSink[A] {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file reading
-    val inputFile = FileIntermediate[A](config.url)
+    val inputFile = FileIntermediate[A](config.url, columnSeparator)
     inputFile.read.acquireFor(intermediate.write) match {
       case Left(exceptions) => handleErrors(exceptions)
       case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
@@ -36,7 +38,7 @@ case class FileIO[A](config: IOConfig)
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file writing
-    val outputFile = FileIntermediate[A](config.url)
+    val outputFile = FileIntermediate[A](config.url, columnSeparator)
     intermediate.read.acquireFor(outputFile.write) match {
       case Left(exceptions) => handleErrors(exceptions)
       case Right(result) => logger.info("Store from %s into %s completed".format(intermediate, config))
@@ -50,7 +52,7 @@ case class S3IO[A](config: S3IOConfig)
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the S3Intermediate for file reading
-    val inputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix)
+    val inputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix, config.keyDate, config.columnSeparator)
     inputFile.read.acquireFor(intermediate.write) match {
       case Left(exceptions) => handleErrors(exceptions)
       case Right(result) => logger.info("Retrieving into %s completed".format(intermediate))
@@ -67,7 +69,7 @@ case class S3IO[A](config: S3IOConfig)
   }
 }
 
-case class ApacheVfsIO[A](config: IOConfig)
+case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option[String] = None)
   extends IOSource[A]
   with IOSink[A]
   with IOOps[A] {
@@ -79,7 +81,7 @@ case class ApacheVfsIO[A](config: IOConfig)
       Iterator.continually {
         Option(reader.readLine())
       }.takeWhile(_.nonEmpty).map { line =>
-        format.convertTo(List[String](line.get))
+        fromLine(line.get)
       }
     }
 

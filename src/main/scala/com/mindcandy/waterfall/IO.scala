@@ -9,10 +9,21 @@ trait IOConfig {
 }
 
 trait IOOps[A] {
-  val columnSeparator = "\t"
+  val columnSeparator: Option[String]
+  def fromLine(input: String)(implicit format: IntermediateFormat[A]) = {
+    columnSeparator match {
+      case Some(separator) => format.convertTo(input.split(separator))
+      case None => format.convertTo(Seq(input))
+    }
+  }
   def toLine(input: A)(implicit format: IntermediateFormat[A]) = {
     val rawInput = format.convertFrom(input)
-    rawInput.tail.foldLeft(rawInput.head)("%s%s%s".format(_, columnSeparator, _))
+    rawInput.tail.foldLeft(rawInput.head) {
+      columnSeparator match {
+        case Some(separator) => "%s%s%s".format(_, separator, _)
+        case None => "%s%s".format(_, _)
+      }
+    }
   }
 }
 

@@ -41,7 +41,7 @@ case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
   }
 }
 
-case class FileIntermediate[A](url: String) extends Intermediate[A] with IOOps[A] {
+case class FileIntermediate[A](url: String, override val columnSeparator: Option[String] = Option("\t")) extends Intermediate[A] with IOOps[A] {
   def read(implicit format: IntermediateFormat[A]): ManagedResource[Iterator[A]] = {
     val path = Paths.get(new URI(url))
     for {
@@ -50,7 +50,7 @@ case class FileIntermediate[A](url: String) extends Intermediate[A] with IOOps[A
       Iterator.continually {
         Option(reader.readLine())
       }.takeWhile(_.nonEmpty).map { line =>
-        format.convertTo(line.get.split(columnSeparator))
+        fromLine(line.get)
       }
     }
   }
@@ -68,7 +68,8 @@ case class FileIntermediate[A](url: String) extends Intermediate[A] with IOOps[A
   }
 }
 
-case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String, keyDate: DateTime = DateTime.now)
+case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
+    keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
   extends Intermediate[A]
   with IOOps[A]
   with Logging {
@@ -85,7 +86,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
       Iterator.continually {
         Option(reader.readLine())
       }.takeWhile(_.nonEmpty).map { line =>
-        format.convertTo(line.get.split(columnSeparator))
+        fromLine(line.get)
       }
     }
   }
