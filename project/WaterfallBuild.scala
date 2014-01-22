@@ -36,6 +36,7 @@ object WaterfallBuild extends Build {
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.2",
+      resolvers += Resolver.url("artifactory", url("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns),
       publishTo <<= (version) { version: String =>
         val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
         val revisionProperty = if (!vcsNumber.isEmpty) ";revision=" + vcsNumber else ""
