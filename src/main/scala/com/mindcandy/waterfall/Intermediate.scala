@@ -36,8 +36,10 @@ case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
     }
   }
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Unit = {
-    data.clear()
     data ++= stream.map(format.convertFrom)
+  }
+  def clearData() {
+    data.clear()
   }
 }
 
