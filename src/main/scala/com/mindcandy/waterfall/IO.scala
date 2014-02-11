@@ -38,6 +38,11 @@ trait IOBase extends Logging {
       }
     }
   }
+  def newTempFileUrl() = {
+    val file = Files.createTempFile("waterfall-io-", ".tsv")
+    file.toFile.deleteOnExit()
+    file.toUri.toString
+  }
 }
 
 trait IOSource[A] extends IOBase {

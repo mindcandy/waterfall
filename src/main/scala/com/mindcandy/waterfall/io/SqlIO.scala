@@ -10,7 +10,7 @@ import com.mindcandy.waterfall.IOConfig
 import com.mindcandy.waterfall.IOSource
 import com.typesafe.scalalogging.slf4j.Logging
 import resource._
-import com.mindcandy.waterfall.MemoryIntermediate
+import com.mindcandy.waterfall.FileIntermediate
 
 case class SqlIOConfig(url: String, driver: String, username: String, password: String, query: String) extends IOConfig {
   override def toString = "SqlIOConfig(%s, %s, %s)".format(url, driver, query)
@@ -58,7 +58,7 @@ trait ShardedSqlIOConfig extends IOConfig {
 
 case class ShardedSqlIOSource[A](config: ShardedSqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val combinedIntermediate = MemoryIntermediate[A]("memory:shardedsqliosource:temp")
+    val combinedIntermediate = FileIntermediate[A](newTempFileUrl())
     generateSqlIOConfigs(config).foreach( SqlIOSource[A](_).retrieveInto(combinedIntermediate)(format) )
     combinedIntermediate.read(format).acquireFor( intermediate.write(_) ) match {
       case Left(exceptions) => handleErrors(exceptions)

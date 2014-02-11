@@ -19,7 +19,7 @@ trait WaterfallDrop[A, B] extends Logging {
   }
   
   def newTempFileUrl() = {
-    val file = Files.createTempFile("waterfall-", ".tsv")
+    val file = Files.createTempFile("waterfall-drops-", ".tsv")
     file.toFile.deleteOnExit()
     file.toUri.toString
   }

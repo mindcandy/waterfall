@@ -14,6 +14,7 @@ import java.io.File
 import com.typesafe.scalalogging.slf4j.Logging
 import scala.annotation.tailrec
 import java.nio.file.FileSystems
+import java.nio.file.StandardOpenOption
 
 trait Intermediate[A] {
   def url: String
@@ -60,7 +61,7 @@ case class FileIntermediate[A](url: String, override val columnSeparator: Option
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Unit = {
     val path = Paths.get(new URI(url))
     for {
-      writer <- managed(Files.newBufferedWriter(path, Charset.defaultCharset()))
+      writer <- managed(Files.newBufferedWriter(path, Charset.defaultCharset(), StandardOpenOption.APPEND))
     } {
       stream.foreach { input =>
         writer.write(toLine(input))
