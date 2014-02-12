@@ -5,6 +5,8 @@ import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleasePlugin.ReleaseKeys._
 
 object WaterfallBuild extends Build {
+  val akkaVersion = "2.2.3"
+  val sprayVersion = "1.2.0"
 
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "com.typesafe.slick" %% "slick" % "1.0.1",
@@ -16,11 +18,18 @@ object WaterfallBuild extends Build {
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
     libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0")
+    
+  lazy val sprayDependencies: Seq[Setting[_]] = Seq(
+    libraryDependencies += "io.spray"            %   "spray-can"     % sprayVersion,
+    libraryDependencies += "io.spray"            %   "spray-routing" % sprayVersion,
+    libraryDependencies += "io.spray"            %   "spray-testkit" % sprayVersion  % "test",
+    libraryDependencies += "com.typesafe.akka"   %%  "akka-actor"    % akkaVersion,
+    libraryDependencies += "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test")
 
   lazy val testDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test,it",
     libraryDependencies += "org.mockito" % "mockito-all" % "1.9.5" % "test,it",
-    libraryDependencies += "org.specs2" %% "specs2" % "2.2.3" % "test,it",
+    libraryDependencies += "org.specs2" %% "specs2" % "2.3.8" % "test,it",
     libraryDependencies += "junit" % "junit" % "4.11" % "test,it",
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4" % "test,it",
     libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it")
@@ -37,7 +46,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.2",

@@ -115,9 +115,9 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List())
+        intermediate.getData must be_== (List())
       }
     }
 
@@ -146,7 +146,7 @@ class BaseIOSpec extends Specification with Mockito {
       val result = vfsIO.storeFrom(intermediate)
 
       (result must beSuccessfulTry) and {
-        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_== (List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
   }
