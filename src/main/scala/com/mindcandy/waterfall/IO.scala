@@ -52,3 +52,8 @@ trait IOSource[A] extends IOBase {
 trait IOSink[A] extends IOBase {
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Unit
 }
+
+object RowSeparator extends Enumeration {
+  type RowSeparator = Value
+  val NewLine, NoSeparator = Value
+}

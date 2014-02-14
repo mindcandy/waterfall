@@ -18,6 +18,7 @@ import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.RowSeparator._
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
@@ -69,7 +70,7 @@ case class S3IO[A](config: S3IOConfig)
   }
 }
 
-case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option[String] = None)
+case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
   extends IOSource[A]
   with IOSink[A]
   with IOOps[A] {
@@ -78,10 +79,18 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
     val inputContent = for {
       reader <- managed(new BufferedReader(new InputStreamReader(fileContent.getInputStream())))
     } yield {
-      Iterator.continually {
+      val rawData = Iterator.continually {
         Option(reader.readLine())
-      }.takeWhile(_.nonEmpty).map { line =>
-        fromLine(line.get)
+      }.takeWhile(_.nonEmpty).flatten
+      
+      rowSeparator match {
+        case NewLine => rawData.map { fromLine(_) }
+        case NoSeparator => {
+          rawData.mkString("") match {
+            case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
+            case _ => Iterator[A]()
+          }
+        }
       }
     }
 
@@ -98,7 +107,10 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
       intermediate.read.acquireFor {
         _.foreach { input =>
           writer.write(toLine(input))
-          writer.newLine()
+          rowSeparator match {
+            case NewLine => writer.newLine()
+            case NoSeparator =>
+          }
         }
       } match {
         case Left(exceptions) => handleErrors(exceptions)
