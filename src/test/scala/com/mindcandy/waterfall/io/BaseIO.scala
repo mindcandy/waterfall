@@ -115,4 +115,36 @@ class BaseIOSpec extends Specification with Mockito {
       Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
     }
   }
+
+  "HttpIOSource" should {
+    "should retrieveFrom with a http url" in {
+      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData, 200).start
+
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
+      vfsIO.retrieveInto(intermediate)
+      server.stop
+      intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+    }
+
+    "should retrieveFrom with a http url using no separator" in {
+      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
+
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
+      vfsIO.retrieveInto(intermediate)
+      server.stop
+      intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+    }
+
+    "should retrieveFrom with a http url having no data" in {
+      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), "", 200).start
+
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
+      vfsIO.retrieveInto(intermediate)
+      server.stop
+      intermediate.data must haveTheSameElementsAs(List())
+    }
+  }
 }

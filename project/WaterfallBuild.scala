@@ -14,7 +14,8 @@ object WaterfallBuild extends Build {
     libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0",
     libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.1",
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
-    libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1")
+    libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
+    libraryDependencies += "net.databinder.dispatch" %% "dispatch-core" % "0.11.0")
 
   lazy val testDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test,it",

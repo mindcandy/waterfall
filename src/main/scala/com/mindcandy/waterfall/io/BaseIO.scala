@@ -19,6 +19,8 @@ import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.RowSeparator._
+import dispatch._, Defaults._
+import java.io.StringReader
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
@@ -122,5 +124,40 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
   private[this] def fileContent = {
     val fileObject = VFS.getManager().resolveFile(config.url);
     fileObject.getContent()
+  }
+}
+
+case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
+  extends IOSource[A]
+  with IOOps[A] {
+
+  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
+    val inputContent = for {
+      reader <- managed(new BufferedReader(fileContent))
+    } yield {
+      val rawData = Iterator.continually {
+        Option(reader.readLine())
+      }.takeWhile(_.nonEmpty).flatten
+
+      rowSeparator match {
+        case NewLine => rawData.map { fromLine(_) }
+        case NoSeparator => {
+          rawData.mkString("") match {
+            case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
+            case _ => Iterator[A]()
+          }
+        }
+      }
+    }
+
+    inputContent.acquireFor(intermediate.write) match {
+      case Left(exceptions) => handleErrors(exceptions)
+      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    }
+  }
+
+  private[this] def fileContent = {
+    val fileObject = url(config.url).GET > as.String;
+    new StringReader(Http(fileObject).apply())
   }
 }
