@@ -24,8 +24,11 @@ import com.mindcandy.waterfall.RowSeparator
 
 @RunWith(classOf[JUnitRunner])
 class BaseIOSpec extends Specification with Mockito {
-  val jsonTestData = """|{ "test1" : "value1", "test2" : 45 }
+  val jsonTestData1 = """|{ "test1" : "value1", "test2" : 45 }
                         |{ "test1" : "value2", "test2" : 67 }""".stripMargin
+
+  val jsonTestData2 = """|{ "testA" : "valueA", "testB" : 12 }
+                        |{ "testA" : "valueB", "testB" : 34 }""".stripMargin
                         
   val jsonTestDataNoSeparator = """|{
                                    |"test1" : "value1",
@@ -61,7 +64,7 @@ class BaseIOSpec extends Specification with Mockito {
 
   "ApacheVfsIO" should {
     "should retrieveFrom with a http url on vfs" in {
-      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData, 200).start
+      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
@@ -118,7 +121,7 @@ class BaseIOSpec extends Specification with Mockito {
 
   "HttpIOSource" should {
     "should retrieveFrom with a http url" in {
-      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData, 200).start
+      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
@@ -145,6 +148,23 @@ class BaseIOSpec extends Specification with Mockito {
       vfsIO.retrieveInto(intermediate)
       server.stop
       intermediate.data must haveTheSameElementsAs(List())
+    }
+  }
+  
+  "MultipleHttpIOSource" should {
+    "should retrieve data from multiple URLs" in {
+      val server1 = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
+      val server2 = new StubServer(8081).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
+      
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
+        def urls = List("http://localhost:8080/test", "http://localhost:8081/test")
+      })
+      vfsIO.retrieveInto(intermediate)
+      server1.stop
+      server2.stop
+      
+      intermediate.data must_== List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }"""))
     }
   }
 }

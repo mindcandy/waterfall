@@ -161,3 +161,24 @@ case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Optio
     new StringReader(Http(fileObject).apply())
   }
 }
+
+trait MultipleHttpIOConfig extends IOConfig {
+  def urls: List[String]
+  override def url = urls.mkString(";")
+  override def toString = "MultipleHttpIOConfig(%s)".format(urls)
+}
+
+case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
+  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
+    val combinedIntermediate = FileIntermediate[A](newTempFileUrl())
+    generateHttpIOConfigs(config).foreach( HttpIOSource[A](_).retrieveInto(combinedIntermediate)(format) )
+    combinedIntermediate.read(format).acquireFor( intermediate.write(_) ) match {
+      case Left(exceptions) => handleErrors(exceptions)
+      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    }
+  }
+ 
+  def generateHttpIOConfigs(config: MultipleHttpIOConfig) = {
+    config.urls.map { url => BaseIOConfig(url) }
+  }
+}
