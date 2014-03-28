@@ -15,7 +15,7 @@ object WaterfallBuild extends Build {
     libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.1",
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
-    libraryDependencies += "net.databinder.dispatch" %% "dispatch-core" % "0.11.0")
+    libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0")
 
   lazy val testDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test,it",
@@ -25,6 +25,10 @@ object WaterfallBuild extends Build {
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4" % "test,it",
     libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it")
 
+  lazy val resolverSettings: Seq[Setting[_]] = Seq(
+    resolvers += "Big Bee Consultants" at "http://repo.bigbeeconsultants.co.uk/repo"
+  )
+
   def vcsNumber: String = {
     val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
     if (vcsBuildNumber == null) "" else vcsBuildNumber
@@ -33,11 +37,10 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.2",
-      resolvers += Resolver.url("artifactory", url("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns),
       publishTo <<= (version) { version: String =>
         val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
         val revisionProperty = if (!vcsNumber.isEmpty) ";revision=" + vcsNumber else ""

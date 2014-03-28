@@ -19,8 +19,8 @@ import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.RowSeparator._
-import dispatch._, Defaults._
 import java.io.StringReader
+import uk.co.bigbeeconsultants.http._
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
@@ -157,8 +157,9 @@ case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Optio
   }
 
   private[this] def fileContent = {
-    val fileObject = url(config.url).GET > as.String;
-    new StringReader(Http(fileObject).apply())
+    val httpClient = new HttpClient
+    val response = httpClient.get(config.url)
+    new StringReader(response.body.asString)
   }
 }
 
