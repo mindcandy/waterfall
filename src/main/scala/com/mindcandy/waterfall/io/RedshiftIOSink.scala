@@ -10,6 +10,7 @@ import scala.slick.session.Database
 import scala.slick.session.Database.threadLocalSession
 import scala.slick.jdbc.StaticQuery
 import com.typesafe.scalalogging.slf4j.Logging
+import scala.util.Try
 
 case class RedshiftIOConfig(url: String, driver: String, username: String, password: String, tableName: String) extends IOConfig
 
@@ -24,10 +25,10 @@ case class RedshiftIOSink[A](config: RedshiftIOConfig, s3Config: Option[S3IOConf
     }
     val combinedS3Url = s"s3://${s3Intermediate.bucketName}/${s3Intermediate.datedKeyPrefix}"
     logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url}")
-    Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withSession {
+    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
       StaticQuery.updateNA(
         s"COPY ${config.tableName} FROM '${combinedS3Url}' credentials 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"
       ).execute
-    }
+    })
   }
 }

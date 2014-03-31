@@ -19,8 +19,11 @@ import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.RowSeparator._
-import java.io.StringReader
 import uk.co.bigbeeconsultants.http._
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+import com.mindcandy.waterfall.IntermediateOps
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
@@ -33,18 +36,16 @@ case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option(
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file reading
     val inputFile = FileIntermediate[A](config.url, columnSeparator)
-    inputFile.read.acquireFor(intermediate.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    inputFile.read(intermediate.write).map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     }
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file writing
     val outputFile = FileIntermediate[A](config.url, columnSeparator)
-    intermediate.read.acquireFor(outputFile.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Store from %s into %s completed".format(intermediate, config))
+    intermediate.read(outputFile.write).map { _ =>
+      logger.info("Store from %s into %s completed".format(intermediate, config))
     }
   }
 }
@@ -56,18 +57,16 @@ case class S3IO[A](config: S3IOConfig)
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the S3Intermediate for file reading
     val inputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix, config.keyDate, config.columnSeparator)
-    inputFile.read.acquireFor(intermediate.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s completed".format(intermediate))
+    inputFile.read(intermediate.write).map { _ =>
+      logger.info("Retrieving into %s completed".format(intermediate))
     }
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the S3Intermediate for file writing
     val outputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix)
-    intermediate.read.acquireFor(outputFile.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s completed".format(intermediate))
+    intermediate.read(outputFile.write).map { _ =>
+      logger.info("Retrieving into %s completed".format(intermediate))
     }
   }
 }
@@ -75,7 +74,8 @@ case class S3IO[A](config: S3IOConfig)
 case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
   extends IOSource[A]
   with IOSink[A]
-  with IOOps[A] {
+  with IOOps[A]
+  with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val inputContent = for {
@@ -96,17 +96,16 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
       }
     }
 
-    inputContent.acquireFor(intermediate.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    inputContent.acquireFor(intermediate.write).convertToTry.map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     }
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    for {
+    Try(for {
       writer <- managed(new BufferedWriter(new OutputStreamWriter(fileContent.getOutputStream())))
     } {
-      intermediate.read.acquireFor {
+      intermediate.read {
         _.foreach { input =>
           writer.write(toLine(input))
           rowSeparator match {
@@ -114,11 +113,8 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
             case NoSeparator =>
           }
         }
-      } match {
-        case Left(exceptions) => handleErrors(exceptions)
-        case Right(result) => logger.info("Store from %s into %s completed".format(intermediate, config))
       }
-    }
+    })
   }
 
   private[this] def fileContent = {
@@ -132,13 +128,8 @@ case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Optio
   with IOOps[A] {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val inputContent = for {
-      reader <- managed(new BufferedReader(fileContent))
-    } yield {
-      val rawData = Iterator.continually {
-        Option(reader.readLine())
-      }.takeWhile(_.nonEmpty).flatten
-
+    val inputContent = {
+      val rawData = fileContent.lines
       rowSeparator match {
         case NewLine => rawData.map { fromLine(_) }
         case NoSeparator => {
@@ -150,32 +141,31 @@ case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Optio
       }
     }
 
-    inputContent.acquireFor(intermediate.write) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    intermediate.write(inputContent).map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     }
   }
 
   private[this] def fileContent = {
     val httpClient = new HttpClient
     val response = httpClient.get(config.url)
-    new StringReader(response.body.asString)
+    response.body.asString
   }
 }
 
 trait MultipleHttpIOConfig extends IOConfig {
   def urls: List[String]
+  def combinedFileUrl: String
   override def url = urls.mkString(";")
   override def toString = "MultipleHttpIOConfig(%s)".format(urls)
 }
 
 case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val combinedIntermediate = FileIntermediate[A](newTempFileUrl())
+    val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
     generateHttpIOConfigs(config).foreach( HttpIOSource[A](_).retrieveInto(combinedIntermediate)(format) )
-    combinedIntermediate.read(format).acquireFor( intermediate.write(_) ) match {
-      case Left(exceptions) => handleErrors(exceptions)
-      case Right(result) => logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    combinedIntermediate.read( intermediate.write(_) )(format).map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     }
   }
  

@@ -3,6 +3,7 @@ package com.mindcandy.waterfall
 import com.typesafe.scalalogging.slf4j.Logging
 import java.io.IOException
 import java.nio.file.Files
+import scala.util.Try
 
 trait IOConfig {
   def url: String
@@ -29,28 +30,14 @@ trait IOOps[A] {
 
 trait IOBase extends Logging {
   def config: IOConfig
-  def handleErrors(exceptions: List[Throwable]) = {
-    exceptions match {
-      case Nil => throw new IOException("Unknown error during IO operation")
-      case (head :: tail) => { 
-        tail.foreach(logger.error("Exception during IO operation", _))
-        throw new IOException("Exception during IO operation", head)
-      }
-    }
-  }
-  def newTempFileUrl() = {
-    val file = Files.createTempFile("waterfall-io-", ".tsv")
-    file.toFile.deleteOnExit()
-    file.toUri.toString
-  }
 }
 
 trait IOSource[A] extends IOBase {
-  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Unit
+  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit]
 }
 
 trait IOSink[A] extends IOBase {
-  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Unit
+  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit]
 }
 
 object RowSeparator extends Enumeration {
