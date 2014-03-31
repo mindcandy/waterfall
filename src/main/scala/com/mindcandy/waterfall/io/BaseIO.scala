@@ -19,7 +19,6 @@ import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.RowSeparator._
-import uk.co.bigbeeconsultants.http._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -120,56 +119,5 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
   private[this] def fileContent = {
     val fileObject = VFS.getManager().resolveFile(config.url);
     fileObject.getContent()
-  }
-}
-
-case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
-  extends IOSource[A]
-  with IOOps[A] {
-
-  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val inputContent = {
-      val rawData = fileContent.lines
-      rowSeparator match {
-        case NewLine => rawData.map { fromLine(_) }
-        case NoSeparator => {
-          rawData.mkString("") match {
-            case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
-            case _ => Iterator[A]()
-          }
-        }
-      }
-    }
-
-    intermediate.write(inputContent).map { _ =>
-      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
-    }
-  }
-
-  private[this] def fileContent = {
-    val httpClient = new HttpClient
-    val response = httpClient.get(config.url)
-    response.body.asString
-  }
-}
-
-trait MultipleHttpIOConfig extends IOConfig {
-  def urls: List[String]
-  def combinedFileUrl: String
-  override def url = urls.mkString(";")
-  override def toString = "MultipleHttpIOConfig(%s)".format(urls)
-}
-
-case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
-  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
-    generateHttpIOConfigs(config).foreach( HttpIOSource[A](_).retrieveInto(combinedIntermediate)(format) )
-    combinedIntermediate.read( intermediate.write(_) )(format).map { _ =>
-      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
-    }
-  }
- 
-  def generateHttpIOConfigs(config: MultipleHttpIOConfig) = {
-    config.urls.map { url => BaseIOConfig(url) }
   }
 }

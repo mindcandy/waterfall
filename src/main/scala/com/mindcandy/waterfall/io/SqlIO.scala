@@ -55,9 +55,15 @@ trait ShardedSqlIOConfig extends IOConfig {
 case class ShardedSqlIOSource[A](config: ShardedSqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
-    generateSqlIOConfigs(config).foreach( SqlIOSource[A](_).retrieveInto(combinedIntermediate)(format) )
-    combinedIntermediate.read(intermediate.write)(format).map { _ =>
-      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    val result = generateSqlIOConfigs(config).foldLeft( Try(()) ) { (previousResult, sqlConfig) =>
+      previousResult.flatMap { _ =>
+        SqlIOSource[A](sqlConfig).retrieveInto(combinedIntermediate)(format)
+      }
+    }
+    result.flatMap { _ =>
+      combinedIntermediate.read( intermediate.write(_) )(format).map { _ =>
+        logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+      }
     }
   }
  
