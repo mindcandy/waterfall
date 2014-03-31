@@ -76,47 +76,51 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
   with IOOps[A]
   with IntermediateOps {
 
-  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val inputContent = for {
-      reader <- managed(new BufferedReader(new InputStreamReader(fileContent.getInputStream())))
-    } yield {
-      val rawData = Iterator.continually {
-        Option(reader.readLine())
-      }.takeWhile(_.nonEmpty).flatten
+  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = {
+    val inputContent = fileContent.map { content =>
+      for {
+        reader <- managed(new BufferedReader(new InputStreamReader(content.getInputStream())))
+      } yield {
+        val rawData = Iterator.continually {
+          Option(reader.readLine())
+        }.takeWhile(_.nonEmpty).flatten
       
-      rowSeparator match {
-        case NewLine => rawData.map { fromLine(_) }
-        case NoSeparator => {
-          rawData.mkString("") match {
-            case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
-            case _ => Iterator[A]()
+        rowSeparator match {
+          case NewLine => rawData.map { fromLine(_) }
+          case NoSeparator => {
+            rawData.mkString("") match {
+              case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
+              case _ => Iterator[A]()
+            }
           }
         }
       }
     }
 
-    inputContent.acquireFor(intermediate.write).convertToTry.map { _ =>
+    inputContent.flatMap { resource => resource.acquireFor(intermediate.write).convertToTry.map { _ =>
       logger.info("Retrieving into %s from %s completed".format(intermediate, config))
-    }
+    }}
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    Try(for {
-      writer <- managed(new BufferedWriter(new OutputStreamWriter(fileContent.getOutputStream())))
-    } {
-      intermediate.read {
-        _.foreach { input =>
-          writer.write(toLine(input))
-          rowSeparator match {
-            case NewLine => writer.newLine()
-            case NoSeparator =>
+    fileContent.map { content =>
+      for {
+        writer <- managed(new BufferedWriter(new OutputStreamWriter(content.getOutputStream())))
+      } {
+        intermediate.read {
+          _.foreach { input =>
+            writer.write(toLine(input))
+            rowSeparator match {
+              case NewLine => writer.newLine()
+              case NoSeparator =>
+            }
           }
         }
       }
-    })
+    }
   }
 
-  private[this] def fileContent = {
+  private[this] def fileContent = Try {
     val fileObject = VFS.getManager().resolveFile(config.url);
     fileObject.getContent()
   }

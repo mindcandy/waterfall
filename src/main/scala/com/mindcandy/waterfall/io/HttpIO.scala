@@ -24,6 +24,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import com.mindcandy.waterfall.IntermediateOps
+import scala.io.Source
 
 case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
   extends IOSource[A]
@@ -34,7 +35,7 @@ case class HttpIOSource[A](config: IOConfig, override val columnSeparator: Optio
       rowSeparator match {
         case NewLine => fileContent.lines.map { fromLine(_) }
         case NoSeparator => {
-          fileContent match {
+          fileContent.lines.mkString("") match {
             case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
             case _ => Iterator[A]()
           }
@@ -72,7 +73,7 @@ case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSourc
       }
     }
     result.flatMap { _ =>
-      combinedIntermediate.read( intermediate.write(_) )(format).map { _ =>
+      combinedIntermediate.read( intermediate.write )(format).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
     }

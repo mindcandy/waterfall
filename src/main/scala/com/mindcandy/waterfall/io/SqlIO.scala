@@ -61,7 +61,7 @@ case class ShardedSqlIOSource[A](config: ShardedSqlIOConfig) extends IOSource[A]
       }
     }
     result.flatMap { _ =>
-      combinedIntermediate.read( intermediate.write(_) )(format).map { _ =>
+      combinedIntermediate.read( intermediate.write )(format).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
     }

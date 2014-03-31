@@ -50,6 +50,9 @@ case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
     data ++= stream.map(format.convertFrom)
     Try(())
   }
+  def getData(): List[Seq[String]] = {
+    data.toList
+  }
   def clearData() {
     data.clear()
   }
