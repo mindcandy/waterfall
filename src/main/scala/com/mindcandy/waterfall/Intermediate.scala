@@ -62,16 +62,19 @@ case class FileIntermediate[A](url: String, override val columnSeparator: Option
 
   def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
     val path = Paths.get(new URI(url))
-    val managedResource = for {
-      reader <- managed(Files.newBufferedReader(path, Charset.defaultCharset()))
-    } yield {
-      Iterator.continually {
-        Option(reader.readLine())
-      }.takeWhile(_.nonEmpty).map { line =>
-        fromLine(line.get)
+    val bufferedReader = Try(Files.newBufferedReader(path, Charset.defaultCharset()))
+    val managedResource = bufferedReader.map { bufReader =>
+      for {
+        reader <- managed(bufReader)
+      } yield {
+        Iterator.continually {
+          Option(reader.readLine())
+        }.takeWhile(_.nonEmpty).map { line =>
+          fromLine(line.get)
+        }
       }
     }
-    managedResource.acquireFor(f).convertToTry
+    managedResource.flatMap { _.acquireFor(f).convertToTry }
   }
 
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
@@ -100,16 +103,19 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
 
   def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
     val path = Paths.get(new URI(url))
-    val managedResource = for {
-      reader <- managed(Files.newBufferedReader(path, Charset.defaultCharset()))
-    } yield {
-      Iterator.continually {
-        Option(reader.readLine())
-      }.takeWhile(_.nonEmpty).map { line =>
-        fromLine(line.get)
+    val bufferedReader = Try(Files.newBufferedReader(path, Charset.defaultCharset()))
+    val managedResource = bufferedReader.map { bufReader =>
+      for {
+        reader <- managed(bufReader)
+      } yield {
+        Iterator.continually {
+          Option(reader.readLine())
+        }.takeWhile(_.nonEmpty).map { line =>
+          fromLine(line.get)
+        }
       }
     }
-    managedResource.acquireFor(f).convertToTry
+    managedResource.flatMap { _.acquireFor(f).convertToTry }
   }
 
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
