@@ -22,6 +22,10 @@ import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import com.mindcandy.waterfall.RowSeparator
 import scala.collection.mutable.ArrayBuffer
+import fr.simply.GET
+import fr.simply.DynamicServerResponse
+import fr.simply.StaticServerResponse
+import java.net.SocketTimeoutException
 
 @RunWith(classOf[JUnitRunner])
 class HttpIOSpec extends Specification with Mockito {
@@ -30,8 +34,10 @@ class HttpIOSpec extends Specification with Mockito {
       should retrieveFrom with a http url separating lines                     ${HttpIOSouceTests.retrieveWithLinesSeparator}
       should retrieveFrom with a http url not separating lines                 ${HttpIOSouceTests.retrieveWithNoRowSeparator}
       should retrieveFrom receiving no data                                    ${HttpIOSouceTests.retrieveWithNoData}
+      should retrieveFrom with read timeout                                    ${HttpIOSouceTests.retrieveWithTimeout}
     MultipleHttpIOSource
       should retrieve data from multiple URLs                                  ${MultipleHttpIOSouceTests.retrieveWithLinesSeparatorFromTwoServers}
+      should retrieve with read timeout                                        ${MultipleHttpIOSouceTests.retrieveWithTimeout}
   """
 
   val jsonTestData1 = """|{ "test1" : "value1", "test2" : 45 }
@@ -56,28 +62,56 @@ class HttpIOSpec extends Specification with Mockito {
       val server = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8090/test"))
-      vfsIO.retrieveInto(intermediate)
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"))
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+      
+      (result must beSuccessfulTry) and {
+        intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+      }
     }
     def retrieveWithNoRowSeparator = {
       val server = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+      
+      (result must beSuccessfulTry) and {
+        intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+      }
     }
     def retrieveWithNoData = {
       val server = new StubServer(8090).defaultResponse(ContentType("text/plain"), "", 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List())
+      
+      (result must beSuccessfulTry) and {
+        intermediate.data must haveTheSameElementsAs(List())
+      }
+    }
+    def retrieveWithTimeout = {
+      val route = GET (
+        path = "/test",
+        response = DynamicServerResponse { request =>
+          Thread.sleep(100)
+          StaticServerResponse(ContentType("text/plain"), jsonTestData1, 200)
+        }
+      )
+      val server = new StubServer(8090, route).start
+
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout=50))
+      val result = vfsIO.retrieveInto(intermediate)
+      server.stop
+      
+      (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
+        intermediate.data must haveTheSameElementsAs(List())
+      }
     }
   }
 
@@ -97,6 +131,31 @@ class HttpIOSpec extends Specification with Mockito {
       
       (result must beSuccessfulTry) and {
         intermediate.getData must_== List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }"""))
+      }
+    }
+    def retrieveWithTimeout = {
+      val route = GET (
+        path = "/test",
+        response = DynamicServerResponse { request =>
+          Thread.sleep(100)
+          StaticServerResponse(ContentType("text/plain"), jsonTestData1, 200)
+        }
+      )
+      val server1 = new StubServer(8090, route).start
+      val server2 = new StubServer(8091).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
+
+      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
+      val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
+        def urls = List("http://localhost:8090/test", "http://localhost:8091/test")
+        def combinedFileUrl = newTempFileUrl()
+        override def readTimeout = 50
+      })
+      val result = vfsIO.retrieveInto(intermediate)
+      server1.stop
+      server2.stop
+      
+      (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
+        intermediate.data must haveTheSameElementsAs(List())
       }
     }
   }

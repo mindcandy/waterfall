@@ -29,7 +29,7 @@ trait IntermediateOps {
   implicit class ManagedResourceOps[A](either: Either[List[Throwable], A]) extends Logging {
     def convertToTry: Try[A] = either match {
       case Left(exceptions) => exceptions match {
-        case Nil => Failure(new Exception("managed resource failure with exception"))
+        case Nil => Failure(new Exception("managed resource failure without exception"))
         case head :: tail => {
           tail.foreach(logger.error("Exception during IO operation", _))
           Failure(head)
