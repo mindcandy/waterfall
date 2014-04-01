@@ -12,7 +12,7 @@ trait WaterfallDrop[A, B] extends Logging {
   def sink: IOSink[B]
   def sinkIntermediate: Intermediate[B]
   
-  def transform(sourceIntermediate: Intermediate[A], sinkIntermediate: Intermediate[B]): Try[Unit]
+  def transform(sourceInter: Intermediate[A], sinkInter: Intermediate[B]): Try[Unit]
   
   def run(implicit formatSource: IntermediateFormat[A], formatSink: IntermediateFormat[B]): Try[Unit] = {
     for {
@@ -33,5 +33,5 @@ trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
   def sink: IOSink[A]
   def sinkIntermediate = sharedIntermediate
   
-  def transform(sourceIntermediate: Intermediate[A], sinkIntermediate: Intermediate[A]): Try[Unit] = Success(()) 
+  def transform(sourceInter: Intermediate[A], sinkInter: Intermediate[A]): Try[Unit] = Success(()) 
 }
