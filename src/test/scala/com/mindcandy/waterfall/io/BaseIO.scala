@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.io
 
 import org.junit.runner.RunWith
-import org.specs2.mutable.Specification
+import org.specs2.Specification
 import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
 import com.mindcandy.waterfall.TestFormat
@@ -21,9 +21,23 @@ import com.mindcandy.waterfall.MemoryIntermediate
 import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import com.mindcandy.waterfall.RowSeparator
+import scala.util.Try
+import scala.util.Failure
 
 @RunWith(classOf[JUnitRunner])
 class BaseIOSpec extends Specification with Mockito {
+  def is = args.execute(sequential = true) ^ args.report(showtimes = true) ^ s2"""
+    FileIO
+      fail readInto with an io exception if the file to read is not found                  ${FileIOTests.failReadFileNotFound}
+      fail storeFrom with an io exception if the underlying intermediate cannot read       ${FileIOTests.failWriteBadIntermediate}
+    ApacheVfsIO
+      should retrieveFrom with a http url on vfs                                           ${ApacheVfsIOTests.retrieveWithLineSeparator}
+      should retrieveFrom with a http url on vfs using no separator                        ${ApacheVfsIOTests.retrieveWithNoSeparator}
+      should retrieveFrom with a http url on vfs having no data                            ${ApacheVfsIOTests.retrieveWithNoData}
+      should storeFrom with a file url on vfs                                              ${ApacheVfsIOTests.storeToFileWithLineSeparator}
+      should storeFrom with a file url on vfs with no separator                            ${ApacheVfsIOTests.storeToFileWithNoSeparator}
+  """
+
   val jsonTestData1 = """|{ "test1" : "value1", "test2" : 45 }
                         |{ "test1" : "value2", "test2" : 67 }""".stripMargin
 
@@ -42,129 +56,98 @@ class BaseIOSpec extends Specification with Mockito {
       override def close(r: B) = ()
     }
 
-    def read(implicit format: IntermediateFormat[A]): ManagedResource[Iterator[A]] = {
-      for { reader <- managed(data) } yield {
-        throw new Exception("this intermediate will always fail")
-      }
+    def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
+      Failure(new IOException("this intermediate will always fail"))
     }
 
-    def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Unit = {
-      throw new Exception("this intermediate will always fail")
+    def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
+      Failure(new IOException("this intermediate will always fail"))
     }
   }
 
-  sequential
-  
-  "FileIO" should {
-    "fail storeFrom with an io exception if the underlying intermediate cannot read" in {
-      val fileIO = FileIO[TestFormat](BaseIOConfig("/tmp/waterfall-test-file.tsv"))
-      fileIO.storeFrom(FailingIntermediate[TestFormat]("nothing")) must throwA[IOException]
+  object FileIOTests {
+    def failReadFileNotFound = {
+      val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file-does-not-exists.tsv"))
+      val result = fileIO.retrieveInto(FailingIntermediate[TestFormat]("nothing"))
+      
+      result must beFailedTry.withThrowable[IOException]
+    }
+    
+    def failWriteBadIntermediate = {
+      val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file.tsv"))
+      val result = fileIO.storeFrom(FailingIntermediate[TestFormat]("nothing"))
+      
+      result must beFailedTry.withThrowable[IOException]
     }
   }
 
-  "ApacheVfsIO" should {
-    "should retrieveFrom with a http url on vfs" in {
+  object ApacheVfsIOTests {
+    def retrieveWithLineSeparator = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
-      vfsIO.retrieveInto(intermediate)
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+      
+      (result must beSuccessfulTry) and {
+        intermediate.getData must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+      }
     }
     
-    "should retrieveFrom with a http url on vfs using no separator" in {
+    def retrieveWithNoSeparator = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+      
+      (result must beSuccessfulTry) and {
+        intermediate.getData must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+      }
     }
     
-    "should retrieveFrom with a http url on vfs having no data" in {
+    def retrieveWithNoData = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), "", 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
+      val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      intermediate.data must haveTheSameElementsAs(List())
+      
+      (result must beSuccessfulTry) and {
+        intermediate.getData must haveTheSameElementsAs(List())
+      }
     }
 
-    "should storeFrom with a file url on vfs" in {
+    def storeToFileWithLineSeparator = {
       val testFile = Files.createTempFile("test-waterfall-", ".txt")
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       intermediate.data ++= (List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
 
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig(testFile.toUri.toString))
-      vfsIO.storeFrom(intermediate)
+      val result = vfsIO.storeFrom(intermediate)
 
-      Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }""",
-          """{ "test1" : "value2", "test2" : 67 }"""))
+      (result must beSuccessfulTry) and {
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }""",
+            """{ "test1" : "value2", "test2" : 67 }"""))
+      }
     }
     
-    "should storeFrom with a file url on vfs with no separator" in {
+    def storeToFileWithNoSeparator = {
       val testFile = Files.createTempFile("test-waterfall-", ".txt")
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       intermediate.data ++= (List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
 
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig(testFile.toUri.toString), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.storeFrom(intermediate)
+      val result = vfsIO.storeFrom(intermediate)
 
-      Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
-    }
-  }
-
-  "HttpIOSource" should {
-    "should retrieveFrom with a http url" in {
-      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
-
-      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
-      vfsIO.retrieveInto(intermediate)
-      server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
-    }
-
-    "should retrieveFrom with a http url using no separator" in {
-      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
-
-      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
-      server.stop
-      intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
-    }
-
-    "should retrieveFrom with a http url having no data" in {
-      val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), "", 200).start
-
-      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
-      vfsIO.retrieveInto(intermediate)
-      server.stop
-      intermediate.data must haveTheSameElementsAs(List())
-    }
-  }
-  
-  "MultipleHttpIOSource" should {
-    "should retrieve data from multiple URLs" in {
-      val server1 = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
-      val server2 = new StubServer(8081).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
-      
-      val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
-        def urls = List("http://localhost:8080/test", "http://localhost:8081/test")
-      })
-      vfsIO.retrieveInto(intermediate)
-      server1.stop
-      server2.stop
-      
-      intermediate.data must_== List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }"""))
+      (result must beSuccessfulTry) and {
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
+      }
     }
   }
 }
