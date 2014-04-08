@@ -91,7 +91,7 @@ class BaseIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+        intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
     }
     
@@ -104,7 +104,7 @@ class BaseIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+        intermediate.getData must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
     }
     
@@ -117,7 +117,7 @@ class BaseIOSpec extends Specification with Mockito {
       server.stop
 
       (result must beSuccessfulTry) and {
-        intermediate.getData must be_== (List())
+        intermediate.getData must be_==(List())
       }
     }
 
@@ -131,7 +131,7 @@ class BaseIOSpec extends Specification with Mockito {
       val result = vfsIO.storeFrom(intermediate)
 
       (result must beSuccessfulTry) and {
-        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }""",
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_==(List("""{ "test1" : "value1", "test2" : 45 }""",
             """{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
@@ -146,7 +146,7 @@ class BaseIOSpec extends Specification with Mockito {
       val result = vfsIO.storeFrom(intermediate)
 
       (result must beSuccessfulTry) and {
-        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_== (List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_==(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
   }

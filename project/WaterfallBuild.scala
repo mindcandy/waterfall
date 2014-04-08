@@ -49,7 +49,7 @@ object WaterfallBuild extends Build {
     settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
-      scalaVersion := "2.10.2",
+      scalaVersion := "2.10.4",
       publishTo <<= (version) { version: String =>
         val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
         val revisionProperty = if (!vcsNumber.isEmpty) ";revision=" + vcsNumber else ""

@@ -67,7 +67,7 @@ class HttpIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+        intermediate.data must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
     }
     def retrieveWithNoRowSeparator = {
@@ -79,7 +79,7 @@ class HttpIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+        intermediate.data must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
     }
     def retrieveWithNoData = {
@@ -91,7 +91,7 @@ class HttpIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
     def retrieveWithTimeout = {
@@ -110,7 +110,7 @@ class HttpIOSpec extends Specification with Mockito {
       server.stop
       
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
   }
@@ -130,7 +130,7 @@ class HttpIOSpec extends Specification with Mockito {
       server2.stop
       
       (result must beSuccessfulTry) and {
-        intermediate.getData must_== List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }"""))
+        intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }""")))
       }
     }
     def retrieveWithTimeout = {
@@ -155,7 +155,7 @@ class HttpIOSpec extends Specification with Mockito {
       server2.stop
       
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
   }
