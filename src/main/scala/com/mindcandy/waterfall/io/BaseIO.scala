@@ -23,10 +23,11 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import com.mindcandy.waterfall.IntermediateOps
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.services.s3.AmazonS3Client
 
 case class BaseIOConfig(url: String) extends IOConfig
-case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
-    keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig
+case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, key: String) extends IOConfig
 
 case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
   extends IOSource[A]
@@ -49,28 +50,38 @@ case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option(
   }
 }
 
-case class S3IO[A](config: S3IOConfig)
+case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
   extends IOSource[A]
-  with IOSink[A] {
+  with IOOps[A]
+  with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    // reusing the S3Intermediate for file reading
-    val inputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix, config.keyDate, config.columnSeparator)
-    inputFile.read(intermediate.write).map { _ =>
-      logger.info("Retrieving into %s completed".format(intermediate))
+    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key).getObjectContent())))
+    val inputContent = bufferedReader.map { bufReader =>
+      for {
+        reader <- managed(bufReader)
+      } yield {
+        val rawData = Iterator.continually {
+          Option(reader.readLine())
+        }.takeWhile(_.nonEmpty).flatten
+        processRowSeparator(rawData, rowSeparator)
+      }
     }
+    
+    inputContent.flatMap { resource => resource.acquireFor(intermediate.write).convertToTry.map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    }}
   }
 
-  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    // reusing the S3Intermediate for file writing
-    val outputFile = S3Intermediate[A](config.url, config.awsAccessKey, config.awsSecretKey, config.bucketName, config.keyPrefix)
-    intermediate.read(outputFile.write).map { _ =>
-      logger.info("Retrieving into %s completed".format(intermediate))
-    }
+  val amazonS3Client = {
+    val awsCredentials = new BasicAWSCredentials(config.awsAccessKey, config.awsSecretKey)
+    val s3Client = new AmazonS3Client(awsCredentials)
+    s3Client.setEndpoint(config.url)
+    s3Client
   }
 }
 
-case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
+case class ApacheVfsIO[A](config: IOConfig, val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
   extends IOSource[A]
   with IOSink[A]
   with IOOps[A]
@@ -84,16 +95,7 @@ case class ApacheVfsIO[A](config: IOConfig, override val columnSeparator: Option
         val rawData = Iterator.continually {
           Option(reader.readLine())
         }.takeWhile(_.nonEmpty).flatten
-      
-        rowSeparator match {
-          case NewLine => rawData.map { fromLine(_) }
-          case NoSeparator => {
-            rawData.mkString("") match {
-              case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
-              case _ => Iterator[A]()
-            }
-          }
-        }
+        processRowSeparator(rawData, rowSeparator)
       }
     }
 

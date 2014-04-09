@@ -18,6 +18,8 @@ import java.nio.file.StandardOpenOption
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
+import scala.collection.JavaConverters._
+import com.amazonaws.services.s3.model.GetObjectRequest
 
 trait Intermediate[A] extends Logging {
   def url: String
@@ -90,6 +92,9 @@ case class FileIntermediate[A](url: String, override val columnSeparator: Option
   }
 }
 
+case class S3IntermediateConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
+    keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig
+
 case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
     keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
   extends Intermediate[A]
@@ -102,8 +107,16 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
   val datedKeyPrefix = s"${keyPrefix}-${keyDate.toString(dateFormat)}"
 
   def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
-    val path = Paths.get(new URI(url))
-    val bufferedReader = Try(Files.newBufferedReader(path, Charset.defaultCharset()))
+    logger.info(s"Starting stream from S3 with endpoint ${url}")
+    val tempFile = Files.createTempFile("waterfall-s3-", ".tsv")
+    val keyList = Try(amazonS3Client.listObjects(bucketName, datedKeyPrefix).getObjectSummaries().asScala.map( _.getKey ).toList)
+    val bufferedReader = keyList.flatMap { list => Try {
+      for {
+        key <- list
+      } yield {
+        amazonS3Client.getObject(new GetObjectRequest(bucketName, key), tempFile.toFile)
+      }
+    }}.flatMap { _ => Try(Files.newBufferedReader(tempFile, Charset.defaultCharset())) }
     val managedResource = bufferedReader.map { bufReader =>
       for {
         reader <- managed(bufReader)
@@ -135,7 +148,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
   @tailrec
   private[this] def writeChunkToS3(stream: Iterator[A], counter: Int)(implicit format: IntermediateFormat[A]): Int = {
     if (stream.hasNext) {
-      val uploadFile = Files.createTempFile("waterfall-", "-" + counter + ".tsv")
+      val uploadFile = Files.createTempFile("waterfall-s3-", "-" + counter + ".tsv")
       var byteCounter = 0
       for {
         writer <- managed(Files.newBufferedWriter(uploadFile, Charset.defaultCharset()))

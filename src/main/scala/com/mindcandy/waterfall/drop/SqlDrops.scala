@@ -17,10 +17,3 @@ trait SqlToFileDrop[A] extends PassThroughWaterfallDrop[A] {
   def sinkConfig : IOConfig
   def sink = FileIO[A](sinkConfig)
 }
-
-trait SqlToS3Drop[A] extends PassThroughWaterfallDrop[A] {
-  def sourceConfig : SqlIOConfig
-  def source = SqlIOSource[A](sourceConfig)
-  def sinkConfig : S3IOConfig
-  def sink = S3IO[A](sinkConfig)
-}
