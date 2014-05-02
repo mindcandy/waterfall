@@ -5,8 +5,8 @@ import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleasePlugin.ReleaseKeys._
 
 object WaterfallBuild extends Build {
-  val akkaVersion = "2.2.3"
-  val sprayVersion = "1.2.0"
+  val akkaVersion = "2.3.2"
+  val sprayVersion = "1.3.1"
 
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "com.typesafe.slick" %% "slick" % "1.0.1",
@@ -24,7 +24,8 @@ object WaterfallBuild extends Build {
     libraryDependencies += "io.spray"            %   "spray-routing" % sprayVersion,
     libraryDependencies += "io.spray"            %   "spray-testkit" % sprayVersion  % "test",
     libraryDependencies += "com.typesafe.akka"   %%  "akka-actor"    % akkaVersion,
-    libraryDependencies += "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test")
+    libraryDependencies += "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test",
+    libraryDependencies += "io.argonaut"         %%  "argonaut"      % "6.0.4")
 
   lazy val testDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test,it",
