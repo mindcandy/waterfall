@@ -6,7 +6,7 @@ import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
-import com.mindcandy.waterfall.actors.JobDatabaseActor
+import com.mindcandy.waterfall.actors.JobDatabaseManager
 
 object Boot extends App {
 
@@ -14,7 +14,7 @@ object Boot extends App {
   implicit val system = ActorSystem("waterfall")
 
   // create and start our service actor
-  val jobDatabase = system.actorOf(JobDatabaseActor.props)
+  val jobDatabase = system.actorOf(JobDatabaseManager.props)
   val service = system.actorOf(JobServiceActor.props(jobDatabase), "job-service")
 
   implicit val timeout = Timeout(5.seconds)
