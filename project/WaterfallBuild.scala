@@ -20,12 +20,13 @@ object WaterfallBuild extends Build {
     libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0")
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
-    libraryDependencies += "io.spray"            %   "spray-can"     % sprayVersion,
-    libraryDependencies += "io.spray"            %   "spray-routing" % sprayVersion,
-    libraryDependencies += "io.spray"            %   "spray-testkit" % sprayVersion  % "test",
-    libraryDependencies += "com.typesafe.akka"   %%  "akka-actor"    % akkaVersion,
-    libraryDependencies += "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test",
-    libraryDependencies += "io.argonaut"         %%  "argonaut"      % "6.0.4")
+    libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
+    libraryDependencies += "io.spray"             %   "spray-routing" % sprayVersion,
+    libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test",
+    libraryDependencies += "com.typesafe.akka"    %%  "akka-actor"    % akkaVersion,
+    libraryDependencies += "com.typesafe.akka"    %%  "akka-testkit"  % akkaVersion   % "test",
+    libraryDependencies += "io.argonaut"          %%  "argonaut"      % "6.0.4",
+    libraryDependencies += "org.quartz-scheduler" %   "quartz"        % "2.2.1")
 
   lazy val testDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test,it",
