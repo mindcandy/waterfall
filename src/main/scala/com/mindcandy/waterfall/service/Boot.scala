@@ -6,7 +6,7 @@ import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
-import com.mindcandy.waterfall.actors.JobDatabaseManager
+import com.mindcandy.waterfall.actor.JobDatabaseManager
 
 object Boot extends App {
 

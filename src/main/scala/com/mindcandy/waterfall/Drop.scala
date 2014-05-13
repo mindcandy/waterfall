@@ -27,7 +27,7 @@ trait WaterfallDrop[A, B] extends Logging {
 
 trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
   def fileUrl: String
-  val sharedIntermediate = FileIntermediate[A](fileUrl)
+  val sharedIntermediate: Intermediate[A] = FileIntermediate[A](fileUrl)
   def sharedIntermediateFormat: IntermediateFormat[A]
   
   def source: IOSource[A]

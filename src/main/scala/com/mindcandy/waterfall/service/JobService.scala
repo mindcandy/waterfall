@@ -7,10 +7,10 @@ import argonaut._
 import Argonaut._
 import akka.actor.Props
 import akka.actor.ActorRef
-import com.mindcandy.waterfall.actors.Protocol._
+import com.mindcandy.waterfall.actor.Protocol._
 import spray.httpx.marshalling.MetaMarshallers.optionMarshaller
-import com.mindcandy.waterfall.actors.JobDatabaseManager.GetJobForCompletion
-import com.mindcandy.waterfall.actors.JobDatabaseManager.GetScheduleForCompletion
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetJobForCompletion
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetScheduleForCompletion
 
 object JobServiceActor {
   def props(jobDatabaseManager: ActorRef): Props = Props(new JobServiceActor(jobDatabaseManager))

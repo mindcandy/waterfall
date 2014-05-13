@@ -1,10 +1,10 @@
-package com.mindcandy.waterfall.actors
+package com.mindcandy.waterfall.actor
 
 import akka.actor.Actor
 import akka.actor.Props
 import Protocol.DropJob
 import akka.actor.ActorLogging
-import com.mindcandy.waterfall.actors.Protocol.DropJobList
+import com.mindcandy.waterfall.actor.Protocol.DropJobList
 
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: Int, completionFunction: Option[DropJob] => Unit)

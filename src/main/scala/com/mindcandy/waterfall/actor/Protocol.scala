@@ -1,4 +1,4 @@
-package com.mindcandy.waterfall.actors
+package com.mindcandy.waterfall.actor
 
 import org.joda.time.DateTime
 import argonaut._

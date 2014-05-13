@@ -1,13 +1,13 @@
-package com.mindcandy.waterfall.actors
+package com.mindcandy.waterfall.actor
 
 import akka.actor.Props
 import akka.actor.Props
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import com.mindcandy.waterfall.actors.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actors.Protocol.DropJobList
-import com.mindcandy.waterfall.actors.Protocol.DropJob
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
+import com.mindcandy.waterfall.actor.Protocol.DropJobList
+import com.mindcandy.waterfall.actor.Protocol.DropJob
 import scala.util.Try
 import scala.concurrent.duration._
 import org.quartz.CronExpression
@@ -105,7 +105,7 @@ class SchedulerManager(val jobDatabaseManager: ActorRef, dropFactory: WaterfallD
   }
   
   def runJob(job: DropJob) = {
-    val worker = context.actorOf(ScheduleWorker.props(self))
+    val worker = context.actorOf(ScheduleWorker.props)
     dropFactory.getDropByUID(job.dropUID) match {
       case Some(drop) => {
         runningJobs += (job.dropUID -> (worker, DateTime.now))

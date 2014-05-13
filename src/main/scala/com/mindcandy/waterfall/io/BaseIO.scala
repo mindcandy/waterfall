@@ -2,6 +2,7 @@ package com.mindcandy.waterfall.io
 
 import com.mindcandy.waterfall.IntermediateFormat
 import com.mindcandy.waterfall.Intermediate
+import com.mindcandy.waterfall.MemoryIntermediate
 import com.mindcandy.waterfall.FileIntermediate
 import com.mindcandy.waterfall.S3Intermediate
 import com.mindcandy.waterfall.IOConfig
@@ -28,6 +29,27 @@ import com.amazonaws.services.s3.AmazonS3Client
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, key: String) extends IOConfig
+
+case class MemoryIO[A](config: IOConfig)
+  extends IOSource[A]
+  with IOSink[A] {
+  
+  val memoryIntermediate = MemoryIntermediate[A](config.url)
+
+  def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
+    // reusing the MemoryIntermediate
+    memoryIntermediate.read(intermediate.write).map { _ =>
+      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+    }
+  }
+
+  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
+    // reusing the MemoryIntermediate
+    intermediate.read(memoryIntermediate.write).map { _ =>
+      logger.info("Store from %s into %s completed".format(intermediate, config))
+    }
+  }
+}
 
 case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
   extends IOSource[A]
