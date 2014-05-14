@@ -8,15 +8,15 @@ import org.specs2.SpecificationLike
 import akka.testkit.TestProbe
 import akka.actor.ActorRef
 import akka.actor.Props
-import com.mindcandy.waterfall.actor.ScheduleWorker.RunDrop
-import com.mindcandy.waterfall.actor.SchedulerManager.JobResult
 import scala.util.Success
+import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 
 
-class ScheduleWorkerSpec extends TestKit(ActorSystem("ScheduleWorkerSpec")) with SpecificationLike with After with NoTimeConversions {
+class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with SpecificationLike with After with NoTimeConversions {
   override def is = s2"""
-     ScheduleWorker should
-       run a drop and return success $runDrop
+    DropWorker should
+      run a drop and return success $runDrop
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -24,10 +24,10 @@ class ScheduleWorkerSpec extends TestKit(ActorSystem("ScheduleWorkerSpec")) with
   def runDrop = {
     val dropUID = "test1"
     val probe: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleWorker.props)
-    val reqst = RunDrop(dropUID, TestWaterfallDropFactory.getDropByUID(dropUID).get)
+    val actor: ActorRef = system.actorOf(DropWorker.props)
+    val request = RunDrop(dropUID, TestWaterfallDropFactory.getDropByUID(dropUID).get)
 
-    probe.send(actor, reqst)
+    probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must_== Success()
   }
 }
