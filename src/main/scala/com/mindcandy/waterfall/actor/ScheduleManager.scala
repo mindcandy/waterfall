@@ -55,7 +55,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     val dropUIDs = jobs.keySet
     val scheduledUIDs = scheduledJobs.keySet & dropUIDs
     for {
-      removableDropUID <- scheduledUIDs &~ dropUIDs
+      removableDropUID <- scheduledJobs.keySet &~ scheduledUIDs
     } yield {
       val (job, cancellable) = scheduledJobs(removableDropUID)
       cancellable.cancel
