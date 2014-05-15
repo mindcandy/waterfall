@@ -23,6 +23,7 @@ class DropWorker extends Actor with ActorLogging {
     case RunDrop(dropUID, dropJob) => {
       val result = dropJob.run
       sender ! JobResult(dropUID, result)
+      context.stop(self)
     }
   }
 }
