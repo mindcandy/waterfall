@@ -1,13 +1,10 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor.Props
-import akka.actor.Props
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.DropJobList
-import com.mindcandy.waterfall.actor.Protocol.DropJob
 import scala.util.Try
 import scala.concurrent.duration._
 import org.quartz.CronExpression
@@ -17,8 +14,6 @@ import akka.actor.Cancellable
 import scala.util.Success
 import scala.util.Failure
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
-import org.joda.time.format.PeriodFormat
-import com.mindcandy.waterfall.WaterfallDrop
 import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 
