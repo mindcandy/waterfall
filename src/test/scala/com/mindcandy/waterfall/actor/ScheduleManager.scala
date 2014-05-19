@@ -146,7 +146,6 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
-  private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob = {
+  private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob =
     DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?")
-  }
 }

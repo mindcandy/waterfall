@@ -1,13 +1,11 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.Props
-import akka.actor.ActorRef
-import akka.actor.ActorLogging
-import akka.actor.Actor
+import akka.actor._
 import com.mindcandy.waterfall.WaterfallDrop
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import scala.util.Try
 import com.mindcandy.waterfall.IntermediateFormat
+import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 
 object DropWorker {
@@ -26,4 +24,12 @@ class DropWorker extends Actor with ActorLogging {
       context.stop(self)
     }
   }
+}
+
+trait DropWorkerFactory {
+  def createWorker(implicit context: ActorContext): ActorRef
+}
+
+object ContextDropWorkerFactory extends DropWorkerFactory {
+  override def createWorker(implicit context: ActorContext): ActorRef = context.actorOf(DropWorker.props)
 }
