@@ -69,8 +69,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val request = DropJobList(List(dropJob1, dropJob2))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(dropJob1), StartJob(dropJob2))
-    success
+    dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(dropJob1), StartJob(dropJob2)) must not(throwA[AssertionError])
   }
 
   def cancelOneJob = {
@@ -86,8 +85,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS))
-    success
+    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
   def cancelOneJobAndKeepAnother = {
@@ -105,8 +103,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
     dropSupervisor.expectMsgClass(FiniteDuration(10, SECONDS), classOf[StartJob]) must_== StartJob(dropJob2)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS))
-    success
+    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
   def scheduleNewJobAndCancelOther = {
@@ -125,8 +122,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
     dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(dropJob2), StartJob(dropJob3))
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS))
-    success
+    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
 }
