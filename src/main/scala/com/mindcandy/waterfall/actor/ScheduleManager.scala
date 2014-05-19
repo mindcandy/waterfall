@@ -20,11 +20,11 @@ import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 object ScheduleManager {
   case class CheckJobs()
 
-  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory): Props = 
-    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory))
+  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration): Props =
+    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime))
 }
 
-class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory) extends Actor with ActorLogging {
+class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration) extends Actor with ActorLogging {
   import ScheduleManager._
   import Protocol._
 
@@ -61,12 +61,16 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
   def scheduleJob(job: DropJob) : Option[Cancellable]= {
     calculateNextFireTime(job.cron) match {
-      case Success(duration) => Some(context.system.scheduler.scheduleOnce(duration, dropSupervisor, StartJob(job))(context.dispatcher))
+      case Success(duration) if maxScheduleTime > duration =>
+        Some(context.system.scheduler.scheduleOnce(duration, dropSupervisor, StartJob(job))(context.dispatcher))
       case Failure(exception) => {
         log.debug("bad cron expression", exception)
         log.error(s"could not resolve cron expression: ${exception.getMessage}")
         None
       }
+      case Success(duration) =>
+        log.debug(s"Job $job ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
+        None
     }
   }
 

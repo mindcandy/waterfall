@@ -28,6 +28,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
       not schedule a job if it is cancelled $cancelOneJob
       schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
       schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
+      only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -36,7 +37,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val request = CheckJobs()
 
     probe.send(actor, request)
@@ -47,7 +48,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val currentTime = DateTime.now + Period.seconds(5)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
@@ -62,7 +63,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val currentTime1 = DateTime.now + Period.seconds(3)
     val currentTime2 = DateTime.now + Period.seconds(6)
 
@@ -79,7 +80,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val currentTime = DateTime.now + Period.seconds(3)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
@@ -95,7 +96,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val currentTime = DateTime.now + Period.seconds(3)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
@@ -113,7 +114,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory))
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(1, MINUTES)))
     val currentTime = DateTime.now + Period.seconds(3)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
@@ -125,6 +126,23 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
     dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(dropJob2), StartJob(dropJob3))
+    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+  }
+
+  def scheduleOnlyWithinTimeFrame = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, TestWaterfallDropFactory, FiniteDuration(5, SECONDS)))
+    val currentTime1 = DateTime.now + Period.seconds(3)
+    val currentTime2 = DateTime.now + Period.seconds(7)
+
+    val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime1)
+    val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime2)
+    val request = DropJobList(List(dropJob1, dropJob2))
+
+    probe.send(actor, request)
+    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob1)
     dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
