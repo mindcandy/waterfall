@@ -8,10 +8,16 @@ import com.mindcandy.waterfall.IntermediateFormat
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 
-object DropWorker {
+trait DropWorkerFactory {
+  def createWorker(implicit context: ActorContext): ActorRef
+}
+
+object DropWorker extends DropWorkerFactory {
   case class RunDrop[A, B](dropUID: DropUID, waterfallDrop: WaterfallDrop[A, B])
   
   def props: Props = Props(new DropWorker())
+
+  def createWorker(implicit context: ActorContext): ActorRef = context.actorOf(props)
 }
 
 class DropWorker extends Actor with ActorLogging {
@@ -24,12 +30,4 @@ class DropWorker extends Actor with ActorLogging {
       context.stop(self)
     }
   }
-}
-
-trait DropWorkerFactory {
-  def createWorker(implicit context: ActorContext): ActorRef
-}
-
-object ContextDropWorkerFactory extends DropWorkerFactory {
-  override def createWorker(implicit context: ActorContext): ActorRef = context.actorOf(DropWorker.props)
 }

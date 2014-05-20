@@ -20,7 +20,7 @@ object DropSupervisor {
   case class StartJob(job: DropJob)
   case class JobResult(jobUID: DropUID, result: Try[Unit])
 
-  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: DropWorkerFactory = ContextDropWorkerFactory): Props =
+  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: DropWorkerFactory = DropWorker): Props =
     Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
 }
 
