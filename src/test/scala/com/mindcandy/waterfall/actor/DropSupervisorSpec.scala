@@ -54,7 +54,8 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   def logSuccess = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory))
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
     val result = JobResult("test1", Success(()))
@@ -72,7 +73,8 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   def logFailure = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory))
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
     val exception = new RuntimeException("test exception")
