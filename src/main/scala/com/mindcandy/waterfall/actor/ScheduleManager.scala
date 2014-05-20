@@ -20,15 +20,19 @@ import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 object ScheduleManager {
   case class CheckJobs()
 
-  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration): Props =
-    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime))
+  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration): Props =
+    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime, checkJobsPeriod))
 }
 
-class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration) extends Actor with ActorLogging {
+class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory,
+                      maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration) extends Actor with ActorLogging {
   import ScheduleManager._
   import Protocol._
 
   private[this] var scheduledJobs = Map[DropUID, (DropJob, Cancellable)]()
+
+  // Schedule a periodic CheckJobs message to self
+  context.system.scheduler.schedule(checkJobsPeriod, checkJobsPeriod, self, CheckJobs())(context.dispatcher)
 
   def receive = {
     case CheckJobs() => {
