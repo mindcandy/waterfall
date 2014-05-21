@@ -11,12 +11,14 @@ object WaterfallBuild extends Build {
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "com.typesafe.slick" %% "slick" % "1.0.1",
     libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13",
+    libraryDependencies += "net.logstash.logback" % "logstash-logback-encoder" % "1.0",
     libraryDependencies += "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3",
     libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0",
     libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.1",
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
+    libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
     libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0")
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
