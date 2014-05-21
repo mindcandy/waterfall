@@ -25,7 +25,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader {
       val config = ConfigFactory.load()
 
       // create and start our service actor
-      val jobDatabase = system.actorOf(JobDatabaseManager.props(jobsDatabaseConfig(config)))
+      val jobDatabase = system.actorOf(JobDatabaseManager.props(jobsDatabaseConfig(config)), "job-database-manager")
       val service = system.actorOf(JobServiceActor.props(jobDatabase), "job-service")
 
       implicit val timeout = Timeout(5.seconds)

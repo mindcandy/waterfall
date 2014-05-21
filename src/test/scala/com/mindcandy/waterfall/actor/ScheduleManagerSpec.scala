@@ -151,7 +151,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
 
     probe.send(actor, request)
     dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob1)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    dropSupervisor.expectNoMsg(FiniteDuration(10, SECONDS)) must not(throwA[AssertionError])
   }
 
 
