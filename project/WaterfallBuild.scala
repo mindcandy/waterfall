@@ -9,6 +9,7 @@ object WaterfallBuild extends Build {
   val sprayVersion = "1.3.1"
 
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
+    libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.0.6",
     libraryDependencies += "com.typesafe.slick" %% "slick" % "1.0.1",
     libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13",
     libraryDependencies += "net.logstash.logback" % "logstash-logback-encoder" % "1.0",
