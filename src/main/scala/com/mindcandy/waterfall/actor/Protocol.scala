@@ -38,6 +38,6 @@ object Protocol {
     } yield exception
   ), "Exception")
   
-  implicit def DropJobCodecJson: EncodeJson[DropJob] = casecodec4(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron")
+  implicit def DropJobCodecJson = casecodec4(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron")
   implicit def DropLogCodecJson: EncodeJson[DropLog] = casecodec5(DropLog.apply, DropLog.unapply)("dropUID", "startTime", "endTime", "logOutput", "exception")
 }

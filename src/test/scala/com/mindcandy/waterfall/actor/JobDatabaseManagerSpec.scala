@@ -8,6 +8,7 @@ import org.specs2.time.NoTimeConversions
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
 import com.mindcandy.waterfall.actor.Protocol.{DropJob, DropJobList}
 import scala.concurrent.duration._
+import com.mindcandy.waterfall.config.JobsDatabaseConfig
 
 class JobDatabaseManagerSpec  extends TestKit(ActorSystem("JobDatabaseManagerSpec")) with SpecificationLike with After with NoTimeConversions  {
   override def is = s2"""
@@ -17,13 +18,15 @@ class JobDatabaseManagerSpec  extends TestKit(ActorSystem("JobDatabaseManagerSpe
 
   override def after: Any = TestKit.shutdownActorSystem(system)
 
+  val config = JobsDatabaseConfig(DropJobList(List(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *"), DropJob("ADX", "Adx", true, "0 2 * * *"))))
+
   def getSchedule = {
     val probe = TestProbe()
-    val actor = system.actorOf(JobDatabaseManager.props())
+    val actor = system.actorOf(JobDatabaseManager.props(config))
 
     probe.send(actor, GetSchedule())
 
-    val expectedMessage = DropJobList(List(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *"), DropJob("ADX", "Adx", true, "0 2 * * *")))
+    val expectedMessage = config.dropJobList
     probe.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
   }
 }

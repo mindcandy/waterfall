@@ -6,16 +6,17 @@ import Protocol.DropJob
 import akka.actor.ActorLogging
 import com.mindcandy.waterfall.actor.Protocol.DropJobList
 import com.mindcandy.waterfall.actor.Protocol.DropLog
+import com.mindcandy.waterfall.config.JobsDatabaseConfig
 
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: Int, completionFunction: Option[DropJob] => Unit)
   case class GetScheduleForCompletion(completionFunction: List[DropJob] => Unit)
   case class GetSchedule()
 
-  def props(): Props = Props(new JobDatabaseManager())
+  def props(config: JobsDatabaseConfig): Props = Props(new JobDatabaseManager(config.dropJobList))
 }
 
-class JobDatabaseManager extends Actor with ActorLogging {
+class JobDatabaseManager(dropJobList: DropJobList) extends Actor with ActorLogging {
   import JobDatabaseManager._
 
   def receive = {
@@ -34,7 +35,7 @@ class JobDatabaseManager extends Actor with ActorLogging {
     }
     case GetSchedule() => {
       log.info(s"schedule lookup")
-      sender ! DropJobList(List(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *"), DropJob("ADX", "Adx", true, "0 2 * * *")))
+      sender ! dropJobList
     }
     case dropLog: DropLog => {
       log.info(s"drop log received")
