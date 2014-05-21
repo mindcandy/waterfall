@@ -1,14 +1,11 @@
 package com.mindcandy.waterfall.service
 
 import spray.routing.HttpService
-import com.typesafe.scalalogging.slf4j.Logging
 import akka.actor.Actor
-import argonaut._
-import Argonaut._
+import argonaut._, Argonaut._
 import akka.actor.Props
 import akka.actor.ActorRef
 import com.mindcandy.waterfall.actor.Protocol._
-import spray.httpx.marshalling.MetaMarshallers.optionMarshaller
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetJobForCompletion
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetScheduleForCompletion
 

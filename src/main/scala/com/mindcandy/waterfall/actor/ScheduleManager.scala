@@ -1,13 +1,10 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor.Props
-import akka.actor.Props
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.DropJobList
-import com.mindcandy.waterfall.actor.Protocol.DropJob
 import scala.util.Try
 import scala.concurrent.duration._
 import org.quartz.CronExpression
@@ -17,23 +14,25 @@ import akka.actor.Cancellable
 import scala.util.Success
 import scala.util.Failure
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
-import org.joda.time.format.PeriodFormat
-import com.mindcandy.waterfall.WaterfallDrop
 import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 
 object ScheduleManager {
   case class CheckJobs()
 
-  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory): Props = 
-    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory))
+  def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration): Props =
+    Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime, checkJobsPeriod))
 }
 
-class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory) extends Actor with ActorLogging {
+class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory,
+                      maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration) extends Actor with ActorLogging {
   import ScheduleManager._
   import Protocol._
 
   private[this] var scheduledJobs = Map[DropUID, (DropJob, Cancellable)]()
+
+  // Schedule a periodic CheckJobs message to self
+  context.system.scheduler.schedule(checkJobsPeriod, checkJobsPeriod, self, CheckJobs())(context.dispatcher)
 
   def receive = {
     case CheckJobs() => {
@@ -55,7 +54,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     val dropUIDs = jobs.keySet
     val scheduledUIDs = scheduledJobs.keySet & dropUIDs
     for {
-      removableDropUID <- scheduledUIDs &~ dropUIDs
+      removableDropUID <- scheduledJobs.keySet &~ scheduledUIDs
     } yield {
       val (job, cancellable) = scheduledJobs(removableDropUID)
       cancellable.cancel
@@ -66,7 +65,11 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
   def scheduleJob(job: DropJob) : Option[Cancellable]= {
     calculateNextFireTime(job.cron) match {
-      case Success(duration) => Some(context.system.scheduler.scheduleOnce(duration, dropSupervisor, StartJob(job))(context.dispatcher))
+      case Success(duration) if maxScheduleTime > duration =>
+        Some(context.system.scheduler.scheduleOnce(duration, dropSupervisor, StartJob(job))(context.dispatcher))
+      case Success(duration) =>
+        log.debug(s"Job $job ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
+        None
       case Failure(exception) => {
         log.debug("bad cron expression", exception)
         log.error(s"could not resolve cron expression: ${exception.getMessage}")

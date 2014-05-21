@@ -20,10 +20,11 @@ object DropSupervisor {
   case class StartJob(job: DropJob)
   case class JobResult(jobUID: DropUID, result: Try[Unit])
 
-  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory): Props = Props(new DropSupervisor(jobDatabaseManager, dropFactory))
+  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
+    Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
 }
 
-class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory) extends Actor with ActorLogging {
+class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
   import DropSupervisor._
 
   private[this] var runningJobs = Map[DropUID, (ActorRef, DateTime)]()
@@ -55,7 +56,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   }
 
   def runJob(job: DropJob) = {
-    val worker = context.actorOf(DropWorker.props)
+    val worker = dropWorkerFactory.createActor
     dropFactory.getDropByUID(job.dropUID) match {
       case Some(drop) => {
         val startTime = DateTime.now
