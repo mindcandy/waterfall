@@ -22,16 +22,12 @@ class JobDatabaseManager(dropJobList: DropJobList) extends Actor with ActorLoggi
   def receive = {
     case GetJobForCompletion(jobId, f) => {
       log.info(s"job lookup for id $jobId")
-      val result = jobId match {
-        case 1 => Some(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *"))
-        case 3 => Some(DropJob("ADX", "Adx", true, "0 2 * * *"))
-        case _ => None
-      }
+      val result = dropJobList.jobs.lift(jobId)
       f(result)
     }
     case GetScheduleForCompletion(f) => {
       log.info(s"schedule lookup for completion")
-      f(List(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *"), DropJob("ADX", "Adx", true, "0 2 * * *")))
+      f(dropJobList.jobs)
     }
     case GetSchedule() => {
       log.info(s"schedule lookup")
