@@ -43,6 +43,12 @@ object WaterfallBuild extends Build {
     resolvers += "Big Bee Consultants" at "http://repo.bigbeeconsultants.co.uk/repo"
   )
 
+  lazy val runSettings = Seq(
+    fork in run := true,
+    connectInput in run := true,
+    javaOptions in run += "-Dlogback.configurationFile=./logback.xml",
+    javaOptions in run += "-Dconfig.file=./application.conf")
+
   def vcsNumber: String = {
     val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
     if (vcsBuildNumber == null) "" else vcsBuildNumber
@@ -51,7 +57,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ runSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
