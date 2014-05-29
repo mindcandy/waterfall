@@ -3,7 +3,8 @@ package com.mindcandy.waterfall.actor
 import org.joda.time.DateTime
 import argonaut._
 import Argonaut._
-import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.drop.WaterfallDropFactory
+import WaterfallDropFactory.DropUID
 import scala.util.Try
 
 object Protocol {

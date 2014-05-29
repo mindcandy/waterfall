@@ -1,13 +1,11 @@
-package com.mindcandy.waterfall.actor
+package com.mindcandy.waterfall.drop
 
-import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.WaterfallDropFactory._
-import com.mindcandy.waterfall.WaterfallDrop
-import com.mindcandy.waterfall.PassThroughWaterfallDrop
+import WaterfallDropFactory._
 import com.mindcandy.waterfall.PlainTextFormat
 import com.mindcandy.waterfall.MemoryIntermediate
 import com.mindcandy.waterfall.io.MemoryIO
 import com.mindcandy.waterfall.io.BaseIOConfig
+import org.joda.time.DateTime
 
 case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
@@ -18,8 +16,8 @@ case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[Plain
 }
 
 
-object TestWaterfallDropFactory extends WaterfallDropFactory {
-  def getDropByUID(dropUID: DropUID): Option[WaterfallDrop[_, _]] = dropUID match {
+class TestWaterfallDropFactory extends WaterfallDropFactory {
+  def getDropByUID(dropUID: DropUID, date: Option[DateTime]=None): Option[WaterfallDrop[_, _]] = dropUID match {
     case "test1" => Some(TestPassThroughWaterfallDrop())
     case _ => None
   }

@@ -24,7 +24,7 @@
     <!-- Supress some logging -->
     <logger name="scala.slick" level="info" />
 
-    <root level="info">
+    <root level="debug">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="FILE" />
     </root>

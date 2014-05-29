@@ -46,18 +46,20 @@ object WaterfallBuild extends Build {
   lazy val runSettings = Seq(
     fork in run := true,
     connectInput in run := true,
-    javaOptions in run += "-Dlogback.configurationFile=./logback.xml",
-    javaOptions in run += "-Dconfig.file=./application.conf")
+    javaOptions in run += "-Dlogback.configurationFile=./config/logback.xml",
+    javaOptions in run += "-Dconfig.file=./config/application.conf")
 
   def vcsNumber: String = {
     val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
     if (vcsBuildNumber == null) "" else vcsBuildNumber
   }
 
+  lazy val generalSettings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ runSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies
+
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ runSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
+    settings = generalSettings ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
@@ -74,4 +76,5 @@ object WaterfallBuild extends Build {
     )
   ).configs( IntegrationTest )
    .settings( Defaults.itSettings : _*)
+
 }

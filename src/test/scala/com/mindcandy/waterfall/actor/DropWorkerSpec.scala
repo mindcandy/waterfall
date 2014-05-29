@@ -10,6 +10,7 @@ import scala.util.Success
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 import scala.concurrent.duration._
+import com.mindcandy.waterfall.drop.TestWaterfallDropFactory
 
 
 class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with SpecificationLike with After with NoTimeConversions {
@@ -25,7 +26,7 @@ class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with Specifi
     val dropUID = "test1"
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(dropUID, TestWaterfallDropFactory.getDropByUID(dropUID).get)
+    val request = RunDrop(dropUID, new TestWaterfallDropFactory().getDropByUID(dropUID).get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must_== Success()
@@ -35,7 +36,7 @@ class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with Specifi
     val dropUID = "test1"
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(dropUID, TestWaterfallDropFactory.getDropByUID(dropUID).get)
+    val request = RunDrop(dropUID, new TestWaterfallDropFactory().getDropByUID(dropUID).get)
     probe.watch(actor)
 
     probe.send(actor, request)

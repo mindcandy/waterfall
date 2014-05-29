@@ -12,6 +12,7 @@ import com.mindcandy.waterfall.actor.Protocol.{DropLog, DropJob}
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
+import com.mindcandy.waterfall.drop.{TestWaterfallDropFactory, TestPassThroughWaterfallDrop}
 
 class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with SpecificationLike with After with NoTimeConversions  {
   override def is = s2"""
@@ -28,7 +29,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
 
@@ -40,7 +41,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   def logJobOnStartJob = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory))
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
 
@@ -55,7 +56,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
     val result = JobResult("test1", Success(()))
@@ -74,7 +75,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
     val request = createStartJob("test1", "Exchange Rate", currentTime)
     val exception = new RuntimeException("test exception")
