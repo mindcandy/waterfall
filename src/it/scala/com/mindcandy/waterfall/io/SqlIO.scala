@@ -27,6 +27,7 @@ class SqlIOSpec extends Specification {
     "work for a two column test table across two databases with two tables" in {
       case class TestShardedSqlIOConfig() extends ShardedSqlIOConfig {
         val urls = List("jdbc:postgresql:waterfall", "jdbc:postgresql:waterfall_sharded")
+        def combinedFileUrl = ""
         val driver = "org.postgresql.Driver"
         val username = "kevin.schmidt"
         val password = ""

@@ -44,10 +44,10 @@ object WaterfallBuild extends Build {
   )
 
   lazy val runSettings = Seq(
-    fork in run := true,
-    connectInput in run := true,
-    javaOptions in run += "-Dlogback.configurationFile=./config/logback.xml",
-    javaOptions in run += "-Dconfig.file=./config/application.conf")
+    fork in test := true,
+    connectInput in test := true,
+    javaOptions in test += "-Dlogback.configurationFile=./config/logback.xml",
+    javaOptions in test += "-Dconfig.file=./config/application.conf")
 
   def vcsNumber: String = {
     val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
