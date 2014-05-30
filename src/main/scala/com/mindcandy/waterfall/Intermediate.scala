@@ -8,9 +8,6 @@ import java.nio.file.Paths
 import java.net.URI
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.auth.BasicAWSCredentials
-import java.nio.file.Path
-import com.amazonaws.services.s3.model.ObjectMetadata
-import java.io.File
 import com.typesafe.scalalogging.slf4j.Logging
 import scala.annotation.tailrec
 import java.nio.file.FileSystems

@@ -1,8 +1,6 @@
 package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
-import java.io.IOException
-import java.nio.file.Files
 import scala.util.Try
 
 trait IOConfig {
@@ -37,7 +35,7 @@ trait IOOps[A] {
   }
 
   def processRowSeparator(rawData: Iterator[String], rowSeparator: RowSeparator)(implicit format: IntermediateFormat[A]) = rowSeparator match {
-    case NewLine => rawData.map { fromLine(_) }
+    case NewLine => rawData.map { fromLine }
     case NoSeparator => {
       rawData.mkString("") match {
         case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
