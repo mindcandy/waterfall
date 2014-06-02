@@ -1,6 +1,6 @@
 package com.mindcandy.waterfall.actor
 
-import com.mindcandy.waterfall.drop.WaterfallDropFactory
+import com.mindcandy.waterfall.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
 import akka.actor.Props
 import scala.util.Try
@@ -15,7 +15,6 @@ import org.joda.time.format.PeriodFormat
 import org.joda.time.Period
 import scala.util.Success
 import scala.util.Failure
-import com.mindcandy.waterfall.drop.WaterfallDropFactory
 import TimeFrame._
 
 object DropSupervisor {

@@ -25,9 +25,9 @@ object WaterfallBuild extends Build {
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
     libraryDependencies += "io.spray"             %   "spray-routing" % sprayVersion,
-    libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test",
+    libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test,it",
     libraryDependencies += "com.typesafe.akka"    %%  "akka-actor"    % akkaVersion,
-    libraryDependencies += "com.typesafe.akka"    %%  "akka-testkit"  % akkaVersion   % "test",
+    libraryDependencies += "com.typesafe.akka"    %%  "akka-testkit"  % akkaVersion   % "test,it",
     libraryDependencies += "io.argonaut"          %%  "argonaut"      % "6.0.4",
     libraryDependencies += "org.quartz-scheduler" %   "quartz"        % "2.2.1")
 
@@ -72,6 +72,6 @@ object WaterfallBuild extends Build {
       }
     )
   ).configs( IntegrationTest )
-   .settings( Defaults.itSettings : _*)
+   .settings( Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
 
 }

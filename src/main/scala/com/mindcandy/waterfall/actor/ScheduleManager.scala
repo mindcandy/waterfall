@@ -13,9 +13,10 @@ import scala.language.postfixOps
 import akka.actor.Cancellable
 import scala.util.Success
 import scala.util.Failure
-import com.mindcandy.waterfall.drop.WaterfallDropFactory
+import com.mindcandy.waterfall.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
+import com.mindcandy.waterfall.WaterfallDropFactory
 
 object ScheduleManager {
   case class CheckJobs()
@@ -36,11 +37,11 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
   def receive = {
     case CheckJobs() => {
-      log.info("Received CheckJobs message")
+      log.debug("Received CheckJobs message")
       jobDatabaseManager ! GetSchedule()
     }
     case DropJobList(jobs) => {
-      log.info(s"Received DropJobList($jobs)")
+      log.debug(s"Received DropJobList($jobs)")
       val newJobUIDs = manageScheduledJobs(jobs.map(job => job.dropUID -> job).toMap)
       for {
         job <- jobs

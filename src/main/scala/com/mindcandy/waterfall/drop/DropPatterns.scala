@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall.drop
 
-import com.mindcandy.waterfall._
-import com.mindcandy.waterfall.FileIntermediate
 import scala.util.{Success, Try}
+import com.mindcandy.waterfall._
+import com.mindcandy.waterfall.intermediate.FileIntermediate
 
 trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
   def fileUrl: String

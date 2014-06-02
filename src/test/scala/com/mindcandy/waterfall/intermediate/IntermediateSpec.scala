@@ -1,4 +1,4 @@
-package com.mindcandy.waterfall
+package com.mindcandy.waterfall.intermediate
 
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
@@ -6,9 +6,9 @@ import com.github.nscala_time.time.Imports._
 import org.specs2.mock.Mockito
 import com.amazonaws.services.s3.AmazonS3Client
 import java.io.File
-import org.mockito.ArgumentCaptor
 import org.specs2.mutable.Specification
 import org.mockito.Matchers.{eq => meq}
+import com.mindcandy.waterfall.TestFormat
 
 @RunWith(classOf[JUnitRunner])
 class IntermediateSpec extends Specification with Mockito {

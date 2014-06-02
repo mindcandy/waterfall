@@ -3,10 +3,11 @@ package com.mindcandy.waterfall.actor
 import org.joda.time.DateTime
 import argonaut._
 import Argonaut._
-import com.mindcandy.waterfall.drop.WaterfallDropFactory
+import com.mindcandy.waterfall.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
 import scala.util.Try
 import scalaz.\/
+import com.mindcandy.waterfall.WaterfallDropFactory
 
 object TimeFrame extends Enumeration {
   type TimeFrame = Value

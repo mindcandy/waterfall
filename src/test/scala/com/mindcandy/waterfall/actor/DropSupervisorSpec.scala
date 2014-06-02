@@ -12,7 +12,7 @@ import com.mindcandy.waterfall.actor.Protocol.{DropLog, DropJob}
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import com.mindcandy.waterfall.drop.{TestWaterfallDropFactory, TestPassThroughWaterfallDrop}
+import com.mindcandy.waterfall.{TestWaterfallDropFactory, TestPassThroughWaterfallDrop}
 
 class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with SpecificationLike with After with NoTimeConversions  {
   override def is = s2"""
@@ -92,5 +92,5 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   }
 
   private def createStartJob(dropUid: String, name: String, currentTime: time.DateTime): StartJob =
-    StartJob(DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?"))
+    StartJob(DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.PREVIOUS_DAY))
 }

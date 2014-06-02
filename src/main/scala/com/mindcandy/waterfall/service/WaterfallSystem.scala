@@ -10,7 +10,7 @@ import com.mindcandy.waterfall.actor.{DropSupervisor, ScheduleManager, JobDataba
 import com.mindcandy.waterfall.app.{ApplicationLifecycle, ApplicationRunner, AbstractApplicationDaemon}
 import com.typesafe.config.ConfigFactory
 import com.mindcandy.waterfall.config.ConfigReader
-import com.mindcandy.waterfall.drop.WaterfallDropFactory
+import com.mindcandy.waterfall.WaterfallDropFactory
 
 trait ClassLoader[T] {
   def loadClass(className: String): T = {

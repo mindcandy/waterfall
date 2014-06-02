@@ -17,7 +17,7 @@ import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 import scala.concurrent.duration._
 import org.joda.time
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
-import com.mindcandy.waterfall.drop.TestWaterfallDropFactory
+import com.mindcandy.waterfall.TestWaterfallDropFactory
 
 class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) with SpecificationLike with After with NoTimeConversions  {
   override def is = s2"""
@@ -161,5 +161,5 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
   private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob =
-    DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?")
+    DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.PREVIOUS_DAY)
 }

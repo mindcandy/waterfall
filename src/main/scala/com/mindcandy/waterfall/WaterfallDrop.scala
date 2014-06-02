@@ -1,10 +1,7 @@
-package com.mindcandy.waterfall.drop
+package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
 import scala.util.Try
-import scala.util.Success
-import com.mindcandy.waterfall._
-import scala.util.Success
 import org.joda.time.DateTime
 
 trait WaterfallDrop[A, B] extends Logging {
