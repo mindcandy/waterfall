@@ -6,17 +6,20 @@ import Argonaut._
 import com.mindcandy.waterfall.drop.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
 import scala.util.Try
+import scalaz.\/
 
 object TimeFrame extends Enumeration {
   type TimeFrame = Value
   val CURRENT_DAY, PREVIOUS_DAY, CURRENT_WEEK, PREVIOUS_WEEK, CURRENT_MONTH, PREVIOUS_MONTH = Value
 
   implicit val TimeFrameEncodeJson: EncodeJson[TimeFrame] = EncodeJson(a => jString(a.toString))
-  implicit val TimeFrameDecodeJson: DecodeJson[TimeFrame] = optionDecoder(json =>
-    for {
-      str <- json.string
-      value <- Try(TimeFrame.withName(str)).toOption
-    } yield value, "com.mindcandy.waterfall.actor.TimeFrame")
+  implicit val TimeFrameDecodeJson: DecodeJson[TimeFrame] = DecodeJson(hcursor =>
+    DecodeResult(hcursor.as[String].result.flatMap { value =>
+      \/.fromTryCatch { TimeFrame.withName(value) }.leftMap { exception =>
+        (s"Invalid TimeFrame value: $value", CursorHistory(List.empty[CursorOp]))
+      }
+    })
+  )
 }
 
 object Protocol {
@@ -27,11 +30,13 @@ object Protocol {
   
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)
-  implicit val DateTimeDecodeJson: DecodeJson[DateTime] = optionDecoder(json =>
-    for {
-      str <- json.string
-      date <- Try(DateTime.parse(str)).toOption
-    } yield date, "org.joda.time.DateTime")
+  implicit val DateTimeDecodeJson: DecodeJson[DateTime] = DecodeJson(hcursor =>
+    DecodeResult(hcursor.as[String].result.flatMap { value =>
+      \/.fromTryCatch { DateTime.parse(value) }.leftMap { exception =>
+        (exception.getMessage, CursorHistory(List.empty[CursorOp]))
+      }
+    })
+  )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
   
   implicit val stackTraceElementEncode: EncodeJson[StackTraceElement] = EncodeJson(element =>
