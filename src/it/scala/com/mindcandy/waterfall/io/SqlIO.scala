@@ -1,10 +1,10 @@
 package com.mindcandy.waterfall.io
 
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
+import com.mindcandy.waterfall.SimpleTestFormat
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-import com.mindcandy.waterfall.SimpleTestFormat
-import com.mindcandy.waterfall.MemoryIntermediate
 
 @RunWith(classOf[JUnitRunner])
 class SqlIOSpec extends Specification {
@@ -27,6 +27,7 @@ class SqlIOSpec extends Specification {
     "work for a two column test table across two databases with two tables" in {
       case class TestShardedSqlIOConfig() extends ShardedSqlIOConfig {
         val urls = List("jdbc:postgresql:waterfall", "jdbc:postgresql:waterfall_sharded")
+        def combinedFileUrl = ""
         val driver = "org.postgresql.Driver"
         val username = "kevin.schmidt"
         val password = ""

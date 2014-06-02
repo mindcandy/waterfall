@@ -9,8 +9,7 @@ import com.mindcandy.waterfall.Intermediate
 import com.mindcandy.waterfall.IOConfig
 import com.mindcandy.waterfall.IOSource
 import com.typesafe.scalalogging.slf4j.Logging
-import resource._
-import com.mindcandy.waterfall.FileIntermediate
+import com.mindcandy.waterfall.intermediate.FileIntermediate
 import scala.util.Try
 
 case class SqlIOConfig(url: String, driver: String, username: String, password: String, query: String) extends IOConfig {

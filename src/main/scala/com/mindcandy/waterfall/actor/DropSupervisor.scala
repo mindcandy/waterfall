@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.actor
 
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import WaterfallDropFactory.DropUID
 import akka.actor.Props
 import scala.util.Try
 import akka.actor.Actor
@@ -15,6 +15,7 @@ import org.joda.time.format.PeriodFormat
 import org.joda.time.Period
 import scala.util.Success
 import scala.util.Failure
+import TimeFrame._
 
 object DropSupervisor {
   case class StartJob(job: DropJob)
@@ -57,7 +58,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def runJob(job: DropJob) = {
     val worker = dropWorkerFactory.createActor
-    dropFactory.getDropByUID(job.dropUID) match {
+    dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame)) match {
       case Some(drop) => {
         val startTime = DateTime.now
         runningJobs += (job.dropUID -> (worker, startTime))
@@ -66,5 +67,14 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
       }
       case None => log.error(s"factory has no drop for ${job.dropUID}")
     }
+  }
+
+  def calculateDate(timeFrame: TimeFrame) = timeFrame match {
+    case PREVIOUS_DAY => Some(DateTime.now - 1.day)
+    case _ => None
+  }
+
+  override def preStart() = {
+    log.info(s"DropSupervisor starting with factory $dropFactory")
   }
 }

@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor._
-import com.mindcandy.waterfall.WaterfallDrop
-import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.{WaterfallDropFactory, WaterfallDrop}
+import WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 
 object DropWorker extends ActorFactory {

@@ -25,9 +25,9 @@ object WaterfallBuild extends Build {
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
     libraryDependencies += "io.spray"             %   "spray-routing" % sprayVersion,
-    libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test",
+    libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test,it",
     libraryDependencies += "com.typesafe.akka"    %%  "akka-actor"    % akkaVersion,
-    libraryDependencies += "com.typesafe.akka"    %%  "akka-testkit"  % akkaVersion   % "test",
+    libraryDependencies += "com.typesafe.akka"    %%  "akka-testkit"  % akkaVersion   % "test,it",
     libraryDependencies += "io.argonaut"          %%  "argonaut"      % "6.0.4",
     libraryDependencies += "org.quartz-scheduler" %   "quartz"        % "2.2.1")
 
@@ -43,6 +43,11 @@ object WaterfallBuild extends Build {
     resolvers += "Big Bee Consultants" at "http://repo.bigbeeconsultants.co.uk/repo"
   )
 
+  lazy val itRunSettings = Seq(
+    fork in IntegrationTest := true,
+    connectInput in IntegrationTest := true
+  )
+
   def vcsNumber: String = {
     val vcsBuildNumber = System.getenv("BUILD_VCS_NUMBER")
     if (vcsBuildNumber == null) "" else vcsBuildNumber
@@ -51,7 +56,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ itRunSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
@@ -67,5 +72,6 @@ object WaterfallBuild extends Build {
       }
     )
   ).configs( IntegrationTest )
-   .settings( Defaults.itSettings : _*)
+   .settings( Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
+
 }
