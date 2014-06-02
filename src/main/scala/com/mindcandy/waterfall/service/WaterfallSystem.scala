@@ -59,7 +59,3 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
 case class ApplicationDaemon() extends AbstractApplicationDaemon {
   def application = WaterfallSystem()
 }
-
-case object WaterfallApp extends ApplicationRunner {
-  def createApplication() = ApplicationDaemon()
-}

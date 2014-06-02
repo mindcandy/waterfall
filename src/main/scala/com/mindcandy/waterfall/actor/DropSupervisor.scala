@@ -74,4 +74,8 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     case PREVIOUS_DAY => Some(DateTime.now - 1.day)
     case _ => None
   }
+
+  override def preStart() = {
+    log.info(s"DropSupervisor starting with factory $dropFactory")
+  }
 }

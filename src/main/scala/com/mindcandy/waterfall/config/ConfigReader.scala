@@ -10,7 +10,10 @@ import scala.concurrent.duration._
 trait ConfigReader {
   def jobsDatabaseConfig: Reader[Config, JobsDatabaseConfig] = Reader( config => {
     val jsonString: String = config.getList("waterfall.dropJobList").render(ConfigRenderOptions.concise())
-    JobsDatabaseConfig(DropJobList(jsonString.decodeOption[List[DropJob]].get))
+    JobsDatabaseConfig(DropJobList(jsonString.decodeEither[List[DropJob]] match {
+      case -\/(error) => throw new IllegalArgumentException(error)
+      case \/-(dropJobs) => dropJobs
+    }))
   })
 
   def dropFactoryClass: Reader[Config, String] = Reader( config => config.getString("waterfall.dropFactoryClass"))
