@@ -14,7 +14,7 @@ import com.mindcandy.waterfall.WaterfallDropFactory
 
 trait ClassLoader[T] {
   def loadClass(className: String): T = {
-    val factoryClass = ClassLoader.getSystemClassLoader.loadClass(className)
+    val factoryClass = Class.forName(className)
     factoryClass.newInstance().asInstanceOf[T]
   }
 
