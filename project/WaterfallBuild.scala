@@ -1,8 +1,8 @@
 import sbt._
 import sbt.Keys._
-import sbtrelease._
 import sbtrelease.ReleasePlugin._
-import sbtrelease.ReleasePlugin.ReleaseKeys._
+import scalariform.formatter.preferences._
+import com.typesafe.sbt.SbtScalariform._
 
 object WaterfallBuild extends Build {
   val akkaVersion = "2.3.2"
@@ -43,6 +43,28 @@ object WaterfallBuild extends Build {
     resolvers += "Big Bee Consultants" at "http://repo.bigbeeconsultants.co.uk/repo"
   )
 
+  lazy val formattingSettings = FormattingPreferences()
+    .setPreference(AlignParameters, true)
+    .setPreference(AlignSingleLineCaseStatements, false)
+    .setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, 40)
+    .setPreference(CompactControlReadability, false)
+    .setPreference(CompactStringConcatenation, false)
+    .setPreference(DoubleIndentClassDeclaration, true)
+    .setPreference(FormatXml, true)
+    .setPreference(IndentLocalDefs, false)
+    .setPreference(IndentPackageBlocks, true)
+    .setPreference(IndentSpaces, 2)
+    .setPreference(IndentWithTabs, false)
+    .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+    .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, false)
+    .setPreference(PreserveSpaceBeforeArguments, false)
+    .setPreference(PreserveDanglingCloseParenthesis, true)
+    .setPreference(RewriteArrowSymbols, false)
+    .setPreference(SpaceBeforeColon, false)
+    .setPreference(SpaceInsideBrackets, false)
+    .setPreference(SpaceInsideParentheses, false)
+    .setPreference(SpacesWithinPatternBinders, true)
+
   lazy val itRunSettings = Seq(
     fork in IntegrationTest := true,
     connectInput in IntegrationTest := true
@@ -56,10 +78,11 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ itRunSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
+      ScalariformKeys.preferences := formattingSettings,
       publishTo <<= (version) { version: String =>
         val repo = "http://artifactory.tool.mindcandy.com/artifactory/"
         val revisionProperty = if (!vcsNumber.isEmpty) ";revision=" + vcsNumber else ""
