@@ -5,13 +5,11 @@ import argonaut._
 import Argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
-import scala.util.Try
 import scalaz.\/
-import com.mindcandy.waterfall.WaterfallDropFactory
 
 object TimeFrame extends Enumeration {
   type TimeFrame = Value
-  val CURRENT_DAY, PREVIOUS_DAY, CURRENT_WEEK, PREVIOUS_WEEK, CURRENT_MONTH, PREVIOUS_MONTH = Value
+  val DAY_TODAY, DAY_YESTERDAY, DAY_TWO_DAYS_AGO, DAY_THREE_DAYS_AGO = Value
 
   implicit val TimeFrameEncodeJson: EncodeJson[TimeFrame] = EncodeJson(a => jString(a.toString))
   implicit val TimeFrameDecodeJson: DecodeJson[TimeFrame] = DecodeJson(hcursor =>

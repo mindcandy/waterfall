@@ -70,8 +70,10 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   }
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
-    case PREVIOUS_DAY => Some(DateTime.now - 1.day)
-    case _ => None
+    case DAY_TODAY => Some(DateTime.now)
+    case DAY_YESTERDAY => Some(DateTime.now - 1.day)
+    case DAY_TWO_DAYS_AGO => Some(DateTime.now - 2.days)
+    case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
   }
 
   override def preStart() = {

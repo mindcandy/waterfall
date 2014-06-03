@@ -92,5 +92,5 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   }
 
   private def createStartJob(dropUid: String, name: String, currentTime: time.DateTime): StartJob =
-    StartJob(DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.PREVIOUS_DAY))
+    StartJob(DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY))
 }
