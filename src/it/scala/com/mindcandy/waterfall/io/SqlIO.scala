@@ -8,7 +8,7 @@ import org.specs2.runner.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
 class SqlIOSpec extends Specification {
-  
+
   "SqlIOSource" should {
     "work for a two column test table" in {
       val intermediate = MemoryIntermediate[SimpleTestFormat]("memory:testintermediate")
@@ -22,7 +22,7 @@ class SqlIOSpec extends Specification {
       )
     }
   }
-  
+
   "ShardedSqlIOSource" should {
     "work for a two column test table across two databases with two tables" in {
       case class TestShardedSqlIOConfig() extends ShardedSqlIOConfig {
@@ -38,7 +38,7 @@ class SqlIOSpec extends Specification {
           }
         }
       }
-      
+
       val intermediate = MemoryIntermediate[SimpleTestFormat]("memory:testintermediate")
       ShardedSqlIOSource[SimpleTestFormat](TestShardedSqlIOConfig()).retrieveInto(intermediate)
       intermediate.data.toList must_== List(

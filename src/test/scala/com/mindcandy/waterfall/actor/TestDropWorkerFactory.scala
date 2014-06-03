@@ -1,6 +1,6 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.{Props, ActorContext, ActorRef}
+import akka.actor.{ Props, ActorContext, ActorRef }
 
 object TestDropWorkerFactory {
   def apply(actor: ActorRef) = new TestDropWorkerFactory(actor)

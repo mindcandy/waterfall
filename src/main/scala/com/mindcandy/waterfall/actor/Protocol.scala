@@ -28,7 +28,7 @@ object Protocol {
   case class DropJobList(jobs: List[DropJob])
   case class DropLog(dropUID: DropUID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[Throwable])
   case class DropHistory(logs: List[DropLog])
-  
+
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)
   implicit val DateTimeDecodeJson: DecodeJson[DateTime] = DecodeJson(hcursor =>
@@ -39,14 +39,14 @@ object Protocol {
     })
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
-  
+
   implicit val stackTraceElementEncode: EncodeJson[StackTraceElement] = EncodeJson(element =>
     jString(s"${element.getClassName}.${element.getMethodName}(${element.getFileName}:${element.getLineNumber})")
   )
   implicit val throwableEncode: EncodeJson[Throwable] = EncodeJson(error =>
     ("message" := jString(error.getMessage)) ->:
-    ("stackTrace" := error.getStackTrace.toList.asJson) ->:
-    jEmptyObject
+      ("stackTrace" := error.getStackTrace.toList.asJson) ->:
+      jEmptyObject
   )
   implicit val throwableDecode: DecodeJson[Throwable] = optionDecoder(json =>
     for {
@@ -54,7 +54,7 @@ object Protocol {
       str <- message.string
       exception <- Option(new Exception(str))
     } yield exception, "Exception")
-  
+
   implicit def DropJobCodecJson = casecodec5(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron", "timeFrame")
   implicit def DropLogCodecJson = casecodec5(DropLog.apply, DropLog.unapply)("dropUID", "startTime", "endTime", "logOutput", "exception")
 }

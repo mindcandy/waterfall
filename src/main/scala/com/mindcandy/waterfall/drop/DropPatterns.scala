@@ -1,6 +1,6 @@
 package com.mindcandy.waterfall.drop
 
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 import com.mindcandy.waterfall._
 import com.mindcandy.waterfall.intermediate.FileIntermediate
 

@@ -14,8 +14,8 @@ import com.mindcandy.waterfall.intermediate.S3Intermediate
 case class RedshiftIOConfig(url: String, driver: String, username: String, password: String, tableName: String) extends IOConfig
 
 case class RedshiftIOSink[A](config: RedshiftIOConfig, s3Config: Option[S3IOConfig] = None)
-  extends IOSink[A]
-  with Logging {
+    extends IOSink[A]
+    with Logging {
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val s3Intermediate = intermediate match {

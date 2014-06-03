@@ -19,7 +19,7 @@ import org.joda.time
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.mindcandy.waterfall.TestWaterfallDropFactory
 
-class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) with SpecificationLike with After with NoTimeConversions  {
+class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) with SpecificationLike with After with NoTimeConversions {
   override def is = s2"""
     ScheduleManager should
       automatically schedule a CheckJobs message to itself $autoCheckJobs
@@ -154,7 +154,6 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob1)
     dropSupervisor.expectNoMsg(FiniteDuration(10, SECONDS)) must not(throwA[AssertionError])
   }
-
 
   def createScheduleActor(databaseManager: TestProbe, dropSupervisor: TestProbe, maxScheduleTime: FiniteDuration = FiniteDuration(1, MINUTES),
                           checkJobsPeriod: FiniteDuration = FiniteDuration(1, HOURS)): ActorRef =

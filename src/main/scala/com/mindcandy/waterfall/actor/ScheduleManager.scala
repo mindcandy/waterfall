@@ -66,7 +66,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     dropUIDs &~ scheduledUIDs
   }
 
-  def scheduleJob(job: DropJob) : Option[Cancellable]= {
+  def scheduleJob(job: DropJob): Option[Cancellable] = {
     calculateNextFireTime(job.cron) match {
       case Success(duration) if maxScheduleTime > duration =>
         Some(context.system.scheduler.scheduleOnce(duration, dropSupervisor, StartJob(job))(context.dispatcher))

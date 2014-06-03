@@ -17,15 +17,15 @@ import scala.util.Try
 import com.mindcandy.waterfall.IntermediateOps
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
-import com.mindcandy.waterfall.intermediate.{FileIntermediate, MemoryIntermediate}
+import com.mindcandy.waterfall.intermediate.{ FileIntermediate, MemoryIntermediate }
 
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, key: String) extends IOConfig
 
 case class MemoryIO[A](config: IOConfig)
-  extends IOSource[A]
-  with IOSink[A] {
-  
+    extends IOSource[A]
+    with IOSink[A] {
+
   val memoryIntermediate = MemoryIntermediate[A](config.url)
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
@@ -44,8 +44,8 @@ case class MemoryIO[A](config: IOConfig)
 }
 
 case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
-  extends IOSource[A]
-  with IOSink[A] {
+    extends IOSource[A]
+    with IOSink[A] {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     // reusing the FileIntermediate for file reading
@@ -65,9 +65,9 @@ case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option(
 }
 
 case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
-  extends IOSource[A]
-  with IOOps[A]
-  with IntermediateOps {
+    extends IOSource[A]
+    with IOOps[A]
+    with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key).getObjectContent())))
@@ -81,10 +81,12 @@ case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Opt
         processRowSeparator(rawData, rowSeparator)
       }
     }
-    
-    inputContent.flatMap { resource => resource.acquireFor(intermediate.write).convertToTry.map { _ =>
-      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
-    }}
+
+    inputContent.flatMap { resource =>
+      resource.acquireFor(intermediate.write).convertToTry.map { _ =>
+        logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+      }
+    }
   }
 
   val amazonS3Client = {
@@ -96,10 +98,10 @@ case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Opt
 }
 
 case class ApacheVfsIO[A](config: IOConfig, val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
-  extends IOSource[A]
-  with IOSink[A]
-  with IOOps[A]
-  with IntermediateOps {
+    extends IOSource[A]
+    with IOSink[A]
+    with IOOps[A]
+    with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = {
     val inputContent = fileContent.map { content =>
@@ -113,9 +115,11 @@ case class ApacheVfsIO[A](config: IOConfig, val columnSeparator: Option[String] 
       }
     }
 
-    inputContent.flatMap { resource => resource.acquireFor(intermediate.write).convertToTry.map { _ =>
-      logger.info("Retrieving into %s from %s completed".format(intermediate, config))
-    }}
+    inputContent.flatMap { resource =>
+      resource.acquireFor(intermediate.write).convertToTry.map { _ =>
+        logger.info("Retrieving into %s from %s completed".format(intermediate, config))
+      }
+    }
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {

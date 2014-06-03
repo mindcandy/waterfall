@@ -39,7 +39,7 @@ class BaseIOSpec extends Specification with Mockito {
 
   val jsonTestData2 = """|{ "testA" : "valueA", "testB" : 12 }
                         |{ "testA" : "valueB", "testB" : 34 }""".stripMargin
-                        
+
   val jsonTestDataNoSeparator = """|{
                                    |"test1" : "value1",
                                    |"test2" : 45
@@ -65,14 +65,14 @@ class BaseIOSpec extends Specification with Mockito {
     def failReadFileNotFound = {
       val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file-does-not-exists.tsv"))
       val result = fileIO.retrieveInto(FailingIntermediate[TestFormat]("nothing"))
-      
+
       result must beFailedTry.withThrowable[IOException]
     }
-    
+
     def failWriteBadIntermediate = {
       val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file.tsv"))
       val result = fileIO.storeFrom(FailingIntermediate[TestFormat]("nothing"))
-      
+
       result must beFailedTry.withThrowable[IOException]
     }
   }
@@ -85,12 +85,12 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
     }
-    
+
     def retrieveWithNoSeparator = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
 
@@ -98,12 +98,12 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.getData must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
     }
-    
+
     def retrieveWithNoData = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), "", 200).start
 
@@ -128,10 +128,10 @@ class BaseIOSpec extends Specification with Mockito {
 
       (result must beSuccessfulTry) and {
         Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_==(List("""{ "test1" : "value1", "test2" : 45 }""",
-            """{ "test1" : "value2", "test2" : 67 }"""))
+          """{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
-    
+
     def storeToFileWithNoSeparator = {
       val testFile = Files.createTempFile("test-waterfall-", ".txt")
 

@@ -8,13 +8,13 @@ trait WaterfallDrop[A, B] extends Logging {
   def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   def sourceIntermediateFormat: IntermediateFormat[A]
-  
+
   def sink: IOSink[B]
   def sinkIntermediate: Intermediate[B]
   def sinkIntermediateFormat: IntermediateFormat[B]
-  
+
   def transform(sourceInter: Intermediate[A], sinkInter: Intermediate[B]): Try[Unit]
-  
+
   def run: Try[Unit] = {
     for {
       _ <- source.retrieveInto(sourceIntermediate)(sourceIntermediateFormat)
@@ -30,6 +30,6 @@ object WaterfallDropFactory {
 
 trait WaterfallDropFactory {
   import WaterfallDropFactory._
-  
-  def getDropByUID(dropUID: DropUID, date: Option[DateTime]=None): Option[WaterfallDrop[_, _]]
+
+  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None): Option[WaterfallDrop[_, _]]
 }

@@ -1,9 +1,9 @@
 package com.mindcandy.waterfall.intermediate
 
-import com.mindcandy.waterfall.{IntermediateOps, Intermediate, IOOps, IntermediateFormat}
+import com.mindcandy.waterfall.{ IntermediateOps, Intermediate, IOOps, IntermediateFormat }
 import java.net.URI
 import java.nio.charset.Charset
-import java.nio.file.{StandardOpenOption, Files, Paths}
+import java.nio.file.{ StandardOpenOption, Files, Paths }
 import resource._
 import scala.util.Try
 

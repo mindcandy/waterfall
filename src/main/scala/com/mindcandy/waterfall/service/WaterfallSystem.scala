@@ -6,8 +6,8 @@ import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
-import com.mindcandy.waterfall.actor.{DropSupervisor, ScheduleManager, JobDatabaseManager}
-import com.mindcandy.waterfall.app.{ApplicationLifecycle, ApplicationRunner, AbstractApplicationDaemon}
+import com.mindcandy.waterfall.actor.{ DropSupervisor, ScheduleManager, JobDatabaseManager }
+import com.mindcandy.waterfall.app.{ ApplicationLifecycle, ApplicationRunner, AbstractApplicationDaemon }
 import com.typesafe.config.ConfigFactory
 import com.mindcandy.waterfall.config.ConfigReader
 import com.mindcandy.waterfall.WaterfallDropFactory
@@ -28,7 +28,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
   implicit val system = ActorSystem("waterfall")
 
   def start {
-    if(!isStarted) {
+    if (!isStarted) {
       isStarted = true
 
       val config = ConfigFactory.load()
@@ -48,7 +48,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
   }
 
   def stop {
-    if(isStarted) {
+    if (isStarted) {
       IO(Http) ! Http.Unbind
       system.shutdown()
       system.awaitTermination()

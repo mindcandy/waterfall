@@ -1,16 +1,16 @@
 package com.mindcandy.waterfall.actor
 
-import akka.testkit.{TestProbe, TestKit}
+import akka.testkit.{ TestProbe, TestKit }
 import akka.actor.ActorSystem
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.{DropJob, DropJobList}
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList }
 import scala.concurrent.duration._
 import com.mindcandy.waterfall.config.JobsDatabaseConfig
 
-class JobDatabaseManagerSpec  extends TestKit(ActorSystem("JobDatabaseManagerSpec")) with SpecificationLike with After with NoTimeConversions  {
+class JobDatabaseManagerSpec extends TestKit(ActorSystem("JobDatabaseManagerSpec")) with SpecificationLike with After with NoTimeConversions {
   override def is = s2"""
     JobDatabaseManager should
       send correct schedule $getSchedule

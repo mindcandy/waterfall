@@ -26,7 +26,7 @@ case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A] with Logging 
         })
       }
       val result = StaticQuery.queryNA(config.query)(getResult).elements
-      intermediate.write{ result.map( format.convertTo(_) ) }
+      intermediate.write { result.map(format.convertTo(_)) }
       logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     })
   }
@@ -54,20 +54,21 @@ trait ShardedSqlIOConfig extends IOConfig {
 case class ShardedSqlIOSource[A](config: ShardedSqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
-    val result = generateSqlIOConfigs(config).foldLeft( Try(()) ) { (previousResult, sqlConfig) =>
+    val result = generateSqlIOConfigs(config).foldLeft(Try(())) { (previousResult, sqlConfig) =>
       previousResult.flatMap { _ =>
         SqlIOSource[A](sqlConfig).retrieveInto(combinedIntermediate)(format)
       }
     }
     result.flatMap { _ =>
-      combinedIntermediate.read( intermediate.write )(format).map { _ =>
+      combinedIntermediate.read(intermediate.write)(format).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
     }
   }
- 
+
   def generateSqlIOConfigs(config: ShardedSqlIOConfig) = {
-    config.urls.flatMap { url => config.queries(url) map { query =>
+    config.urls.flatMap { url =>
+      config.queries(url) map { query =>
         SqlIOConfig(url, config.driver, config.username, config.password, query)
       }
     }

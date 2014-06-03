@@ -55,7 +55,7 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.data must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
@@ -67,7 +67,7 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.data must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
@@ -79,13 +79,13 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.data must be_==(List())
       }
     }
     def retrieveWithTimeout = {
-      val route = GET (
+      val route = GET(
         path = "/test",
         response = DynamicServerResponse { request =>
           Thread.sleep(100)
@@ -95,10 +95,10 @@ class HttpIOSpec extends Specification with Mockito {
       val server = new StubServer(8090, route).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout=50))
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout = 50))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
         intermediate.data must be_==(List())
       }
@@ -109,7 +109,7 @@ class HttpIOSpec extends Specification with Mockito {
     def retrieveWithLinesSeparatorFromTwoServers = {
       val server1 = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
       val server2 = new StubServer(8091).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
-      
+
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
         def urls = List("http://localhost:8090/test", "http://localhost:8091/test")
@@ -118,13 +118,13 @@ class HttpIOSpec extends Specification with Mockito {
       val result = vfsIO.retrieveInto(intermediate)
       server1.stop
       server2.stop
-      
+
       (result must beSuccessfulTry) and {
         intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }""")))
       }
     }
     def retrieveWithTimeout = {
-      val route = GET (
+      val route = GET(
         path = "/test",
         response = DynamicServerResponse { request =>
           Thread.sleep(100)
@@ -143,7 +143,7 @@ class HttpIOSpec extends Specification with Mockito {
       val result = vfsIO.retrieveInto(intermediate)
       server1.stop
       server2.stop
-      
+
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
         intermediate.data must be_==(List())
       }

@@ -7,7 +7,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall._
 import com.typesafe.scalalogging.slf4j.Logging
 import java.nio.charset.Charset
-import java.nio.file.{FileSystems, Files}
+import java.nio.file.{ FileSystems, Files }
 import resource._
 import scala.annotation.tailrec
 import scala.util.Try
@@ -18,10 +18,10 @@ case class S3IntermediateConfig(url: String, awsAccessKey: String, awsSecretKey:
 
 case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
                              keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
-  extends Intermediate[A]
-  with IOOps[A]
-  with IntermediateOps
-  with Logging {
+    extends Intermediate[A]
+    with IOOps[A]
+    with IntermediateOps
+    with Logging {
 
   val fileChunkSize = 100 * 1024 * 1024 // 100MB
   val dateFormat = DateTimeFormat.forPattern("yyyyMMdd");
@@ -30,14 +30,16 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
   def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
     logger.info(s"Starting stream from S3 with endpoint ${url}")
     val tempFile = Files.createTempFile("waterfall-s3-", ".tsv")
-    val keyList = Try(amazonS3Client.listObjects(bucketName, datedKeyPrefix).getObjectSummaries().asScala.map( _.getKey ).toList)
-    val bufferedReader = keyList.flatMap { list => Try {
-      for {
-        key <- list
-      } yield {
-        amazonS3Client.getObject(new GetObjectRequest(bucketName, key), tempFile.toFile)
+    val keyList = Try(amazonS3Client.listObjects(bucketName, datedKeyPrefix).getObjectSummaries().asScala.map(_.getKey).toList)
+    val bufferedReader = keyList.flatMap { list =>
+      Try {
+        for {
+          key <- list
+        } yield {
+          amazonS3Client.getObject(new GetObjectRequest(bucketName, key), tempFile.toFile)
+        }
       }
-    }}.flatMap { _ => Try(Files.newBufferedReader(tempFile, Charset.defaultCharset())) }
+    }.flatMap { _ => Try(Files.newBufferedReader(tempFile, Charset.defaultCharset())) }
     val managedResource = bufferedReader.map { bufReader =>
       for {
         reader <- managed(bufReader)
@@ -74,7 +76,7 @@ case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: St
       for {
         writer <- managed(Files.newBufferedWriter(uploadFile, Charset.defaultCharset()))
       } {
-        while(stream.hasNext && byteCounter < fileChunkSize) {
+        while (stream.hasNext && byteCounter < fileChunkSize) {
           val line = toLine(stream.next)
           writer.write(line)
           writer.newLine()

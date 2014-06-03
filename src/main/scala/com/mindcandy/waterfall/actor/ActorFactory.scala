@@ -1,6 +1,6 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.{ActorRef, ActorContext, Props}
+import akka.actor.{ ActorRef, ActorContext, Props }
 
 trait ActorFactory {
   def props: Props

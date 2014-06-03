@@ -14,8 +14,8 @@ import com.mindcandy.waterfall.intermediate.FileIntermediate
 case class HttpIOConfig(url: String, connectTimeout: Int = 2000, readTimeout: Int = 5000) extends IOConfig
 
 case class HttpIOSource[A](config: HttpIOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
-  extends IOSource[A]
-  with IOOps[A] {
+    extends IOSource[A]
+    with IOOps[A] {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val inputContent = Try {
@@ -30,7 +30,7 @@ case class HttpIOSource[A](config: HttpIOConfig, override val columnSeparator: O
       }
     }
 
-    inputContent.map{ content =>
+    inputContent.map { content =>
       intermediate.write(content).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
@@ -57,18 +57,18 @@ trait MultipleHttpIOConfig extends IOConfig {
 case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
-    val result = generateHttpIOConfigs(config).foldLeft( Try(()) ) { (previousResult, httpIOConfig) =>
+    val result = generateHttpIOConfigs(config).foldLeft(Try(())) { (previousResult, httpIOConfig) =>
       previousResult.flatMap { _ =>
         HttpIOSource[A](httpIOConfig).retrieveInto(combinedIntermediate)(format)
       }
     }
     result.flatMap { _ =>
-      combinedIntermediate.read( intermediate.write )(format).map { _ =>
+      combinedIntermediate.read(intermediate.write)(format).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
     }
   }
- 
+
   def generateHttpIOConfigs(config: MultipleHttpIOConfig) = {
     config.urls.map { url => HttpIOConfig(url, config.connectTimeout, config.readTimeout) }
   }

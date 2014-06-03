@@ -14,7 +14,7 @@ object RowSeparator extends Enumeration {
 
 trait IOOps[A] {
   import RowSeparator._
-  
+
   val columnSeparator: Option[String]
 
   def fromLine(input: String)(implicit format: IntermediateFormat[A]) = {

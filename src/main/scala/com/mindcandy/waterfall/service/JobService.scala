@@ -20,21 +20,23 @@ class JobServiceActor(val jobDatabaseManager: ActorRef) extends Actor with JobSe
 
 trait JobService extends HttpService with ArgonautMarshallers {
   def jobDatabaseManager: ActorRef
-  
+
   val route = {
     path("jobs" / IntNumber) { id =>
-      get { 
-        produce(instanceOf[Option[DropJob]]) { completionFunction => context =>
-          jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+      get {
+        produce(instanceOf[Option[DropJob]]) { completionFunction =>
+          context =>
+            jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
         }
       }
     } ~
-    path("schedule") {
-      get {
-        produce(instanceOf[List[DropJob]]) { completionFunction => context =>
-          jobDatabaseManager ! GetScheduleForCompletion(completionFunction)
+      path("schedule") {
+        get {
+          produce(instanceOf[List[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetScheduleForCompletion(completionFunction)
+          }
         }
       }
-    }
   }
 }
