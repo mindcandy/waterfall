@@ -1,22 +1,21 @@
 package com.mindcandy.waterfall.io
 
-import com.mindcandy.waterfall.IOSource
 import com.mindcandy.waterfall.IOSink
 import com.mindcandy.waterfall.Intermediate
 import com.mindcandy.waterfall.IntermediateFormat
 import com.mindcandy.waterfall.IOConfig
-import com.mindcandy.waterfall.S3Intermediate
 import scala.slick.session.Database
 import scala.slick.session.Database.threadLocalSession
 import scala.slick.jdbc.StaticQuery
 import com.typesafe.scalalogging.slf4j.Logging
 import scala.util.Try
+import com.mindcandy.waterfall.intermediate.S3Intermediate
 
 case class RedshiftIOConfig(url: String, driver: String, username: String, password: String, tableName: String) extends IOConfig
 
 case class RedshiftIOSink[A](config: RedshiftIOConfig, s3Config: Option[S3IOConfig] = None)
-  extends IOSink[A]
-  with Logging {
+    extends IOSink[A]
+    with Logging {
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val s3Intermediate = intermediate match {

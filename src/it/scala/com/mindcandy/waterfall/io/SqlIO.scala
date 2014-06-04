@@ -1,14 +1,14 @@
 package com.mindcandy.waterfall.io
 
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
+import com.mindcandy.waterfall.SimpleTestFormat
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-import com.mindcandy.waterfall.SimpleTestFormat
-import com.mindcandy.waterfall.MemoryIntermediate
 
 @RunWith(classOf[JUnitRunner])
 class SqlIOSpec extends Specification {
-  
+
   "SqlIOSource" should {
     "work for a two column test table" in {
       val intermediate = MemoryIntermediate[SimpleTestFormat]("memory:testintermediate")
@@ -22,11 +22,12 @@ class SqlIOSpec extends Specification {
       )
     }
   }
-  
+
   "ShardedSqlIOSource" should {
     "work for a two column test table across two databases with two tables" in {
       case class TestShardedSqlIOConfig() extends ShardedSqlIOConfig {
         val urls = List("jdbc:postgresql:waterfall", "jdbc:postgresql:waterfall_sharded")
+        def combinedFileUrl = ""
         val driver = "org.postgresql.Driver"
         val username = "kevin.schmidt"
         val password = ""
@@ -37,7 +38,7 @@ class SqlIOSpec extends Specification {
           }
         }
       }
-      
+
       val intermediate = MemoryIntermediate[SimpleTestFormat]("memory:testintermediate")
       ShardedSqlIOSource[SimpleTestFormat](TestShardedSqlIOConfig()).retrieveInto(intermediate)
       intermediate.data.toList must_== List(

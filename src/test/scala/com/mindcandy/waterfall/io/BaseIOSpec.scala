@@ -6,18 +6,14 @@ import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
 import com.mindcandy.waterfall.TestFormat
 import com.mindcandy.waterfall.Intermediate
-import resource.ManagedResource
 import com.mindcandy.waterfall.IntermediateFormat
 import resource._
 import java.io.IOException
-import com.github.nscala_time.time.Imports._
-import com.mindcandy.waterfall.FileIntermediate
 import java.nio.file.Files
 import fr.simply.StubServer
 import fr.simply.util.ContentType
-import scala.io.Source
 import com.mindcandy.waterfall.PlainTextFormat
-import com.mindcandy.waterfall.MemoryIntermediate
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import com.mindcandy.waterfall.RowSeparator
@@ -43,7 +39,7 @@ class BaseIOSpec extends Specification with Mockito {
 
   val jsonTestData2 = """|{ "testA" : "valueA", "testB" : 12 }
                         |{ "testA" : "valueB", "testB" : 34 }""".stripMargin
-                        
+
   val jsonTestDataNoSeparator = """|{
                                    |"test1" : "value1",
                                    |"test2" : 45
@@ -69,14 +65,14 @@ class BaseIOSpec extends Specification with Mockito {
     def failReadFileNotFound = {
       val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file-does-not-exists.tsv"))
       val result = fileIO.retrieveInto(FailingIntermediate[TestFormat]("nothing"))
-      
+
       result must beFailedTry.withThrowable[IOException]
     }
-    
+
     def failWriteBadIntermediate = {
       val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file.tsv"))
       val result = fileIO.storeFrom(FailingIntermediate[TestFormat]("nothing"))
-      
+
       result must beFailedTry.withThrowable[IOException]
     }
   }
@@ -89,12 +85,12 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+        intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
     }
-    
+
     def retrieveWithNoSeparator = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), jsonTestDataNoSeparator, 200).start
 
@@ -102,12 +98,12 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+        intermediate.getData must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
     }
-    
+
     def retrieveWithNoData = {
       val server = new StubServer(8080).defaultResponse(ContentType("text/plain"), "", 200).start
 
@@ -115,9 +111,9 @@ class BaseIOSpec extends Specification with Mockito {
       val vfsIO = ApacheVfsIO[PlainTextFormat](BaseIOConfig("http://localhost:8080/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.getData must haveTheSameElementsAs(List())
+        intermediate.getData must be_==(List())
       }
     }
 
@@ -131,11 +127,11 @@ class BaseIOSpec extends Specification with Mockito {
       val result = vfsIO.storeFrom(intermediate)
 
       (result must beSuccessfulTry) and {
-        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }""",
-            """{ "test1" : "value2", "test2" : 67 }"""))
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_==(List("""{ "test1" : "value1", "test2" : 45 }""",
+          """{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
-    
+
     def storeToFileWithNoSeparator = {
       val testFile = Files.createTempFile("test-waterfall-", ".txt")
 
@@ -146,7 +142,7 @@ class BaseIOSpec extends Specification with Mockito {
       val result = vfsIO.storeFrom(intermediate)
 
       (result must beSuccessfulTry) and {
-        Files.readAllLines(testFile, Charset.defaultCharset).asScala must haveTheSameElementsAs(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must be_==(List("""{ "test1" : "value1", "test2" : 45 }{ "test1" : "value2", "test2" : 67 }"""))
       }
     }
   }

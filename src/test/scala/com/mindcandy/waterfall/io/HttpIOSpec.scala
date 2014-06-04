@@ -4,24 +4,14 @@ import org.junit.runner.RunWith
 import org.specs2.Specification
 import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
-import com.mindcandy.waterfall.TestFormat
-import com.mindcandy.waterfall.Intermediate
-import resource.ManagedResource
-import com.mindcandy.waterfall.IntermediateFormat
-import resource._
-import java.io.IOException
-import com.github.nscala_time.time.Imports._
-import com.mindcandy.waterfall.FileIntermediate
 import java.nio.file.Files
 import fr.simply.StubServer
 import fr.simply.util.ContentType
-import scala.io.Source
 import com.mindcandy.waterfall.PlainTextFormat
-import com.mindcandy.waterfall.MemoryIntermediate
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import com.mindcandy.waterfall.RowSeparator
-import scala.collection.mutable.ArrayBuffer
 import fr.simply.GET
 import fr.simply.DynamicServerResponse
 import fr.simply.StaticServerResponse
@@ -65,9 +55,9 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
+        intermediate.data must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }""")))
       }
     }
     def retrieveWithNoRowSeparator = {
@@ -77,9 +67,9 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List(List("""{"test1" : "value1","test2" : 45}""")))
+        intermediate.data must be_==(List(List("""{"test1" : "value1","test2" : 45}""")))
       }
     }
     def retrieveWithNoData = {
@@ -89,13 +79,13 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"), rowSeparator = RowSeparator.NoSeparator)
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
     def retrieveWithTimeout = {
-      val route = GET (
+      val route = GET(
         path = "/test",
         response = DynamicServerResponse { request =>
           Thread.sleep(100)
@@ -105,12 +95,12 @@ class HttpIOSpec extends Specification with Mockito {
       val server = new StubServer(8090, route).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout=50))
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout = 50))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
-      
+
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
   }
@@ -119,7 +109,7 @@ class HttpIOSpec extends Specification with Mockito {
     def retrieveWithLinesSeparatorFromTwoServers = {
       val server1 = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
       val server2 = new StubServer(8091).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
-      
+
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
       val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
         def urls = List("http://localhost:8090/test", "http://localhost:8091/test")
@@ -128,13 +118,13 @@ class HttpIOSpec extends Specification with Mockito {
       val result = vfsIO.retrieveInto(intermediate)
       server1.stop
       server2.stop
-      
+
       (result must beSuccessfulTry) and {
-        intermediate.getData must_== List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }"""))
+        intermediate.getData must be_==(List(List("""{ "test1" : "value1", "test2" : 45 }"""), List("""{ "test1" : "value2", "test2" : 67 }"""), List("""{ "testA" : "valueA", "testB" : 12 }"""), List("""{ "testA" : "valueB", "testB" : 34 }""")))
       }
     }
     def retrieveWithTimeout = {
-      val route = GET (
+      val route = GET(
         path = "/test",
         response = DynamicServerResponse { request =>
           Thread.sleep(100)
@@ -153,9 +143,9 @@ class HttpIOSpec extends Specification with Mockito {
       val result = vfsIO.retrieveInto(intermediate)
       server1.stop
       server2.stop
-      
+
       (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
-        intermediate.data must haveTheSameElementsAs(List())
+        intermediate.data must be_==(List())
       }
     }
   }
