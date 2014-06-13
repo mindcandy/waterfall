@@ -5,8 +5,7 @@ import com.mindcandy.waterfall._
 import com.mindcandy.waterfall.intermediate.FileIntermediate
 
 trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
-  def fileUrl: String
-  val sharedIntermediate: Intermediate[A] = FileIntermediate[A](fileUrl)
+  def sharedIntermediate: Intermediate[A]
   def sharedIntermediateFormat: IntermediateFormat[A]
 
   def source: IOSource[A]

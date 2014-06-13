@@ -38,12 +38,12 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
       val dropSupervisor = system.actorOf(DropSupervisor.props(jobDatabaseManager, dropFactory), "drop-supervisor")
       val scheduleManager = system.actorOf(ScheduleManager.props(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime(config), checkJobsPeriod(config)), "schedule-manager")
 
-      // create and start our service actor
+      // create and start service actors
       val service = system.actorOf(JobServiceActor.props(jobDatabaseManager), "job-service")
 
       implicit val timeout = Timeout(5.seconds)
       // start a new HTTP server on port 8080 with our service actor as the handler
-      IO(Http) ? Http.Bind(service, interface = "localhost", port = 8080)
+      IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)
     }
   }
 
