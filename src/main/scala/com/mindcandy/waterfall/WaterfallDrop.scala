@@ -31,5 +31,5 @@ object WaterfallDropFactory {
 trait WaterfallDropFactory {
   import WaterfallDropFactory._
 
-  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None): Option[WaterfallDrop[_, _]]
+  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_, _]]
 }

@@ -18,7 +18,10 @@ class JobDatabaseManagerSpec extends TestKit(ActorSystem("JobDatabaseManagerSpec
 
   override def after: Any = TestKit.shutdownActorSystem(system)
 
-  val config = JobsDatabaseConfig(DropJobList(List(DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY), DropJob("ADX", "Adx", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY))))
+  val config = JobsDatabaseConfig(DropJobList(List(
+    DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
+    DropJob("ADX", "Adx", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
+  )))
 
   def getSchedule = {
     val probe = TestProbe()

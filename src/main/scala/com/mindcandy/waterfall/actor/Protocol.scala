@@ -22,7 +22,7 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
-  case class DropJob(dropUID: DropUID, name: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame)
+  case class DropJob(dropUID: DropUID, name: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: List[DropJob])
   case class DropLog(dropUID: DropUID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[Throwable])
   case class DropHistory(logs: List[DropLog])
@@ -53,6 +53,6 @@ object Protocol {
       exception <- Option(new Exception(str))
     } yield exception, "Exception")
 
-  implicit def DropJobCodecJson = casecodec5(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron", "timeFrame")
+  implicit def DropJobCodecJson = casecodec6(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec5(DropLog.apply, DropLog.unapply)("dropUID", "startTime", "endTime", "logOutput", "exception")
 }
