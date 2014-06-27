@@ -71,6 +71,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case None => log.error(s"factory has no drop for ${job.dropUID}")
         }
       }
+    }
   }
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {

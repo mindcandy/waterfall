@@ -30,6 +30,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
       schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
       schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
       only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
+      reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
+      do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -153,6 +155,44 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     probe.send(actor, request)
     dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob1)
     dropSupervisor.expectNoMsg(FiniteDuration(10, SECONDS)) must not(throwA[AssertionError])
+  }
+
+  def rescheduleJobs = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+
+    val currentTime = DateTime.now + Period.seconds(3)
+    val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
+    val request = DropJobList(List(dropJob))
+    probe.send(actor, request)
+
+    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob)
+
+    val newTime = DateTime.now + Period.seconds(3)
+    val newDropJob = createDropJob("EXRATE", "Exchange Rate", newTime)
+    val rescheduleRequest = DropJobList(List(newDropJob))
+    probe.send(actor, rescheduleRequest)
+
+    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(newDropJob)
+  }
+
+  def doNotRescheduleJobs = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+    val currentTime = DateTime.now + Period.seconds(3)
+
+    val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
+    val request = DropJobList(List(dropJob))
+    val rescheduleRequest = DropJobList(List(dropJob))
+
+    probe.send(actor, request)
+    probe.send(actor, rescheduleRequest)
+    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob)
+    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
 
   def createScheduleActor(databaseManager: TestProbe, dropSupervisor: TestProbe, maxScheduleTime: FiniteDuration = FiniteDuration(1, MINUTES),
