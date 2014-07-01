@@ -4,7 +4,7 @@ import scala.util.{ Success, Try }
 import com.mindcandy.waterfall._
 import com.mindcandy.waterfall.intermediate.FileIntermediate
 
-trait PassThroughWaterfallDrop[A] extends WaterfallDrop[A, A] {
+trait PassThroughWaterfallDrop[A <: AnyRef] extends WaterfallDrop[A, A] {
   def sharedIntermediate: Intermediate[A]
   def sharedIntermediateFormat: IntermediateFormat[A]
 

@@ -16,7 +16,7 @@ trait RedshiftIOConfig extends IOConfig {
 case class RedshiftIOSourceConfig(url: String, username: String, password: String, query: String) extends RedshiftIOConfig
 case class RedshiftIOSinkConfig(url: String, username: String, password: String, tableName: String, columnNames: Option[List[String]] = None) extends RedshiftIOConfig
 
-case class RedshiftIOSource[A](config: RedshiftIOSourceConfig, s3Config: Option[S3IOConfig] = None)
+case class RedshiftIOSource[A <: AnyRef](config: RedshiftIOSourceConfig, s3Config: Option[S3IOConfig] = None)
     extends IOSource[A]
     with Logging {
 
@@ -35,7 +35,7 @@ case class RedshiftIOSource[A](config: RedshiftIOSourceConfig, s3Config: Option[
   }
 }
 
-case class RedshiftIOSink[A](config: RedshiftIOSinkConfig, s3Config: Option[S3IOConfig] = None)
+case class RedshiftIOSink[A <: AnyRef](config: RedshiftIOSinkConfig, s3Config: Option[S3IOConfig] = None)
     extends IOSink[A]
     with Logging {
 

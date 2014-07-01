@@ -16,8 +16,8 @@ import scala.collection.JavaConverters._
 case class S3IntermediateConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
                                 keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig
 
-case class S3Intermediate[A](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
-                             keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
+case class S3Intermediate[A <: AnyRef](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
+                                       keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
     extends Intermediate[A]
     with IOOps[A]
     with IntermediateOps

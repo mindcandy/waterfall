@@ -16,7 +16,7 @@ case class SqlIOConfig(url: String, driver: String, username: String, password: 
   override def toString = "SqlIOConfig(%s, %s, %s)".format(url, driver, query)
 }
 
-case class SqlIOSource[A](config: SqlIOConfig) extends IOSource[A] with Logging {
+case class SqlIOSource[A <: AnyRef](config: SqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     logger.info("Sourcing from %s".format(config))
     Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withSession {
@@ -51,7 +51,7 @@ trait ShardedSqlIOConfig extends IOConfig {
   override def toString = "ShardedSqlIOConfig(%s, %s)".format(urls, driver)
 }
 
-case class ShardedSqlIOSource[A](config: ShardedSqlIOConfig) extends IOSource[A] with Logging {
+case class ShardedSqlIOSource[A <: AnyRef](config: ShardedSqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
     val result = generateSqlIOConfigs(config).foldLeft(Try(())) { (previousResult, sqlConfig) =>

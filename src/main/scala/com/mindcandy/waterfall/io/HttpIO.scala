@@ -13,7 +13,7 @@ import com.mindcandy.waterfall.intermediate.FileIntermediate
 
 case class HttpIOConfig(url: String, connectTimeout: Int = 2000, readTimeout: Int = 5000) extends IOConfig
 
-case class HttpIOSource[A](config: HttpIOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
+case class HttpIOSource[A <: AnyRef](config: HttpIOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOOps[A] {
 
@@ -54,7 +54,7 @@ trait MultipleHttpIOConfig extends IOConfig {
   override def toString = "MultipleHttpIOConfig(%s)".format(urls)
 }
 
-case class MultipleHttpIOSource[A](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
+case class MultipleHttpIOSource[A <: AnyRef](config: MultipleHttpIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val combinedIntermediate = FileIntermediate[A](config.combinedFileUrl)
     val result = generateHttpIOConfigs(config).foldLeft(Try(())) { (previousResult, httpIOConfig) =>
