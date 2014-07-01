@@ -57,15 +57,20 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   }
 
   def runJob(job: DropJob) = {
-    val worker = dropWorkerFactory.createActor
-    dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
-      case Some(drop) => {
-        val startTime = DateTime.now
-        runningJobs += (job.dropUID -> (worker, startTime))
-        worker ! DropWorker.RunDrop(job.dropUID, drop)
-        jobDatabaseManager ! DropLog(job.dropUID, startTime, None, None, None)
+    runningJobs.get(job.dropUID) match {
+      case Some((actorRef, timestamp)) => log.warning(s"job ${job.dropUID} already running as actor $actorRef started at $timestamp")
+      case None => {
+        val worker = dropWorkerFactory.createActor
+        dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
+          case Some(drop) => {
+            val startTime = DateTime.now
+            runningJobs += (job.dropUID ->(worker, startTime))
+            worker ! DropWorker.RunDrop(job.dropUID, drop)
+            jobDatabaseManager ! DropLog(job.dropUID, startTime, None, None, None)
+          }
+          case None => log.error(s"factory has no drop for ${job.dropUID}")
+        }
       }
-      case None => log.error(s"factory has no drop for ${job.dropUID}")
     }
   }
 

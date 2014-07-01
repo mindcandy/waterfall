@@ -21,6 +21,8 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
       log the job when it receives a start job message $logJobOnStartJob
       log a success result when a job is completed successfully $logSuccess
       log a failure result when a job is completed unsuccessfully $logFailure
+      do not run a job that is still running $doNotStartIfRunning
+      rerun a job if previous run finished $reRunAfterFinished
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -89,6 +91,39 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
       case DropLog("test1", _, Some(endTime), None, Some(`exception`)) => success
       case _ => failure
     }
+  }
+
+  def doNotStartIfRunning = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val currentTime = DateTime.now + Period.seconds(3)
+    val request = createStartJob("test1", "Exchange Rate", currentTime)
+
+    probe.send(actor, request)
+    probe.send(actor, request)
+    probe.send(actor, request)
+    val expectedMessage = RunDrop("test1", TestPassThroughWaterfallDrop())
+    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
+    worker.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+  }
+
+  def reRunAfterFinished = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val currentTime = DateTime.now + Period.seconds(3)
+    val request = createStartJob("test1", "Exchange Rate", currentTime)
+    val expectedMessage = RunDrop("test1", TestPassThroughWaterfallDrop())
+
+    probe.send(actor, request)
+    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
+
+    probe.send(actor, JobResult("test1", Success(Unit)))
+    probe.send(actor, request)
+    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
   }
 
   private def createStartJob(dropUid: String, name: String, currentTime: time.DateTime): StartJob =
