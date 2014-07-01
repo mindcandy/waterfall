@@ -7,6 +7,7 @@ import com.typesafe.sbt.SbtScalariform._
 object WaterfallBuild extends Build {
   val akkaVersion = "2.3.2"
   val sprayVersion = "1.3.1"
+  val astyanaxVersion = "1.56.48"
 
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.0.6",
@@ -20,7 +21,10 @@ object WaterfallBuild extends Build {
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
     libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
-    libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0")
+    libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0",
+    libraryDependencies += "com.netflix.astyanax" % "astyanax-cassandra" % astyanaxVersion,
+    libraryDependencies += "com.netflix.astyanax" % "astyanax-thrift" % astyanaxVersion,
+    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion)
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
