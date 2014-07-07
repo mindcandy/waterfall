@@ -48,8 +48,9 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
             value match {
               case b: Boolean => columnListMutation.putColumn(properName, b)
               case i: Int => columnListMutation.putColumn(properName, i)
+              case l: Long => columnListMutation.putColumn(properName, l)
               case f: Float => columnListMutation.putColumn(properName, f)
-              case d: BigDecimal => columnListMutation.putColumn(properName, d.toFloat)
+              case d: Double => columnListMutation.putColumn(properName, d)
               case timestamp: DateTime => columnListMutation.putColumn(properName, timestamp.toDate)
               case _ => columnListMutation.putColumn(properName, value.toString)
             }
