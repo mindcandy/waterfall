@@ -2,6 +2,7 @@ package com.mindcandy.waterfall.io
 
 import com.mindcandy.waterfall._
 import com.typesafe.scalalogging.slf4j.Logging
+import org.joda.time.DateTime
 import scala.util.Try
 import com.netflix.astyanax.AstyanaxContext
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl
@@ -42,14 +43,21 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
         val columnListMutation = mutationBatch.withRow(columnFamily, keyValue)
         columnValues.foreach {
           case (name, value) =>
-            columnListMutation.putColumn(name, value.toString)
+            value match {
+              case b: Boolean => columnListMutation.putColumn(name, b)
+              case i: Int => columnListMutation.putColumn(name, i)
+              case f: Float => columnListMutation.putColumn(name, f)
+              case d: BigDecimal => columnListMutation.putColumn(name, d.toFloat)
+              case timestamp: DateTime => columnListMutation.putColumn(name, timestamp.toDate)
+              case _ => columnListMutation.putColumn(name, value.toString)
+            }
         }
         mutationBatch.execute()
       }
     }
   }
 
-  def getFields(caseClass: AnyRef) =
+  def getFields(caseClass: A) =
     (Map[String, Any]() /: caseClass.getClass.getDeclaredFields) { (result, field) =>
       field.setAccessible(true)
       if (field.getName.startsWith("$")) { // eliminate compiler generated fields
