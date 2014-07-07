@@ -26,6 +26,7 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
     with Logging {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = {
+    // TODO
     Try(())
   }
 
@@ -43,13 +44,14 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
         val columnListMutation = mutationBatch.withRow(columnFamily, keyValue)
         columnValues.foreach {
           case (name, value) =>
+            val properName = config.fieldToColumnMapping.get(name).getOrElse(name)
             value match {
-              case b: Boolean => columnListMutation.putColumn(name, b)
-              case i: Int => columnListMutation.putColumn(name, i)
-              case f: Float => columnListMutation.putColumn(name, f)
-              case d: BigDecimal => columnListMutation.putColumn(name, d.toFloat)
-              case timestamp: DateTime => columnListMutation.putColumn(name, timestamp.toDate)
-              case _ => columnListMutation.putColumn(name, value.toString)
+              case b: Boolean => columnListMutation.putColumn(properName, b)
+              case i: Int => columnListMutation.putColumn(properName, i)
+              case f: Float => columnListMutation.putColumn(properName, f)
+              case d: BigDecimal => columnListMutation.putColumn(properName, d.toFloat)
+              case timestamp: DateTime => columnListMutation.putColumn(properName, timestamp.toDate)
+              case _ => columnListMutation.putColumn(properName, value.toString)
             }
         }
         mutationBatch.execute()

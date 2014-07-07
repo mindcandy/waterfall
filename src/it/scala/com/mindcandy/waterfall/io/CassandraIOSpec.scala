@@ -18,6 +18,7 @@ class CassandraIOSpec extends Specification {
   override def is = s2"""
     CassandroIO should
       store two lines correctly in a column family $storeTwoLines
+      store one line in a differently named column $storeOneLineMapped
       receive two lines correctly from a column family $receiveTwoLines
   """
 
@@ -51,7 +52,6 @@ class CassandraIOSpec extends Specification {
     keySpace = "waterfall_testing",
     localDatacenter = ""
   )
-  val cassandraConfig = CassandraIOConfig(clusterConfig, "cassandra_io_test", CassandraTestData.keyField)
 
   def storeTwoLines = {
     val intermediate: MemoryIntermediate[CassandraTestData] = new MemoryIntermediate("memory:source")
@@ -59,6 +59,17 @@ class CassandraIOSpec extends Specification {
       CassandraTestData("dg7327fds2a", new DateTime(2013, 10, 30, 23, 11, 23, 0, DateTimeZone.UTC), 35, "Test User One"),
       CassandraTestData("afrds2363", new DateTime(2014, 5, 2, 7, 45, 12, 0, DateTimeZone.UTC), 21, "Test User Two")
     ))
+    val cassandraConfig = CassandraIOConfig(clusterConfig, "cassandra_io_test", CassandraTestData.keyField)
+    val cassandraSink = CassandraIO[CassandraTestData](cassandraConfig)
+    val result = cassandraSink.storeFrom(intermediate)
+    result must beSuccessfulTry
+  }
+  def storeOneLineMapped = {
+    val intermediate: MemoryIntermediate[CassandraTestData] = new MemoryIntermediate("memory:source")
+    intermediate.write(Iterator(
+      CassandraTestData("335lgkhkh", new DateTime(2014, 6, 2, 7, 45, 12, 0, DateTimeZone.UTC), 90, "Test User Three")
+    ))
+    val cassandraConfig = CassandraIOConfig(clusterConfig, "cassandra_io_test", CassandraTestData.keyField, Map("age" -> "mappedAge"))
     val cassandraSink = CassandraIO[CassandraTestData](cassandraConfig)
     val result = cassandraSink.storeFrom(intermediate)
     result must beSuccessfulTry
