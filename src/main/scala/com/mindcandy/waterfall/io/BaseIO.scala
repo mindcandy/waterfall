@@ -64,13 +64,13 @@ case class FileIO[A <: AnyRef](config: IOConfig, columnSeparator: Option[String]
   }
 }
 
-case class S3IO[A <: AnyRef](config: S3IOConfig, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
+case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] = None, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOOps[A]
     with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key).getObjectContent())))
+    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key + keySuffix.getOrElse("")).getObjectContent())))
     val inputContent = bufferedReader.map { bufReader =>
       for {
         reader <- managed(bufReader)
