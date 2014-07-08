@@ -12,7 +12,7 @@ object RowSeparator extends Enumeration {
   val NewLine, NoSeparator = Value
 }
 
-trait IOOps[A] {
+trait IOOps[A <: AnyRef] {
   import RowSeparator._
 
   val columnSeparator: Option[String]
@@ -49,10 +49,10 @@ trait IOBase extends Logging {
   def config: IOConfig
 }
 
-trait IOSource[A] extends IOBase {
+trait IOSource[A <: AnyRef] extends IOBase {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit]
 }
 
-trait IOSink[A] extends IOBase {
+trait IOSink[A <: AnyRef] extends IOBase {
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit]
 }

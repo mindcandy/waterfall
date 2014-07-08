@@ -25,7 +25,7 @@ case class TestFailingPassThroughWaterfallDrop() extends PassThroughWaterfallDro
 }
 
 class TestWaterfallDropFactory extends WaterfallDropFactory {
-  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_, _]] = dropUID match {
+  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_ <: AnyRef, _ <: AnyRef]] = dropUID match {
     case "test1" => Some(TestPassThroughWaterfallDrop())
     case "test2" => Some(TestFailingPassThroughWaterfallDrop())
     case _ => None

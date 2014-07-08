@@ -6,7 +6,7 @@ import WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 
 object DropWorker extends ActorFactory {
-  case class RunDrop[A, B](dropUID: DropUID, waterfallDrop: WaterfallDrop[A, B])
+  case class RunDrop[A <: AnyRef, B <: AnyRef](dropUID: DropUID, waterfallDrop: WaterfallDrop[A, B])
 
   def props: Props = Props(new DropWorker())
 }

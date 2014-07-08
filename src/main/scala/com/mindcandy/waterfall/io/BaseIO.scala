@@ -22,7 +22,7 @@ import com.mindcandy.waterfall.intermediate.{ FileIntermediate, MemoryIntermedia
 case class BaseIOConfig(url: String) extends IOConfig
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, key: String) extends IOConfig
 
-case class MemoryIO[A](config: IOConfig)
+case class MemoryIO[A <: AnyRef](config: IOConfig)
     extends IOSource[A]
     with IOSink[A] {
 
@@ -43,7 +43,7 @@ case class MemoryIO[A](config: IOConfig)
   }
 }
 
-case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
+case class FileIO[A <: AnyRef](config: IOConfig, columnSeparator: Option[String] = Option("\t"))
     extends IOSource[A]
     with IOSink[A] {
 
@@ -64,13 +64,13 @@ case class FileIO[A](config: IOConfig, columnSeparator: Option[String] = Option(
   }
 }
 
-case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
+case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] = None, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOOps[A]
     with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key).getObjectContent())))
+    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key + keySuffix.getOrElse("")).getObjectContent())))
     val inputContent = bufferedReader.map { bufReader =>
       for {
         reader <- managed(bufReader)
@@ -97,7 +97,7 @@ case class S3IO[A](config: S3IOConfig, val columnSeparator: Option[String] = Opt
   }
 }
 
-case class ApacheVfsIO[A](config: IOConfig, val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
+case class ApacheVfsIO[A <: AnyRef](config: IOConfig, val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOSink[A]
     with IOOps[A]

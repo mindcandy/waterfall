@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import scala.util.Try
 import org.joda.time.DateTime
 
-trait WaterfallDrop[A, B] extends Logging {
+trait WaterfallDrop[A <: AnyRef, B <: AnyRef] extends Logging {
   def source: IOSource[A]
   def sourceIntermediate: Intermediate[A]
   def sourceIntermediateFormat: IntermediateFormat[A]
@@ -31,5 +31,5 @@ object WaterfallDropFactory {
 trait WaterfallDropFactory {
   import WaterfallDropFactory._
 
-  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_, _]]
+  def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_ <: AnyRef, _ <: AnyRef]]
 }
