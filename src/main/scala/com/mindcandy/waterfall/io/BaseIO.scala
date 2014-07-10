@@ -6,21 +6,19 @@ import com.mindcandy.waterfall.IOConfig
 import com.mindcandy.waterfall.IOSource
 import com.mindcandy.waterfall.IOSink
 import org.apache.commons.vfs2.VFS
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io._
 import resource._
-import java.io.BufferedWriter
-import java.io.OutputStreamWriter
 import com.mindcandy.waterfall.IOOps
 import com.mindcandy.waterfall.RowSeparator._
-import scala.util.Try
+import scala.util.{ Failure, Try }
 import com.mindcandy.waterfall.IntermediateOps
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.mindcandy.waterfall.intermediate.{ FileIntermediate, MemoryIntermediate }
+import scala.collection.JavaConverters._
 
 case class BaseIOConfig(url: String) extends IOConfig
-case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, key: String) extends IOConfig
+case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String) extends IOConfig
 
 case class MemoryIO[A <: AnyRef](config: IOConfig)
     extends IOSource[A]
@@ -70,7 +68,22 @@ case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] =
     with IntermediateOps {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val bufferedReader = Try(new BufferedReader(new InputStreamReader(amazonS3Client.getObject(config.bucketName, config.key + keySuffix.getOrElse("")).getObjectContent())))
+    val keyPrefix = config.keyPrefix + keySuffix.getOrElse("")
+    val computedKeys = amazonS3Client.map {
+      _.listObjects(config.bucketName, keyPrefix).getObjectSummaries.asScala.toList.map(_.getKey)
+    }
+    val bufferedReader = amazonS3Client.flatMap { s3Client =>
+      computedKeys.flatMap {
+        case Nil => Failure(new Exception(s"No keys found in ${config.bucketName} for key prefix ${keyPrefix}"))
+        case keys => Try {
+          logger.info(s"Starting stream from S3 with endpoint ${config.url} using ${config.bucketName} and keys ${keys}")
+          val inputStreams = keys.map(s3Client.getObject(config.bucketName, _).getObjectContent())
+          new BufferedReader(new InputStreamReader(inputStreams.reduceLeft[InputStream] { (input1, input2) =>
+            new SequenceInputStream(input1, input2)
+          }))
+        }
+      }
+    }
     val inputContent = bufferedReader.map { bufReader =>
       for {
         reader <- managed(bufReader)
@@ -89,7 +102,7 @@ case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] =
     }
   }
 
-  val amazonS3Client = {
+  val amazonS3Client = Try {
     val awsCredentials = new BasicAWSCredentials(config.awsAccessKey, config.awsSecretKey)
     val s3Client = new AmazonS3Client(awsCredentials)
     s3Client.setEndpoint(config.url)

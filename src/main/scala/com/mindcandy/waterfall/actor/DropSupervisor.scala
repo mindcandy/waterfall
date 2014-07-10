@@ -64,7 +64,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
           case Some(drop) => {
             val startTime = DateTime.now
-            runningJobs += (job.dropUID ->(worker, startTime))
+            runningJobs += (job.dropUID -> (worker, startTime))
             worker ! DropWorker.RunDrop(job.dropUID, drop)
             jobDatabaseManager ! DropLog(job.dropUID, startTime, None, None, None)
           }

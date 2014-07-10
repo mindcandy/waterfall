@@ -3,7 +3,7 @@ package com.mindcandy.waterfall.io
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import com.mindcandy.waterfall.{IntermediateFormat, IntermediateFormatCompanion}
+import com.mindcandy.waterfall.{ IntermediateFormat, IntermediateFormatCompanion }
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType
 import com.netflix.astyanax.model.ConsistencyLevel
