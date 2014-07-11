@@ -31,31 +31,33 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
   }
 
   def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = {
-    intermediate.read {
-      _.foreach { input =>
-        val fields = getFields(input)
-        val keyValue = fields(config.keyField).toString
-        val columnValues = if (config.fieldToColumnMapping.isEmpty) {
-          fields - config.keyField
-        } else {
-          fields -- (fields.keySet &~ config.fieldToColumnMapping.keySet)
+    intermediate.read { iterator =>
+      Try {
+        iterator.foreach { input =>
+          val fields = getFields(input)
+          val keyValue = fields(config.keyField).toString
+          val columnValues = if (config.fieldToColumnMapping.isEmpty) {
+            fields - config.keyField
+          } else {
+            fields -- (fields.keySet &~ config.fieldToColumnMapping.keySet)
+          }
+          val mutationBatch = keySpace.prepareMutationBatch()
+          val columnListMutation = mutationBatch.withRow(columnFamily, keyValue)
+          columnValues.foreach {
+            case (name, value) =>
+              val properName = config.fieldToColumnMapping.get(name).getOrElse(name)
+              value match {
+                case b: Boolean => columnListMutation.putColumn(properName, b)
+                case i: Int => columnListMutation.putColumn(properName, i)
+                case l: Long => columnListMutation.putColumn(properName, l)
+                case f: Float => columnListMutation.putColumn(properName, f)
+                case d: Double => columnListMutation.putColumn(properName, d)
+                case timestamp: DateTime => columnListMutation.putColumn(properName, timestamp.toDate)
+                case _ => columnListMutation.putColumn(properName, value.toString)
+              }
+          }
+          mutationBatch.execute()
         }
-        val mutationBatch = keySpace.prepareMutationBatch()
-        val columnListMutation = mutationBatch.withRow(columnFamily, keyValue)
-        columnValues.foreach {
-          case (name, value) =>
-            val properName = config.fieldToColumnMapping.get(name).getOrElse(name)
-            value match {
-              case b: Boolean => columnListMutation.putColumn(properName, b)
-              case i: Int => columnListMutation.putColumn(properName, i)
-              case l: Long => columnListMutation.putColumn(properName, l)
-              case f: Float => columnListMutation.putColumn(properName, f)
-              case d: Double => columnListMutation.putColumn(properName, d)
-              case timestamp: DateTime => columnListMutation.putColumn(properName, timestamp.toDate)
-              case _ => columnListMutation.putColumn(properName, value.toString)
-            }
-        }
-        mutationBatch.execute()
       }
     }
   }

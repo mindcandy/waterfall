@@ -7,12 +7,12 @@ import scala.util.Failure
 
 trait Intermediate[A] extends Logging {
   def url: String
-  def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B]
+  def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B]
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit]
 }
 
 trait IntermediateOps {
-  implicit class ManagedResourceOps[A](either: Either[List[Throwable], A]) extends Logging {
+  implicit class ManagedResourceOps[A](either: Either[List[Throwable], Try[A]]) extends Logging {
     def convertToTry: Try[A] = either match {
       case Left(exceptions) => exceptions match {
         case Nil => Failure(new Exception("managed resource failure without exception"))
@@ -21,7 +21,7 @@ trait IntermediateOps {
           Failure(head)
         }
       }
-      case Right(result) => Success(result)
+      case Right(result) => result
     }
   }
 }

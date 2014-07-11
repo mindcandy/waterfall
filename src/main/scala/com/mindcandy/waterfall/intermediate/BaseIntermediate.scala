@@ -10,8 +10,8 @@ import scala.util.Try
 case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
   val data = collection.mutable.ArrayBuffer[Seq[String]]()
 
-  def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
-    Try(f(data.map(format.convertTo).iterator))
+  def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
+    f(data.map(format.convertTo).iterator)
   }
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
     data ++= stream.map(format.convertFrom)
@@ -27,7 +27,7 @@ case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
 
 case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparator: Option[String] = Option("\t")) extends Intermediate[A] with IOOps[A] with IntermediateOps {
 
-  def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
+  def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
     val path = Paths.get(new URI(url))
     val bufferedReader = Try(Files.newBufferedReader(path, Charset.defaultCharset()))
     val managedResource = bufferedReader.map { bufReader =>

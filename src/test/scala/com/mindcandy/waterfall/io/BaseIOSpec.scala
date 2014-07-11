@@ -52,7 +52,7 @@ class BaseIOSpec extends Specification with Mockito {
       override def close(r: B) = ()
     }
 
-    def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
+    def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
       Failure(new IOException("this intermediate will always fail"))
     }
 

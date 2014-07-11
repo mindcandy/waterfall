@@ -140,12 +140,14 @@ case class ApacheVfsIO[A <: AnyRef](config: IOConfig, val columnSeparator: Optio
       for {
         writer <- managed(new BufferedWriter(new OutputStreamWriter(content.getOutputStream())))
       } {
-        intermediate.read {
-          _.foreach { input =>
-            writer.write(toLine(input))
-            rowSeparator match {
-              case NewLine => writer.newLine()
-              case NoSeparator =>
+        intermediate.read { iterator =>
+          Try {
+            iterator.foreach { input =>
+              writer.write(toLine(input))
+              rowSeparator match {
+                case NewLine => writer.newLine()
+                case NoSeparator =>
+              }
             }
           }
         }

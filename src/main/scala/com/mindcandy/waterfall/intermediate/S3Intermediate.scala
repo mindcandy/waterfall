@@ -27,7 +27,7 @@ case class S3Intermediate[A <: AnyRef](url: String, awsAccessKey: String, awsSec
   val dateFormat = DateTimeFormat.forPattern("yyyyMMdd");
   val datedKeyPrefix = s"${keyPrefix}-${keyDate.toString(dateFormat)}"
 
-  def read[B](f: Iterator[A] => B)(implicit format: IntermediateFormat[A]): Try[B] = {
+  def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
     logger.info(s"Starting stream from S3 with endpoint ${url}")
     val tempFile = Files.createTempFile("waterfall-s3-", ".tsv")
     val keyList = Try(amazonS3Client.listObjects(bucketName, datedKeyPrefix).getObjectSummaries().asScala.map(_.getKey).toList)
