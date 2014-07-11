@@ -13,9 +13,9 @@ case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
     f(data.map(format.convertTo).iterator)
   }
-  def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
+  def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = Try {
     data ++= stream.map(format.convertFrom)
-    Try(())
+    ()
   }
   def getData(): List[Seq[String]] = {
     data.toList
@@ -44,15 +44,15 @@ case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparat
     managedResource.flatMap { _.acquireFor(f).convertToTry }
   }
 
-  def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = {
+  def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = Try {
     val path = Paths.get(new URI(url))
-    Try(for {
+    for {
       writer <- managed(Files.newBufferedWriter(path, Charset.defaultCharset(), StandardOpenOption.APPEND))
     } {
       stream.foreach { input =>
         writer.write(toLine(input))
         writer.newLine()
       }
-    })
+    }
   }
 }
