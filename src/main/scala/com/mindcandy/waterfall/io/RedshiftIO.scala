@@ -29,7 +29,7 @@ case class RedshiftIOSource[A <: AnyRef](config: RedshiftIOSourceConfig, s3Confi
     logger.info(s"Copying Redshift query into S3 with url ${combinedS3Url} in db ${config.url}")
     Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
       StaticQuery.updateNA(
-        s"UNLOAD ('${config.query.replace("'", "\\\'")}') TO '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' NULL AS '\\N' DELIMITER '\\t'"
+        s"UNLOAD ('${config.query.replace("'", "\\\'")}') TO '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' NULL AS '\\\\N' DELIMITER '\\t'"
       ).execute
     })
   }
@@ -49,7 +49,7 @@ case class RedshiftIOSink[A <: AnyRef](config: RedshiftIOSinkConfig, s3Config: O
     logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url}")
     Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
       StaticQuery.updateNA(
-        s"COPY ${config.tableName} ${columns} FROM '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' NULL AS '\\N' DELIMITER '\\t'"
+        s"COPY ${config.tableName} ${columns} FROM '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"
       ).execute
     })
   }
