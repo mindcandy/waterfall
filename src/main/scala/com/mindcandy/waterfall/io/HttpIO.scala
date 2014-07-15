@@ -39,7 +39,7 @@ case class HttpIOSource[A <: AnyRef](config: HttpIOConfig, override val columnSe
       }
     }
 
-    inputContent.map { content =>
+    inputContent.flatMap { content =>
       intermediate.write(content).map { _ =>
         logger.info("Retrieving into %s from %s completed".format(intermediate, config))
       }
