@@ -21,13 +21,13 @@ object WaterfallBuild extends Build {
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
     libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
-    libraryDependencies += "uk.co.bigbeeconsultants" %% "bee-client" % "0.27.0",
     libraryDependencies += "com.netflix.astyanax" % "astyanax-cassandra" % astyanaxVersion,
     libraryDependencies += "com.netflix.astyanax" % "astyanax-thrift" % astyanaxVersion,
     libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion)
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
+    libraryDependencies += "io.spray"             %   "spray-client"  % sprayVersion,
     libraryDependencies += "io.spray"             %   "spray-routing" % sprayVersion,
     libraryDependencies += "io.spray"             %   "spray-testkit" % sprayVersion  % "test,it",
     libraryDependencies += "com.typesafe.akka"    %%  "akka-actor"    % akkaVersion,
@@ -42,10 +42,6 @@ object WaterfallBuild extends Build {
     libraryDependencies += "junit" % "junit" % "4.11" % "test,it",
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4" % "test,it",
     libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it")
-
-  lazy val resolverSettings: Seq[Setting[_]] = Seq(
-    resolvers += "Big Bee Consultants" at "http://repo.bigbeeconsultants.co.uk/repo"
-  )
 
   lazy val formattingSettings = FormattingPreferences()
     .setPreference(AlignParameters, true)
@@ -82,7 +78,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ resolverSettings ++ sprayDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",

@@ -1,5 +1,6 @@
 package com.mindcandy.waterfall.io
 
+import akka.pattern.AskTimeoutException
 import org.junit.runner.RunWith
 import org.specs2.Specification
 import org.specs2.mock.Mockito
@@ -9,13 +10,10 @@ import fr.simply.StubServer
 import fr.simply.util.ContentType
 import com.mindcandy.waterfall.PlainTextFormat
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import java.nio.charset.Charset
-import scala.collection.JavaConverters._
 import com.mindcandy.waterfall.RowSeparator
 import fr.simply.GET
 import fr.simply.DynamicServerResponse
 import fr.simply.StaticServerResponse
-import java.net.SocketTimeoutException
 
 @RunWith(classOf[JUnitRunner])
 class HttpIOSpec extends Specification with Mockito {
@@ -95,11 +93,11 @@ class HttpIOSpec extends Specification with Mockito {
       val server = new StubServer(8090, route).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", readTimeout = 50))
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", timeout = 50))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
 
-      (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
+      (result must beFailedTry.withThrowable[AskTimeoutException]) and {
         intermediate.data must be_==(List())
       }
     }
@@ -138,13 +136,13 @@ class HttpIOSpec extends Specification with Mockito {
       val vfsIO = MultipleHttpIOSource[PlainTextFormat](new MultipleHttpIOConfig() {
         def urls = List("http://localhost:8090/test", "http://localhost:8091/test")
         def combinedFileUrl = newTempFileUrl()
-        override def readTimeout = 50
+        override def timeout = 50
       })
       val result = vfsIO.retrieveInto(intermediate)
       server1.stop
       server2.stop
 
-      (result must beFailedTry.withThrowable[SocketTimeoutException]) and {
+      (result must beFailedTry.withThrowable[AskTimeoutException]) and {
         intermediate.data must be_==(List())
       }
     }

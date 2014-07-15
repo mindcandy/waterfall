@@ -1,5 +1,9 @@
 package com.mindcandy.waterfall.io
 
+import java.util.concurrent.TimeUnit
+
+import akka.actor.ActorSystem
+import akka.util.Timeout
 import com.mindcandy.waterfall.IntermediateFormat
 import com.mindcandy.waterfall.Intermediate
 import com.mindcandy.waterfall.IOConfig
@@ -7,22 +11,27 @@ import com.mindcandy.waterfall.IOSource
 import com.typesafe.scalalogging.slf4j.Logging
 import com.mindcandy.waterfall.IOOps
 import com.mindcandy.waterfall.RowSeparator._
-import uk.co.bigbeeconsultants.http._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.Try
 import com.mindcandy.waterfall.intermediate.FileIntermediate
+import spray.http._
+import spray.client.pipelining._
 
-case class HttpIOConfig(url: String, connectTimeout: Int = 2000, readTimeout: Int = 5000) extends IOConfig
+case class HttpIOConfig(url: String, timeout: Int = 5000) extends IOConfig
 
 case class HttpIOSource[A <: AnyRef](config: HttpIOConfig, override val columnSeparator: Option[String] = None, val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOOps[A] {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
-    val inputContent = Try {
-      rowSeparator match {
-        case NewLine => fileContent.lines.map { fromLine(_) }
-        case NoSeparator => {
-          fileContent.lines.mkString("") match {
+    val inputContent = rowSeparator match {
+      case NewLine => fileContent.map {
+        _.lines.map(fromLine(_))
+      }
+      case NoSeparator => {
+        fileContent.map {
+          _.lines.mkString("") match {
             case combinedData if !combinedData.isEmpty => Iterator(fromLine(combinedData))
             case _ => Iterator[A]()
           }
@@ -37,19 +46,20 @@ case class HttpIOSource[A <: AnyRef](config: HttpIOConfig, override val columnSe
     }
   }
 
-  private[this] def fileContent = {
-    val httpConfig = Config(connectTimeout = config.connectTimeout, readTimeout = config.readTimeout)
-    val httpClient = new HttpClient(httpConfig)
-    val response = httpClient.get(config.url)
-    response.body.asString
+  implicit val system = ActorSystem("waterfall-httpio")
+  implicit val executionContext: ExecutionContext = system.dispatcher
+  implicit val timeout = Timeout(config.timeout, TimeUnit.MILLISECONDS)
+  val pipeline: HttpRequest => Future[String] = sendReceive ~> unmarshal[String]
+
+  private[this] def fileContent: Try[String] = Try {
+    Await.result(pipeline(Get(config.url)), Duration.Inf)
   }
 }
 
 trait MultipleHttpIOConfig extends IOConfig {
   def urls: List[String]
   def combinedFileUrl: String
-  def connectTimeout: Int = 2000
-  def readTimeout: Int = 5000
+  def timeout: Int = 5000
   override def url = urls.mkString(";")
   override def toString = "MultipleHttpIOConfig(%s)".format(urls)
 }
@@ -70,6 +80,6 @@ case class MultipleHttpIOSource[A <: AnyRef](config: MultipleHttpIOConfig) exten
   }
 
   def generateHttpIOConfigs(config: MultipleHttpIOConfig) = {
-    config.urls.map { url => HttpIOConfig(url, config.connectTimeout, config.readTimeout) }
+    config.urls.map { url => HttpIOConfig(url, config.timeout) }
   }
 }
