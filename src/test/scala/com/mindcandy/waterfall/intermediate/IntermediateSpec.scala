@@ -15,18 +15,18 @@ class IntermediateSpec extends Specification with Grouped with Mockito {
 
   write a single small file to S3 with a proper file name
   =======================================================
-    + file should not be empty
-    + file should have size of 457780
+    file should not be empty        ${g1.e1}
+    file should have size of 457780 ${g1.e2}
 
   write a large data set as two files to S3 with proper file names
   ================================================================
-    + 1st file should not be empty
-    + 1st file should have size of 400004
-    + 2nd file should not be empty
-    + 2nd file should have size of 57776
+    1st file should not be empty        ${g2.e1}
+    1st file should have size of 400004 ${g2.e2}
+    2nd file should not be empty        ${g2.e3}
+    2nd file should have size of 57776  ${g2.e4}
   """
 
-  "write a single small file to S3 with a proper file name" - new group {
+  "write a single small file to S3 with a proper file name" - new g1 {
     val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
       "secret-key", "waterfall-testing", "testfile", new DateTime(2013, 10, 1, 0, 0, 0, 0, DateTimeZone.UTC)) {
       override val amazonS3Client = {
@@ -40,11 +40,11 @@ class IntermediateSpec extends Specification with Grouped with Mockito {
 
     val captureFile = capture[File]
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-0.tsv"), captureFile)
-    eg := captureFile.value must not be (null)
-    eg := captureFile.value.length must be_==(457780)
+    e1 := captureFile.value must not(beNull)
+    e2 := captureFile.value.length must be_==(457780)
   }
 
-  "write a large data set as two files to S3 with proper file names" - new group {
+  "write a large data set as two files to S3 with proper file names" - new g2 {
     val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
       "secret-key", "waterfall-testing", "testfile", new DateTime(2013, 10, 1, 0, 0, 0, 0, DateTimeZone.UTC)) {
       override val fileChunkSize = 400000
@@ -59,11 +59,11 @@ class IntermediateSpec extends Specification with Grouped with Mockito {
 
     val captureFileFirst = capture[File]
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-0.tsv"), captureFileFirst)
-    eg := captureFileFirst.value must not be (null)
-    eg := captureFileFirst.value.length must be_==(400004)
+    e1 := captureFileFirst.value must not be (null)
+    e2 := captureFileFirst.value.length must be_==(400004)
     val captureFileSecond = capture[File]
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-1.tsv"), captureFileSecond)
-    eg := captureFileSecond.value must not be (null)
-    eg := captureFileSecond.value.length must be_==(57776)
+    e3 := captureFileSecond.value must not be (null)
+    e4 := captureFileSecond.value.length must be_==(57776)
   }
 }
