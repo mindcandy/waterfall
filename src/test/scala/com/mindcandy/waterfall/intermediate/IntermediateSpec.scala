@@ -15,18 +15,18 @@ class IntermediateSpec extends Specification with Grouped with Mockito {
 
   write a single small file to S3 with a proper file name
   =======================================================
-    file should not be empty        ${g1.e1}
-    file should have size of 457780 ${g1.e2}
+    file should not be empty        ${singleSmallFile.e1}
+    file should have size of 457780 ${singleSmallFile.e2}
 
   write a large data set as two files to S3 with proper file names
   ================================================================
-    1st file should not be empty        ${g2.e1}
-    1st file should have size of 400004 ${g2.e2}
-    2nd file should not be empty        ${g2.e3}
-    2nd file should have size of 57776  ${g2.e4}
+    1st file should not be empty        ${twoFiles.e1}
+    1st file should have size of 400004 ${twoFiles.e2}
+    2nd file should not be empty        ${twoFiles.e3}
+    2nd file should have size of 57776  ${twoFiles.e4}
   """
 
-  "write a single small file to S3 with a proper file name" - new g1 {
+  val singleSmallFile = new group {
     val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
       "secret-key", "waterfall-testing", "testfile", new DateTime(2013, 10, 1, 0, 0, 0, 0, DateTimeZone.UTC)) {
       override val amazonS3Client = {
@@ -44,7 +44,7 @@ class IntermediateSpec extends Specification with Grouped with Mockito {
     e2 := captureFile.value.length must be_==(457780)
   }
 
-  "write a large data set as two files to S3 with proper file names" - new g2 {
+  val twoFiles = new group {
     val intermediate = new S3Intermediate[TestFormat]("s3-eu-west-1.amazonaws.com", "access-key",
       "secret-key", "waterfall-testing", "testfile", new DateTime(2013, 10, 1, 0, 0, 0, 0, DateTimeZone.UTC)) {
       override val fileChunkSize = 400000
