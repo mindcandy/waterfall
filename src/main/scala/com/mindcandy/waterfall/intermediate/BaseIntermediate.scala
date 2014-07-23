@@ -7,7 +7,7 @@ import java.nio.file.{ StandardOpenOption, Files, Paths }
 import resource._
 import scala.util.Try
 
-case class MemoryIntermediate[A](url: String) extends Intermediate[A] {
+case class MemoryIntermediate[A <: AnyRef](url: String) extends Intermediate[A] {
   val data = collection.mutable.ArrayBuffer[Seq[String]]()
 
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
