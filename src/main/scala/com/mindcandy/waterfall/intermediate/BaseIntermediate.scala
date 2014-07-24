@@ -27,8 +27,10 @@ case class MemoryIntermediate[A <: AnyRef](url: String) extends Intermediate[A] 
 
 case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparator: Option[String] = Option("\t")) extends Intermediate[A] with IOOps[A] with IntermediateOps {
 
+  // execute only when read/write operation needed
+  lazy val path = Paths.get(new URI(url))
+
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
-    val path = Paths.get(new URI(url))
     val bufferedReader = Try(Files.newBufferedReader(path, Charset.defaultCharset()))
     val managedResource = bufferedReader.map { bufReader =>
       for {
@@ -45,7 +47,8 @@ case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparat
   }
 
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = Try {
-    val path = Paths.get(new URI(url))
+    // create the file if not exists
+    if (!Files.exists(path)) Files.createFile(path)
     for {
       writer <- managed(Files.newBufferedWriter(path, Charset.defaultCharset(), StandardOpenOption.APPEND))
     } {
