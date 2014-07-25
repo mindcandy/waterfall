@@ -7,19 +7,28 @@ import java.nio.file.{ StandardOpenOption, Files, Paths }
 import resource._
 import scala.util.Try
 
+/**
+ * Read or write data within memory.
+ * @param url unused param
+ * @tparam A
+ */
 case class MemoryIntermediate[A <: AnyRef](url: String) extends Intermediate[A] {
   val data = collection.mutable.ArrayBuffer[Seq[String]]()
 
+  // Return an iterator of collection of A to function f and run it.
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
     f(data.map(format.convertTo).iterator)
   }
+
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = Try {
     data ++= stream.map(format.convertFrom)
     ()
   }
+
   def getData(): List[Seq[String]] = {
     data.toList
   }
+
   def clearData() {
     data.clear()
   }
