@@ -19,7 +19,7 @@ object TestData {
   // the iterator of large data to be written
   def iterator = {
     val data = List.tabulate(10000)(
-        n => TestFormat(n, "middleware-" + n, dateTime))
+      n => TestFormat(n, "middleware-" + n, dateTime))
     data.iterator
   }
 
@@ -33,12 +33,12 @@ object TestData {
 
   // check if two list of list are identical
   def isIdenticalContent(actual: List[Seq[String]], expect: List[Seq[String]]) =
-      actual.zip(expect).count(
-          x => x._1.zip(x._2).count(
-              y => y._1 != y._2) != 0) == 0
+    actual.zip(expect).count(
+      x => x._1.zip(x._2).count(
+        y => y._1 != y._2) != 0) == 0
 
   // transform function to read all content from an Iterator as a List.
-  def iteratorToList(iterator: Iterator[TestFormat]): Try[List[TestFormat]] = Try{
+  def iteratorToList(iterator: Iterator[TestFormat]): Try[List[TestFormat]] = Try {
     iterator.toList
   }
 
@@ -54,6 +54,7 @@ class S3IntermediateSpec extends Specification with Grouped with Mockito {
   =======================================================
     file should not be empty        ${singleFile.e1}
     file should have size of 457780 ${singleFile.e2}
+    write successfully              ${singleFile.e3}
 
   write a large data set as two files to S3 with proper file names
   ================================================================
@@ -61,6 +62,7 @@ class S3IntermediateSpec extends Specification with Grouped with Mockito {
     1st file should have size of 400004 ${twoFiles.e2}
     2nd file should not be empty        ${twoFiles.e3}
     2nd file should have size of 57776  ${twoFiles.e4}
+    write successfully                  ${twoFiles.e5}
   """
 
   val singleFile = new group {
@@ -68,12 +70,13 @@ class S3IntermediateSpec extends Specification with Grouped with Mockito {
       "secret-key", "waterfall-testing", "testfile", new DateTime(2013, 10, 1, 0, 0, 0, 0, DateTimeZone.UTC)) {
       override val amazonS3Client = mock[AmazonS3Client]
     }
-    intermediate.write(TestData.iterator)
+    val writeOp = intermediate.write(TestData.iterator)
 
     val captureFile = capture[File]
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-0.tsv"), captureFile)
     e1 := captureFile.value must not(beNull)
     e2 := captureFile.value.length must be_==(TestData.dataSize)
+    e3 := writeOp must beSuccessfulTry
   }
 
   val twoFiles = new group {
@@ -83,7 +86,7 @@ class S3IntermediateSpec extends Specification with Grouped with Mockito {
       override val amazonS3Client = mock[AmazonS3Client]
     }
 
-    intermediate.write(TestData.iterator)
+    val writeOp = intermediate.write(TestData.iterator)
 
     val captureFileFirst = capture[File]
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-0.tsv"), captureFileFirst)
@@ -95,26 +98,34 @@ class S3IntermediateSpec extends Specification with Grouped with Mockito {
     there was one(intermediate.amazonS3Client).putObject(meq("waterfall-testing"), meq("testfile-20131001-1.tsv"), captureFileSecond)
     e3 := captureFileSecond.value must not be (null)
     e4 := captureFileSecond.value.length must be_==(TestData.dataSize - fileFistSize)
+    e5 := writeOp must beSuccessfulTry
   }
 }
 
 class FileIntermediateSpec extends Specification with Grouped {
   def is = s2"""
-  File Intermediate should
+  FileIntermediate should
 
   write a single file
-  =======================================================
+  ==============================================================================
     file exists                       ${singleFile.e1}
     file should have size of 457780   ${singleFile.e2}
+    write successfully                ${singleFile.e3}
 
   write to a file which does not exist
-  ====================================
+  ==============================================================================
     file exists                     ${fileNotExists.e1}
     file should have size of 457780 ${fileNotExists.e2}
 
   append to an existing file
-  =======================================================
+  ==============================================================================
     file should have size of 457780*2 ${appendToFile.e1}
+    append successfully               ${appendToFile.e2}
+
+  read from file
+  ==============================================================================
+    read successfully                                 ${readFromFile.e1}
+    the content read is identical to what's written   ${readFromFile.e2}
   """
 
   val singleFile = new group {
@@ -124,10 +135,11 @@ class FileIntermediateSpec extends Specification with Grouped {
     val pathURL = testFile.toURI.toURL.toString
 
     val intermediate = new FileIntermediate[TestFormat](pathURL)
-    intermediate.write(TestData.iterator)
+    val writeOp = intermediate.write(TestData.iterator)
 
     e1 := testFile.exists must beTrue
     e2 := testFile.length must be_==(TestData.dataSize)
+    e3 := writeOp must beSuccessfulTry
   }
 
   val fileNotExists = new group {
@@ -152,9 +164,25 @@ class FileIntermediateSpec extends Specification with Grouped {
 
     val intermediate = new FileIntermediate[TestFormat](pathURL)
     intermediate.write(TestData.iterator)
-    intermediate.write(TestData.iterator)
+    val appendOp = intermediate.write(TestData.iterator)
 
     e1 := testFile.length must be_==(TestData.dataSize * 2)
+    e2 := appendOp must beSuccessfulTry
+  }
+
+  val readFromFile = new group {
+    val testFile = File.createTempFile("test", "")
+    val pathFile = testFile.getAbsolutePath
+    val pathURL = testFile.toURI.toURL.toString
+
+    val intermediate = new FileIntermediate[TestFormat](pathURL)
+    intermediate.write(TestData.iteratorSingle)
+
+    val actual = intermediate.read(TestData.iteratorToList)
+    val expect = List(TestFormat(0, "middleware", TestData.dateTime))
+
+    e1 := actual must beSuccessfulTry
+    e2 := actual.get.zip(expect).count(x => x._1 != x._2) must be_==(0)
   }
 }
 
