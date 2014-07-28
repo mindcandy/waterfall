@@ -38,6 +38,8 @@ case class HttpIOSource[A <: AnyRef](config: HttpIOConfig, override val columnSe
         }
       }
     }
+    system.shutdown()
+    system.awaitTermination()
 
     inputContent.flatMap { content =>
       intermediate.write(content).map { _ =>

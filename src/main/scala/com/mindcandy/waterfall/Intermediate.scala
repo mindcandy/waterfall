@@ -5,7 +5,7 @@ import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
 
-trait Intermediate[A] extends Logging {
+trait Intermediate[A <: AnyRef] extends Logging {
   def url: String
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B]
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit]

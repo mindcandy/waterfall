@@ -45,7 +45,7 @@ class BaseIOSpec extends Specification with Mockito {
                                    |"test2" : 45
                                    |}""".stripMargin
 
-  case class FailingIntermediate[A](url: String) extends Intermediate[A] {
+  case class FailingIntermediate[A <: AnyRef](url: String) extends Intermediate[A] {
     val data = Seq[Seq[String]]()
 
     implicit def SeqResource[B <: Seq[_]] = new Resource[B] {
