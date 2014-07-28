@@ -15,7 +15,6 @@ import scala.util.Try
 case class MemoryIntermediate[A <: AnyRef](url: String) extends Intermediate[A] {
   val data = collection.mutable.ArrayBuffer[Seq[String]]()
 
-  // Return an iterator of collection of A to function f and run it.
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
     f(data.map(format.convertTo).iterator)
   }
@@ -36,7 +35,6 @@ case class MemoryIntermediate[A <: AnyRef](url: String) extends Intermediate[A] 
 
 case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparator: Option[String] = Option("\t")) extends Intermediate[A] with IOOps[A] with IntermediateOps {
 
-  // execute only when read/write operation needed
   lazy val path = Paths.get(new URI(url))
 
   def read[B](f: Iterator[A] => Try[B])(implicit format: IntermediateFormat[A]): Try[B] = {
@@ -56,7 +54,6 @@ case class FileIntermediate[A <: AnyRef](url: String, override val columnSeparat
   }
 
   def write(stream: Iterator[A])(implicit format: IntermediateFormat[A]): Try[Unit] = Try {
-    // create the file if not exists
     if (!Files.exists(path)) Files.createFile(path)
     for {
       writer <- managed(Files.newBufferedWriter(path, Charset.defaultCharset(), StandardOpenOption.APPEND))
