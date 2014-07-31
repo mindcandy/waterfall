@@ -1,14 +1,13 @@
 package com.mindcandy.waterfall.io
 
-import java.io.{ SequenceInputStream, InputStream, InputStreamReader, BufferedReader }
+import java.io.{ InputStreamReader, BufferedReader }
 import com.amazonaws.services.s3.model.ObjectListing
 import resource._
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.util.{ Success, Try, Failure }
+import scala.util.Try
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
-import com.mindcandy.waterfall.RowSeparator.RowSeparator
 import com.mindcandy.waterfall._
 import com.mindcandy.waterfall.RowSeparator._
 
