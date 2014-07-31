@@ -29,11 +29,11 @@ class S3IOSpec extends Specification {
 
   def retrieveMultipleFiles = {
     val intermediate: MemoryIntermediate[PlainTextFormat] = new MemoryIntermediate("memory:sink")
-    val s3IO = S3IO[PlainTextFormat](s3Config, Some("2014-04-01-23-2"))
+    val s3IO = S3IO[PlainTextFormat](s3Config, Some("2014-07-13"))
     val result = s3IO.retrieveInto(intermediate)
     val data = intermediate.getData().map(_(0)).mkString("\n")
     val expected = Source.fromFile(expectedFile).getLines().mkString("\n")
-    (data must_== expected) and
-      (result must beSuccessfulTry)
+    (result must beSuccessfulTry) and
+      (data must_== expected)
   }
 }
