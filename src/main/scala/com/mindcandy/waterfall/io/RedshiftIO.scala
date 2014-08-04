@@ -13,8 +13,12 @@ trait RedshiftIOConfig extends IOConfig {
   def username: String
   def password: String
 }
-case class RedshiftIOSourceConfig(url: String, username: String, password: String, query: String) extends RedshiftIOConfig
-case class RedshiftIOSinkConfig(url: String, username: String, password: String, tableName: String, columnNames: Option[List[String]] = None) extends RedshiftIOConfig
+case class RedshiftIOSourceConfig(url: String, username: String, password: String, query: String) extends RedshiftIOConfig {
+  override def toString = "RedshiftIOSourceConfig(%s, %s)".format(url, query)
+}
+case class RedshiftIOSinkConfig(url: String, username: String, password: String, tableName: String, columnNames: Option[List[String]] = None) extends RedshiftIOConfig {
+  override def toString = "RedshiftIOSourceConfig(%s, %s, %s)".format(url, tableName, columnNames)
+}
 
 case class RedshiftIOSource[A <: AnyRef](config: RedshiftIOSourceConfig, s3Config: Option[S3IOConfig] = None)
     extends IOSource[A]
