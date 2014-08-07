@@ -30,6 +30,8 @@ class DBSpec extends Specification with Grouped with AfterExample {
 
     create new database ${createNewDatabase.e1}
 
+    create new database but not overwrite ${createNewDatabaseNotOverwrite.e1}
+
     insert 1 row into database ${insertToDatabase.e1}
     inserted data is correct ${insertToDatabase.e2}
 
@@ -41,6 +43,11 @@ class DBSpec extends Specification with Grouped with AfterExample {
 
     create tables in new database ${createTablesInNewDB.e1}
 
+    create tables and overwrite existed ones
+      tables created successfully ${createTablesOverwrite.e1}
+      table 1 is empty ${createTablesOverwrite.e2}
+      table 2 is empty ${createTablesOverwrite.e3}
+
     successfully insert DropJob into DropInfo table ${insertDropJob.e1}
     inserted DropJob is correct ${insertDropJob.e2}
   """
@@ -50,6 +57,16 @@ class DBSpec extends Specification with Grouped with AfterExample {
   def createNewDatabase = new group {
     val logDB = TestData.db
     logDB.create(dropLogs)
+    val tableName = dropLogs.baseTableRow.tableName
+    val isTableExists: Boolean = logDB.db.withDynSession {
+      !MTable.getTables(tableName).list.isEmpty
+    }
+    e1 := isTableExists must beTrue
+  }
+
+  def createNewDatabaseNotOverwrite = new group {
+    val logDB = TestData.db
+    logDB.createIfNotExists(dropLogs)
     val tableName = dropLogs.baseTableRow.tableName
     val isTableExists: Boolean = logDB.db.withDynSession {
       !MTable.getTables(tableName).list.isEmpty
@@ -120,6 +137,27 @@ class DBSpec extends Specification with Grouped with AfterExample {
     }
 
     e1 := isTablesCreated must beTrue
+  }
+
+  def createTablesOverwrite = new group {
+    val logDB = TestData.db
+    logDB.create(List(dropJobs, dropLogs))
+    logDB.insert(dropJobs, TestData.oneDropJob)
+    logDB.create(List(dropJobs, dropLogs))
+    val isTablesCreated = logDB.db.withDynSession {
+      !MTable.getTables(dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(dropJobs.baseTableRow.tableName).list.isEmpty
+    }
+
+    val dataDropJobs = logDB.db.withDynSession {
+      dropJobs.list
+    }
+    val dataDropLogs = logDB.db.withDynSession {
+      dropLogs.list
+    }
+    e1 := isTablesCreated must beTrue
+    e2 := dataDropJobs must_== List()
+    e3 := dataDropLogs must_== List()
   }
 
   def insertDropJob = new group {
