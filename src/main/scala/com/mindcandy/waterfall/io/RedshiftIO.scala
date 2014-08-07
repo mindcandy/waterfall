@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall.io
 
 import com.mindcandy.waterfall._
-import scala.slick.session.Database
-import scala.slick.session.Database.threadLocalSession
+import scala.slick.jdbc.JdbcBackend.Database
+import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.StaticQuery
 import com.typesafe.scalalogging.slf4j.Logging
 import scala.util.Try
@@ -13,6 +13,7 @@ trait RedshiftIOConfig extends IOConfig {
   def username: String
   def password: String
 }
+
 case class RedshiftIOSourceConfig(url: String, username: String, password: String, query: String) extends RedshiftIOConfig {
   override def toString = "RedshiftIOSourceConfig(%s, %s)".format(url, query)
 }
@@ -31,7 +32,7 @@ case class RedshiftIOSource[A <: AnyRef](config: RedshiftIOSourceConfig, s3Confi
     }
     val combinedS3Url = s"s3://${s3Intermediate.bucketName}/${s3Intermediate.datedKeyPrefix}/"
     logger.info(s"Copying Redshift query into S3 with url ${combinedS3Url} in db ${config.url}")
-    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
+    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withDynSession {
       StaticQuery.updateNA(
         s"UNLOAD ('${config.query.replace("'", "\\\'")}') TO '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' NULL AS '\\\\N' DELIMITER '\\t'"
       ).execute
@@ -51,7 +52,7 @@ case class RedshiftIOSink[A <: AnyRef](config: RedshiftIOSinkConfig, s3Config: O
     val combinedS3Url = s"s3://${s3Intermediate.bucketName}/${s3Intermediate.datedKeyPrefix}"
     val columns = config.columnNames.map("(" + _.mkString(",") + ")").getOrElse("")
     logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url} with truncate=${config.truncateTargetTable}")
-    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
+    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withDynSession {
       if (config.truncateTargetTable) {
         StaticQuery.updateNA(
           s"TRUNCATE ${config.tableName}"

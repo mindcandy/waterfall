@@ -49,7 +49,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog("test1", _, None, None, None) => success
+      case DropLog(None, "test1", _, None, None, None) => success
       case _ => failure
     }
   }
@@ -68,7 +68,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog("test1", _, Some(endTime), None, None) => success
+      case DropLog(None, "test1", _, Some(endTime), None, None) => success
       case _ => failure
     }
   }
@@ -88,7 +88,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog("test1", _, Some(endTime), None, Some(`exception`)) => success
+      case DropLog(None, "test1", _, Some(endTime), None, Some(msg)) => success
       case _ => failure
     }
   }
@@ -127,5 +127,5 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
   }
 
   private def createStartJob(dropUid: String, name: String, currentTime: time.DateTime): StartJob =
-    StartJob(DropJob(dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+    StartJob(DropJob(None, dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map()))
 }

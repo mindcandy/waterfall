@@ -9,8 +9,15 @@ import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList }
 import scala.concurrent.duration._
 import com.mindcandy.waterfall.config.JobsDatabaseConfig
+import com.mindcandy.waterfall.database
+import org.specs2.mock.Mockito
 
-class JobDatabaseManagerSpec extends TestKit(ActorSystem("JobDatabaseManagerSpec")) with SpecificationLike with After with NoTimeConversions {
+class JobDatabaseManagerSpec
+  extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
+  with SpecificationLike
+  with After
+  with NoTimeConversions
+  with Mockito {
   override def is = s2"""
     JobDatabaseManager should
       send correct schedule $getSchedule
@@ -19,13 +26,14 @@ class JobDatabaseManagerSpec extends TestKit(ActorSystem("JobDatabaseManagerSpec
   override def after: Any = TestKit.shutdownActorSystem(system)
 
   val config = JobsDatabaseConfig(DropJobList(List(
-    DropJob("EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-    DropJob("ADX", "Adx", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
+    DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
+    DropJob(None, "ADX", "Adx", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
   )))
 
   def getSchedule = {
     val probe = TestProbe()
-    val actor = system.actorOf(JobDatabaseManager.props(config))
+    val db = mock[database.DB]
+    val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     probe.send(actor, GetSchedule())
 

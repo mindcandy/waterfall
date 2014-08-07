@@ -43,11 +43,11 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         result match {
           case Success(nothing) => {
             log.info(s"success for drop $jobUID after ${runtime}")
-            jobDatabaseManager ! DropLog(jobUID, startTime, Some(endTime), None, None)
+            jobDatabaseManager ! DropLog(None, jobUID, startTime, Some(endTime), None, None)
           }
           case Failure(exception) => {
             log.error(s"failure for drop $jobUID after ${runtime}", exception)
-            jobDatabaseManager ! DropLog(jobUID, startTime, Some(endTime), None, Some(exception))
+            jobDatabaseManager ! DropLog(None, jobUID, startTime, Some(endTime), None, Some(exception.toString))
           }
         }
         runningJobs -= jobUID
@@ -66,7 +66,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
             val startTime = DateTime.now
             runningJobs += (job.dropUID -> (worker, startTime))
             worker ! DropWorker.RunDrop(job.dropUID, drop)
-            jobDatabaseManager ! DropLog(job.dropUID, startTime, None, None, None)
+            jobDatabaseManager ! DropLog(None, job.dropUID, startTime, None, None, None)
           }
           case None => log.error(s"factory has no drop for ${job.dropUID}")
         }
