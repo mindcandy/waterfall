@@ -9,7 +9,7 @@ import scala.util.{ Failure, Try }
 
 case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
-  override val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
+  val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
   val source = MemoryIO[PlainTextFormat](BaseIOConfig("memory:source"))
   val sink = MemoryIO[PlainTextFormat](BaseIOConfig("memory:sink"))
@@ -17,7 +17,7 @@ case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[Plain
 
 case class TestFailingPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
-  override val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
+  val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
   val source = MemoryIO[PlainTextFormat](BaseIOConfig("memory:source"))
   val sink = MemoryIO[PlainTextFormat](BaseIOConfig("memory:sink"))

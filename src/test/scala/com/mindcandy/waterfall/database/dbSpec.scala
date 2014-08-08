@@ -12,8 +12,8 @@ import scala.slick.jdbc.meta.MTable
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.driver.SQLiteDriver.simple._
 
-object TestData {
-  def db = new DB("jdbc:sqlite:test.db")
+trait TestData {
+  def db = new DB("jdbc:sqlite:dbspec.db")
   val oneDropLog = DropLog(
     Some(1), "test", new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
@@ -21,7 +21,7 @@ object TestData {
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
-class DBSpec extends Specification with Grouped with AfterExample {
+class DBSpec extends Specification with Grouped with AfterExample with TestData {
 
   def is = sequential ^ s2"""
   DropLogging Database test
@@ -52,10 +52,10 @@ class DBSpec extends Specification with Grouped with AfterExample {
     inserted DropJob is correct ${insertDropJob.e2}
   """
 
-  def after() = Files.delete(Paths.get("test.db"))
+  def after() = Files.delete(Paths.get("dbspec.db"))
 
   def createNewDatabase = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(dropLogs)
     val tableName = dropLogs.baseTableRow.tableName
     val isTableExists: Boolean = logDB.db.withDynSession {
@@ -65,7 +65,7 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def createNewDatabaseNotOverwrite = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.createIfNotExists(dropLogs)
     val tableName = dropLogs.baseTableRow.tableName
     val isTableExists: Boolean = logDB.db.withDynSession {
@@ -75,9 +75,9 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def insertToDatabase = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(dropLogs)
-    val numberOfInsert = logDB.insert(dropLogs, TestData.oneDropLog)
+    val numberOfInsert = logDB.insert(dropLogs, oneDropLog)
     val insertedData = logDB.db.withDynSession {
       dropLogs.list
     }
@@ -88,10 +88,10 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def insertTwoToDatabase = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(dropLogs)
     val data = List(
-      TestData.oneDropLog,
+      oneDropLog,
       DropLog(Some(1), "test2", new DateTime(2014, 8, 6, 9, 30), Some(new DateTime(2014, 8, 6, 10, 30)), None, Some("exception msg")))
     val numberOfInsert = logDB.insert(dropLogs, data)
     val insertedData = logDB.db.withDynSession {
@@ -105,9 +105,9 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def overwriteExistDatabase = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(dropLogs)
-    logDB.insert(dropLogs, TestData.oneDropLog)
+    logDB.insert(dropLogs, oneDropLog)
     logDB.create(dropLogs)
     val insertedData = logDB.db.withDynSession {
       dropLogs.list
@@ -117,9 +117,9 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def notOverwriteExistDatabase = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(dropLogs)
-    logDB.insert(dropLogs, TestData.oneDropLog)
+    logDB.insert(dropLogs, oneDropLog)
     logDB.createIfNotExists(dropLogs)
     val insertedData = logDB.db.withDynSession {
       dropLogs.list
@@ -129,7 +129,7 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def createTablesInNewDB = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.createIfNotExists(List(dropJobs, dropLogs))
     val isTablesCreated = logDB.db.withDynSession {
       !MTable.getTables(dropLogs.baseTableRow.tableName).list.isEmpty &&
@@ -140,9 +140,9 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def createTablesOverwrite = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(List(dropJobs, dropLogs))
-    logDB.insert(dropJobs, TestData.oneDropJob)
+    logDB.insert(dropJobs, oneDropJob)
     logDB.create(List(dropJobs, dropLogs))
     val isTablesCreated = logDB.db.withDynSession {
       !MTable.getTables(dropLogs.baseTableRow.tableName).list.isEmpty &&
@@ -161,14 +161,14 @@ class DBSpec extends Specification with Grouped with AfterExample {
   }
 
   def insertDropJob = new group {
-    val logDB = TestData.db
+    val logDB = db
     logDB.create(List(dropJobs, dropLogs))
-    val numOfInsert = logDB.insert(dropJobs, TestData.oneDropJob)
+    val numOfInsert = logDB.insert(dropJobs, oneDropJob)
     val insertedData = logDB.db.withDynSession {
       dropJobs.list
     }
 
     e1 := numOfInsert must_== 1
-    e2 := insertedData must_== List(TestData.oneDropJob)
+    e2 := insertedData must_== List(oneDropJob)
   }
 }
