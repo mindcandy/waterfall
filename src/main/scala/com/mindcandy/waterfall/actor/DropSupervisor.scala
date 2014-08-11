@@ -19,7 +19,7 @@ import TimeFrame._
 
 object DropSupervisor {
   case class StartJob(job: DropJob)
-  case class JobResult(jobUID: DropUID, result: Try[Unit])
+  case class JobResult(jobID: Int, result: Try[Unit])
 
   def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
     Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
@@ -28,45 +28,46 @@ object DropSupervisor {
 class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
   import DropSupervisor._
 
-  private[this] var runningJobs = Map[DropUID, (ActorRef, DateTime)]()
+  private[this] var runningJobs = Map[Int, (ActorRef, DateTime)]()
 
   def receive = {
     case StartJob(job) => runJob(job)
-    case JobResult(jobUID, result) => processResult(jobUID, result)
+    case JobResult(jobID, result) => processResult(jobID, result)
   }
 
-  def processResult(jobUID: DropUID, result: Try[Unit]) = {
-    runningJobs.get(jobUID) match {
+  def processResult(jobID: Int, result: Try[Unit]) = {
+    runningJobs.get(jobID) match {
       case Some((worker, startTime)) => {
         val endTime = DateTime.now
         val runtime = PeriodFormat.getDefault().print(new Period((startTime to endTime)))
         result match {
           case Success(nothing) => {
-            log.info(s"success for drop $jobUID after ${runtime}")
-            jobDatabaseManager ! DropLog(None, jobUID, startTime, Some(endTime), None, None)
+            log.info(s"success for drop $jobID after ${runtime}")
+            jobDatabaseManager ! DropLog(None, jobID, startTime, Some(endTime), None, None)
           }
           case Failure(exception) => {
-            log.error(s"failure for drop $jobUID after ${runtime}", exception)
-            jobDatabaseManager ! DropLog(None, jobUID, startTime, Some(endTime), None, Some(exception.toString))
+            log.error(s"failure for drop $jobID after ${runtime}", exception)
+            jobDatabaseManager ! DropLog(None, jobID, startTime, Some(endTime), None, Some(exception.toString))
           }
         }
-        runningJobs -= jobUID
+        runningJobs -= jobID
       }
-      case None => log.error(s"job result from job $jobUID but not present in running jobs list")
+      case None => log.error(s"job result from job $jobID but not present in running jobs list")
     }
   }
 
   def runJob(job: DropJob) = {
-    runningJobs.get(job.dropUID) match {
+    runningJobs.get(job.jobID.get) match {
       case Some((actorRef, timestamp)) => log.warning(s"job ${job.dropUID} already running as actor $actorRef started at $timestamp")
       case None => {
         val worker = dropWorkerFactory.createActor
         dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
           case Some(drop) => {
             val startTime = DateTime.now
-            runningJobs += (job.dropUID -> (worker, startTime))
-            worker ! DropWorker.RunDrop(job.dropUID, drop)
-            jobDatabaseManager ! DropLog(None, job.dropUID, startTime, None, None, None)
+            runningJobs += (job.jobID.get -> (worker, startTime))
+            // TODO(deo.liang): handle error if job.jobID is None
+            worker ! DropWorker.RunDrop(job.jobID.get, drop)
+            jobDatabaseManager ! DropLog(None, job.jobID.get, startTime, None, None, None)
           }
           case None => log.error(s"factory has no drop for ${job.dropUID}")
         }

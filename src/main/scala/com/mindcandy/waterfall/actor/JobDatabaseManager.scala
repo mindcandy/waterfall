@@ -37,7 +37,6 @@ class JobDatabaseManager(dropJobList: DropJobList, db: DB) extends Actor with Ac
     }
     case dropLog: DropLog => {
       log.debug(s"drop log received")
-      // TODO(deo.liang): add the jobID here
       db.insert(dropLogs, dropLog)
     }
   }

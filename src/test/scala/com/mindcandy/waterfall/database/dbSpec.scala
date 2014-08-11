@@ -10,14 +10,14 @@ import org.specs2.specification.script.Specification
 
 import scala.slick.jdbc.meta.MTable
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
-import scala.slick.driver.SQLiteDriver.simple._
+import scala.slick.driver.JdbcDriver.simple._
 
 trait TestData {
   def db = new DB("jdbc:sqlite:dbspec.db")
   val oneDropLog = DropLog(
-    Some(1), "test", new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
+    None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
-    Some(1), "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
+    None, "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
@@ -48,8 +48,8 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
       table 1 is empty ${createTablesOverwrite.e2}
       table 2 is empty ${createTablesOverwrite.e3}
 
-    successfully insert DropJob into DropInfo table ${insertDropJob.e1}
-    inserted DropJob is correct ${insertDropJob.e2}
+    successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
+    inserted DropLog is correct ${insertDropLog.e2}
   """
 
   def after() = Files.delete(Paths.get("dbspec.db"))
@@ -76,41 +76,41 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def insertToDatabase = new group {
     val logDB = db
-    logDB.create(dropLogs)
-    val numberOfInsert = logDB.insert(dropLogs, oneDropLog)
+    logDB.create(dropJobs)
+    val numberOfInsert = logDB.insert(dropJobs, oneDropJob)
     val insertedData = logDB.db.withDynSession {
-      dropLogs.list
+      dropJobs.list
     }
 
     e1 := numberOfInsert must_== 1
     e2 := insertedData must_== List(
-      DropLog(Some(1), "test", new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None))
+      DropJob(Some(1), "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")))
   }
 
   def insertTwoToDatabase = new group {
     val logDB = db
-    logDB.create(dropLogs)
+    logDB.create(dropJobs)
     val data = List(
-      oneDropLog,
-      DropLog(Some(1), "test2", new DateTime(2014, 8, 6, 9, 30), Some(new DateTime(2014, 8, 6, 10, 30)), None, Some("exception msg")))
-    val numberOfInsert = logDB.insert(dropLogs, data)
+      oneDropJob,
+      DropJob(None, "test2", "test", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+    val numberOfInsert = logDB.insert(dropJobs, data)
     val insertedData = logDB.db.withDynSession {
-      dropLogs.list
+      dropJobs.list
     }
 
     e1 := numberOfInsert must_== Some(2)
     e2 := insertedData must_== List(
-      DropLog(Some(1), "test", new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None),
-      DropLog(Some(1), "test2", new DateTime(2014, 8, 6, 9, 30), Some(new DateTime(2014, 8, 6, 10, 30)), None, Some("exception msg")))
+      DropJob(Some(1), "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")),
+      DropJob(Some(2), "test2", "test", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
   }
 
   def overwriteExistDatabase = new group {
     val logDB = db
-    logDB.create(dropLogs)
-    logDB.insert(dropLogs, oneDropLog)
-    logDB.create(dropLogs)
+    logDB.create(dropJobs)
+    logDB.insert(dropJobs, oneDropJob)
+    logDB.create(dropJobs)
     val insertedData = logDB.db.withDynSession {
-      dropLogs.list
+      dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beTrue
@@ -118,11 +118,11 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def notOverwriteExistDatabase = new group {
     val logDB = db
-    logDB.create(dropLogs)
-    logDB.insert(dropLogs, oneDropLog)
-    logDB.createIfNotExists(dropLogs)
+    logDB.create(dropJobs)
+    logDB.insert(dropJobs, oneDropJob)
+    logDB.createIfNotExists(dropJobs)
     val insertedData = logDB.db.withDynSession {
-      dropLogs.list
+      dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beFalse
@@ -160,15 +160,17 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
     e3 := dataDropLogs must_== List()
   }
 
-  def insertDropJob = new group {
+  def insertDropLog = new group {
     val logDB = db
-    logDB.create(List(dropJobs, dropLogs))
-    val numOfInsert = logDB.insert(dropJobs, oneDropJob)
+    logDB.create(List(dropLogs, dropJobs))
+    logDB.insert(dropJobs, oneDropJob)
+    val numOfInsert= logDB.insert(dropLogs, oneDropLog)
     val insertedData = logDB.db.withDynSession {
-      dropJobs.list
+      dropLogs.list
     }
 
     e1 := numOfInsert must_== 1
-    e2 := insertedData must_== List(oneDropJob)
+    e2 := insertedData must_== List(
+      DropLog(Some(1), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None))
   }
 }

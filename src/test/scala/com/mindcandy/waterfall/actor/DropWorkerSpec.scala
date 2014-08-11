@@ -23,30 +23,30 @@ class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with Specifi
   override def after: Any = TestKit.shutdownActorSystem(system)
 
   def runDrop = {
-    val dropUID = "test1"
+    val jobID = 1
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(dropUID, new TestWaterfallDropFactory().getDropByUID(dropUID).get)
+    val request = RunDrop(jobID, new TestWaterfallDropFactory().getDropByUID("test1").get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must beSuccessfulTry
   }
 
   def runFailingDrop = {
-    val dropUID = "test2"
+    val jobID = 2
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(dropUID, new TestWaterfallDropFactory().getDropByUID(dropUID).get)
+    val request = RunDrop(jobID, new TestWaterfallDropFactory().getDropByUID("test2").get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must beFailedTry
   }
 
   def stopActor = {
-    val dropUID = "test1"
+    val jobID = 1
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(dropUID, new TestWaterfallDropFactory().getDropByUID(dropUID).get)
+    val request = RunDrop(jobID, new TestWaterfallDropFactory().getDropByUID("test1").get)
     probe.watch(actor)
 
     probe.send(actor, request)

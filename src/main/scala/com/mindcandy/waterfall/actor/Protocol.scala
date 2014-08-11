@@ -28,7 +28,7 @@ object TimeFrame extends Enumeration {
 object Protocol {
   case class DropJob(jobID: Option[Int], dropUID: DropUID, name: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: List[DropJob])
-  case class DropLog(jobID: Option[Int], dropUID: DropUID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
+  case class DropLog(logID: Option[Int], jobID: Int, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog])
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
@@ -60,24 +60,22 @@ object Protocol {
   implicit def DropJobCodecJson = casecodec7(DropJob.apply, DropJob.unapply)(
     "jobID", "dropUID", "name", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
-    "jobID", "dropUID", "startTime", "endTime", "logOutput", "exception")
+    "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
 
   implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
     { dt => new Timestamp(dt.getMillis) },
     { ts => new DateTime(ts) }
   )
 
-  class DropLogs(tag: Tag) extends Table[DropLog](tag, "LOG") {
-    def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
-    def jobID = column[Option[Int]]("JOB_ID", O.NotNull)
-    // TODO(deo.liang): remove this as the jobID shall be enough
-    def dropUID = column[String]("DROP_UID", O.NotNull)
+  class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
+    def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
+    def jobID = column[Int]("JOB_ID", O.NotNull)
     def startTime = column[DateTime]("START_TIME", O.NotNull)
     def endTime = column[Option[DateTime]]("END_TIME")
     def content = column[Option[String]]("CONTENT")
     def exception = column[Option[String]]("EXCEPTION")
     def * =
-      (jobID, dropUID, startTime, endTime, content, exception) <>
+      (logID.?, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
     def job_fk = foreignKey("JOB_FK", jobID, dropJobs)(_.jobID)
   }

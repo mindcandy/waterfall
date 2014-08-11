@@ -3,9 +3,16 @@ package com.mindcandy.waterfall.database
 import scala.slick.driver.SQLiteDriver.simple._
 import scala.slick.jdbc.meta.MTable
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
+import java.util.Properties
 
 class DB(url: String) {
-  val db = Database.forURL(url, driver = "org.sqlite.JDBC")
+
+  val db = {
+    val sqlite_prop = new Properties()
+    // notice sqlite has to set the foreign keys constraint explicitly
+    sqlite_prop.setProperty("foreign_keys", "true")
+    Database.forURL(url, driver = "org.sqlite.JDBC", prop = sqlite_prop)
+  }
 
   def insert[A](table: TableQuery[_ <: Table[A]], entry: A): Int = db.withDynSession {
     table += entry

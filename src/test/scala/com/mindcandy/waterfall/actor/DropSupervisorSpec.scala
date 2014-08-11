@@ -33,10 +33,10 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
 
     probe.send(actor, request)
-    val expectedMessage = RunDrop("test1", TestPassThroughWaterfallDrop())
+    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
     worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
   }
 
@@ -45,11 +45,11 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, "test1", _, None, None, None) => success
+      case DropLog(None, 1, _, None, None, None) => success
       case _ => failure
     }
   }
@@ -60,15 +60,15 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
-    val result = JobResult("test1", Success(()))
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val result = JobResult(1, Success(()))
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog])
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, "test1", _, Some(endTime), None, None) => success
+      case DropLog(None, 1, _, Some(endTime), None, None) => success
       case _ => failure
     }
   }
@@ -79,16 +79,16 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
     val exception = new RuntimeException("test exception")
-    val result = JobResult("test1", Failure(exception))
+    val result = JobResult(1, Failure(exception))
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog])
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, "test1", _, Some(endTime), None, Some(msg)) => success
+      case DropLog(None, 1, _, Some(endTime), None, Some(msg)) => success
       case _ => failure
     }
   }
@@ -99,12 +99,12 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
 
     probe.send(actor, request)
     probe.send(actor, request)
     probe.send(actor, request)
-    val expectedMessage = RunDrop("test1", TestPassThroughWaterfallDrop())
+    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
     worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
     worker.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
   }
@@ -115,17 +115,17 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob("test1", "Exchange Rate", currentTime)
-    val expectedMessage = RunDrop("test1", TestPassThroughWaterfallDrop())
+    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
 
     probe.send(actor, request)
     worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
 
-    probe.send(actor, JobResult("test1", Success(Unit)))
+    probe.send(actor, JobResult(1, Success(Unit)))
     probe.send(actor, request)
     worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
   }
 
-  private def createStartJob(dropUid: String, name: String, currentTime: time.DateTime): StartJob =
-    StartJob(DropJob(None, dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+  private def createStartJob(jobID: Int, dropUid: String, name: String, currentTime: time.DateTime): StartJob =
+    StartJob(DropJob(Some(jobID), dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map()))
 }

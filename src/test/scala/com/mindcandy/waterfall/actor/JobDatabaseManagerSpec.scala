@@ -15,7 +15,7 @@ import com.mindcandy.waterfall.database
 import org.specs2.mock.Mockito
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.Protocol.{ dropJobs, dropLogs }
-import scala.slick.driver.SQLiteDriver.simple._
+import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
@@ -29,6 +29,7 @@ class JobDatabaseManagerSpec
       send correct schedule $getSchedule
       log to database correctly $logToDatabase
       multiple logs to database correctly $logsToDatabase
+      insert DropLog related to unknow Drop $logToDatabaseWithUnknownKey
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -53,36 +54,59 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     val start = DateTime.now
     val end = Some(DateTime.now + 1.hour)
-    val log = DropLog(Some(1), "EXRATE", start, end, Some("test log"), None)
+    val log = DropLog(None, 1, start, end, Some("test log"), None)
     probe.send(actor, log)
-    probe.expectNoMsg()
+    probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
 
     val actual = db.db.withDynSession {dropLogs.list}
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
-    actual must_== List(log)
+    actual must_== List(DropLog(Some(1), 1, start, end, Some("test log"), None))
   }
 
   def logsToDatabase = {
     val probe = TestProbe()
     val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     val start = DateTime.now
     val end = Some(DateTime.now + 1.hour)
-    val log = DropLog(Some(1), "EXRATE", start, end, Some("test log"), None)
-    val log2 = DropLog(Some(1), "ADX", start, None, None, Some("exception"))
+    val log = DropLog(None, 1, start, end, Some("test log"), None)
+    val log2 = DropLog(None, 2, start, None, None, Some("exception"))
 
     probe.send(actor, log)
     probe.send(actor, log2)
 
-    probe.expectNoMsg()
+    probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
     val actual2 = db.db.withDynSession {dropLogs.list}
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
-    actual2 must_== List(log, log2)
+    actual2 must_== List(
+      DropLog(Some(1), 1, start, end, Some("test log"), None),
+      DropLog(Some(2), 2, start, None, None, Some("exception")))
+  }
+
+  def logToDatabaseWithUnknownKey = {
+    val probe = TestProbe()
+    val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
+    db.create(List(dropJobs, dropLogs))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "exchange rate", true, "0 0 0 0 0", TimeFrame.DAY_TODAY, Map()))
+    val actor = system.actorOf(JobDatabaseManager.props(config, db))
+
+    val start = DateTime.now
+    val end = Some(DateTime.now + 1.hour)
+    val log = DropLog(None, 2, start, end, Some("test log"), None)
+    probe.send(actor, log)
+    probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
+
+    val actual = db.db.withDynSession {dropLogs.list}
+    Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
+    actual must_== List()
   }
 }
