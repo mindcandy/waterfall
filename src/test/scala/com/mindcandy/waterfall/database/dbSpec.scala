@@ -164,7 +164,7 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
     val logDB = db
     logDB.create(List(dropLogs, dropJobs))
     logDB.insert(dropJobs, oneDropJob)
-    val numOfInsert= logDB.insert(dropLogs, oneDropLog)
+    val numOfInsert = logDB.insert(dropLogs, oneDropLog)
     val insertedData = logDB.db.withDynSession {
       dropLogs.list
     }

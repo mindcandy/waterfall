@@ -2,6 +2,7 @@ package com.mindcandy.waterfall.io
 
 import java.io.{ InputStreamReader, BufferedReader }
 import com.amazonaws.services.s3.model.ObjectListing
+import com.mindcandy.waterfall.intermediate.S3Ops
 import resource._
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -18,7 +19,8 @@ case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, b
 case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] = None, val columnSeparator: Option[String] = Option("\t"), val rowSeparator: RowSeparator = NewLine)
     extends IOSource[A]
     with IOOps[A]
-    with IntermediateOps {
+    with IntermediateOps
+    with S3Ops {
 
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     val keyPrefix = config.keyPrefix + keySuffix.getOrElse("")
@@ -42,15 +44,6 @@ case class S3IO[A <: AnyRef](config: S3IOConfig, val keySuffix: Option[String] =
           }
         }
       }
-    }
-  }
-
-  @tailrec
-  private[this] def getObjects(acc: List[String], listing: ObjectListing, s3Client: AmazonS3Client): List[String] = {
-    val keys = listing.getObjectSummaries.asScala.toList.map(_.getKey)
-    listing.isTruncated match {
-      case true => getObjects(acc ::: keys, s3Client.listNextBatchOfObjects(listing), s3Client)
-      case false => acc ::: keys
     }
   }
 

@@ -21,6 +21,13 @@ object DropSupervisor {
   case class StartJob(job: DropJob)
   case class JobResult(jobID: Int, result: Try[Unit])
 
+  def calculateDate(timeFrame: TimeFrame) = timeFrame match {
+    case DAY_TODAY => Some(DateTime.now)
+    case DAY_YESTERDAY => Some(DateTime.now - 1.day)
+    case DAY_TWO_DAYS_AGO => Some(DateTime.now - 2.days)
+    case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
+  }
+
   def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
     Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
 }
@@ -57,6 +64,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   }
 
   def runJob(job: DropJob) = {
+    // TODO(deo.liang): handle error if job.jobID is None
     runningJobs.get(job.jobID.get) match {
       case Some((actorRef, timestamp)) => log.warning(s"job ${job.dropUID} already running as actor $actorRef started at $timestamp")
       case None => {
@@ -65,7 +73,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Some(drop) => {
             val startTime = DateTime.now
             runningJobs += (job.jobID.get -> (worker, startTime))
-            // TODO(deo.liang): handle error if job.jobID is None
             worker ! DropWorker.RunDrop(job.jobID.get, drop)
             jobDatabaseManager ! DropLog(None, job.jobID.get, startTime, None, None, None)
           }
@@ -73,13 +80,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         }
       }
     }
-  }
-
-  def calculateDate(timeFrame: TimeFrame) = timeFrame match {
-    case DAY_TODAY => Some(DateTime.now)
-    case DAY_YESTERDAY => Some(DateTime.now - 1.day)
-    case DAY_TWO_DAYS_AGO => Some(DateTime.now - 2.days)
-    case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
   }
 
   override def preStart() = {

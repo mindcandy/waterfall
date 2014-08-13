@@ -1,20 +1,27 @@
 package com.mindcandy.waterfall.actor
 
 import akka.testkit.{ TestProbe, TestKit }
-import akka.actor.{ ActorContext, ActorRef, ActorSystem }
+import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
-import org.joda.time
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 import com.mindcandy.waterfall.{ TestWaterfallDropFactory, TestPassThroughWaterfallDrop }
+import akka.testkit.EventFilter
 
-class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with SpecificationLike with After with NoTimeConversions {
+class DropSupervisorSpec extends TestKit(
+  ActorSystem(
+    "DropSupervisorSpec",
+    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+    with SpecificationLike
+    with After
+    with NoTimeConversions {
   override def is = s2"""
     DropSupervisor should
       run the job when it receives a start job message $runJobOnStartJob
@@ -23,6 +30,8 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
       log a failure result when a job is completed unsuccessfully $logFailure
       do not run a job that is still running $doNotStartIfRunning
       rerun a job if previous run finished $reRunAfterFinished
+      log to Error if the drop not in factory $logToErrorIfNoFactoryDrop
+      log to Error if result not in running list $logToErrorIfResultNotInList
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -32,8 +41,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob()
 
     probe.send(actor, request)
     val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
@@ -44,8 +52,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob()
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
@@ -59,8 +66,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob(TimeFrame.DAY_THREE_DAYS_AGO)
     val result = JobResult(1, Success(()))
 
     probe.send(actor, request)
@@ -78,8 +84,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob(TimeFrame.DAY_TWO_DAYS_AGO)
     val exception = new RuntimeException("test exception")
     val result = JobResult(1, Failure(exception))
 
@@ -98,8 +103,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob(TimeFrame.DAY_YESTERDAY)
 
     probe.send(actor, request)
     probe.send(actor, request)
@@ -114,8 +118,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val currentTime = DateTime.now + Period.seconds(3)
-    val request = createStartJob(1, "test1", "Exchange Rate", currentTime)
+    val request = createStartJob(TimeFrame.DAY_TODAY)
     val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
 
     probe.send(actor, request)
@@ -126,6 +129,41 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec")) with
     worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
   }
 
-  private def createStartJob(jobID: Int, dropUid: String, name: String, currentTime: time.DateTime): StartJob =
-    StartJob(DropJob(Some(jobID), dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+  def logToErrorIfNoFactoryDrop = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val dropUID = "drop not in factory"
+    val request = StartJob(
+      DropJob(
+        Some(1), dropUID, "", true, "", TimeFrame.DAY_TODAY, Map()))
+
+    EventFilter.error(
+      source = actor.path.toString,
+      message = s"factory has no drop for ${dropUID}",
+      occurrences = 1) intercept { probe.send(actor, request) } must not(throwA[AssertionError])
+  }
+
+  def logToErrorIfResultNotInList = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+
+    probe.send(actor, createStartJob(TimeFrame.DAY_TODAY))
+
+    val jobID = 2
+    EventFilter.error(
+      source = actor.path.toString,
+      message = s"job result from job ${jobID} but not present in running jobs list",
+      occurrences = 1) intercept {
+        probe.send(actor, JobResult(jobID, Success(())))
+      } must not(throwA[AssertionError])
+  }
+
+  private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
+    val now = DateTime.now + Period.seconds(3)
+    StartJob(DropJob(Some(1), "test1", "Exchange Rate", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
+  }
 }

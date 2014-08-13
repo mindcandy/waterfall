@@ -2,12 +2,10 @@ package com.mindcandy.waterfall.actor
 
 import org.specs2.SpecificationLike
 import akka.testkit.TestKit
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, ActorRef }
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
 import akka.testkit.TestProbe
-import akka.actor.ActorRef
-import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
 import com.mindcandy.waterfall.actor.Protocol.DropJobList
 import com.mindcandy.waterfall.actor.Protocol.DropJob
@@ -18,8 +16,18 @@ import scala.concurrent.duration._
 import org.joda.time
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.mindcandy.waterfall.TestWaterfallDropFactory
+import org.specs2.mock.Mockito
+import akka.testkit.EventFilter
+import com.typesafe.config.ConfigFactory
 
-class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) with SpecificationLike with After with NoTimeConversions {
+class ScheduleManagerSpec extends TestKit(
+  ActorSystem(
+    "ScheduleManagerSpec",
+    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+    with SpecificationLike
+    with After
+    with NoTimeConversions
+    with Mockito {
   override def is = s2"""
     ScheduleManager should
       automatically schedule a CheckJobs message to itself $autoCheckJobs
@@ -32,6 +40,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
       only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
       reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
       do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
+      do not schedule a job if it's cron is malformed $malformedCron
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -193,6 +202,20 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec")) wi
     probe.send(actor, rescheduleRequest)
     dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob)
     dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+  }
+
+  def malformedCron = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
+    val request = DropJobList(List(dropJob))
+
+    EventFilter.error(
+      source = actor.path.toString,
+      pattern = "could not resolve cron expression",
+      occurrences = 1) intercept { probe.send(actor, request) } must not(throwA[AssertionError])
   }
 
   def createScheduleActor(databaseManager: TestProbe, dropSupervisor: TestProbe, maxScheduleTime: FiniteDuration = FiniteDuration(1, MINUTES),

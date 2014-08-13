@@ -1,14 +1,15 @@
 package com.mindcandy.waterfall.actor
 
-import java.nio.file.{Paths, Files}
+import java.nio.file.{ Paths, Files }
 
-import akka.testkit.{ TestProbe, TestKit }
+import akka.testkit.{ EventFilter, TestProbe, TestKit }
 import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.{DropLog, DropJob, DropJobList}
+import com.mindcandy.waterfall.actor.JobDatabaseManager._
+import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob, DropJobList }
 import scala.concurrent.duration
 import com.mindcandy.waterfall.config.JobsDatabaseConfig
 import com.mindcandy.waterfall.database
@@ -19,17 +20,22 @@ import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
-  extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
-  with SpecificationLike
-  with After
-  with NoTimeConversions
-  with Mockito {
+    extends TestKit(
+      ActorSystem(
+        "JobDatabaseManagerSpec",
+        ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+    with SpecificationLike
+    with After
+    with NoTimeConversions
+    with Mockito {
   override def is = sequential ^ s2"""
     JobDatabaseManager should
       send correct schedule $getSchedule
       log to database correctly $logToDatabase
       multiple logs to database correctly $logsToDatabase
       insert DropLog related to unknow Drop $logToDatabaseWithUnknownKey
+      send GetJobForCompletion $getJobCompletion
+      send GetScheduleForCompletion $getScheduleCompletion
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -63,7 +69,7 @@ class JobDatabaseManagerSpec
     probe.send(actor, log)
     probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
 
-    val actual = db.db.withDynSession {dropLogs.list}
+    val actual = db.db.withDynSession { dropLogs.list }
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
     actual must_== List(DropLog(Some(1), 1, start, end, Some("test log"), None))
   }
@@ -85,7 +91,7 @@ class JobDatabaseManagerSpec
     probe.send(actor, log2)
 
     probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
-    val actual2 = db.db.withDynSession {dropLogs.list}
+    val actual2 = db.db.withDynSession { dropLogs.list }
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
     actual2 must_== List(
       DropLog(Some(1), 1, start, end, Some("test log"), None),
@@ -105,8 +111,35 @@ class JobDatabaseManagerSpec
     probe.send(actor, log)
     probe.expectNoMsg(duration.FiniteDuration(5, duration.SECONDS))
 
-    val actual = db.db.withDynSession {dropLogs.list}
+    val actual = db.db.withDynSession { dropLogs.list }
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
     actual must_== List()
+  }
+
+  def getJobCompletion() = {
+    def testFunc(dropJob: Option[DropJob]) =
+      throw new Exception(dropJob.orElse(Some("")).toString)
+    val probe = TestProbe()
+    val db = mock[database.DB]
+    val actor = system.actorOf(JobDatabaseManager.props(config, db))
+
+    EventFilter[Exception](
+      message = config.dropJobList.jobs.lift(0).toString,
+      occurrences = 1) intercept {
+        probe.send(actor, GetJobForCompletion(0, testFunc))
+      } must not(throwA[AssertionError])
+  }
+
+  def getScheduleCompletion() = {
+    def testFunc(ls: List[DropJob]) = throw new Exception(ls.toString)
+    val probe = TestProbe()
+    val db = mock[database.DB]
+    val actor = system.actorOf(JobDatabaseManager.props(config, db))
+
+    EventFilter[Exception](
+      message = config.dropJobList.jobs.toString,
+      occurrences = 1) intercept {
+        probe.send(actor, GetScheduleForCompletion(testFunc))
+      } must not(throwA[AssertionError])
   }
 }
