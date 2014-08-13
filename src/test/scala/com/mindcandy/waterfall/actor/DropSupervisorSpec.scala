@@ -137,7 +137,7 @@ class DropSupervisorSpec extends TestKit(
     val dropUID = "drop not in factory"
     val request = StartJob(
       DropJob(
-        Some(1), dropUID, "", true, "", TimeFrame.DAY_TODAY, Map()))
+        Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
 
     EventFilter.error(
       source = actor.path.toString,
@@ -164,6 +164,6 @@ class DropSupervisorSpec extends TestKit(
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
     val now = DateTime.now + Period.seconds(3)
-    StartJob(DropJob(Some(1), "test1", "Exchange Rate", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
+    StartJob(DropJob(Some(1), "test1", "Exchange Rate", "description", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
   }
 }

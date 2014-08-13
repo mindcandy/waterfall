@@ -41,8 +41,8 @@ class JobDatabaseManagerSpec
   override def after: Any = TestKit.shutdownActorSystem(system)
 
   val config = JobsDatabaseConfig(DropJobList(List(
-    DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-    DropJob(None, "ADX", "Adx", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
+    DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
+    DropJob(None, "ADX", "Adx", "desc", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
   )))
 
   def getSchedule = {
@@ -60,7 +60,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
-    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     val start = DateTime.now
@@ -78,8 +78,8 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
-    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
-    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     val start = DateTime.now
@@ -102,7 +102,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
-    db.insert(dropJobs, DropJob(None, "EXRATE", "exchange rate", true, "0 0 0 0 0", TimeFrame.DAY_TODAY, Map()))
+    db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 0 0 0 0", TimeFrame.DAY_TODAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     val start = DateTime.now

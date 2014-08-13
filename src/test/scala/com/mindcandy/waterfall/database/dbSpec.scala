@@ -17,7 +17,7 @@ trait TestData {
   val oneDropLog = DropLog(
     None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
-    None, "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
+    None, "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
@@ -84,7 +84,7 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
     e1 := numberOfInsert must_== 1
     e2 := insertedData must_== List(
-      DropJob(Some(1), "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")))
+      DropJob(Some(1), "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")))
   }
 
   def insertTwoToDatabase = new group {
@@ -92,7 +92,7 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
     logDB.create(dropJobs)
     val data = List(
       oneDropJob,
-      DropJob(None, "test2", "test", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+      DropJob(None, "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val numberOfInsert = logDB.insert(dropJobs, data)
     val insertedData = logDB.db.withDynSession {
       dropJobs.list
@@ -100,8 +100,8 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
     e1 := numberOfInsert must_== Some(2)
     e2 := insertedData must_== List(
-      DropJob(Some(1), "test", "test", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")),
-      DropJob(Some(2), "test2", "test", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+      DropJob(Some(1), "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")),
+      DropJob(Some(2), "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
   }
 
   def overwriteExistDatabase = new group {

@@ -209,7 +209,7 @@ class ScheduleManagerSpec extends TestKit(
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
     val request = DropJobList(List(dropJob))
 
     EventFilter.error(
@@ -223,5 +223,5 @@ class ScheduleManagerSpec extends TestKit(
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
   private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob =
-    DropJob(None, dropUid, name, true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    DropJob(None, dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
 }

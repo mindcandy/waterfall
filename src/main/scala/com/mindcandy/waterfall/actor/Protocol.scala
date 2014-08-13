@@ -26,7 +26,7 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
-  case class DropJob(jobID: Option[Int], dropUID: DropUID, name: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
+  case class DropJob(jobID: Option[Int], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: List[DropJob])
   case class DropLog(logID: Option[Int], jobID: Int, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog])
@@ -57,8 +57,8 @@ object Protocol {
       exception <- Option(new Exception(str))
     } yield exception, "Exception")
 
-  implicit def DropJobCodecJson = casecodec7(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "enabled", "cron", "timeFrame", "configuration")
+  implicit def DropJobCodecJson = casecodec8(DropJob.apply, DropJob.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
 
@@ -101,13 +101,14 @@ object Protocol {
     def jobID = column[Int]("JOB_ID", O.PrimaryKey, O.AutoInc)
     def dropUID = column[String]("DROP_UID", O.NotNull)
     def name = column[String]("NAME", O.NotNull)
+    def description = column[String]("DESCRIPTION", O.NotNull)
     def enabled = column[Boolean]("ENABLED", O.NotNull)
     def cron = column[String]("CRON", O.NotNull)
     def timeFrame = column[TimeFrame.TimeFrame]("TIME_FRAME", O.NotNull)
     // configuration stored as a json string
     def configuration = column[Map[String, String]]("CONFIGURATION", O.NotNull)
     def * =
-      (jobID.?, dropUID, name, enabled, cron, timeFrame, configuration) <>
+      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration) <>
         (DropJob.tupled, DropJob.unapply)
   }
 
