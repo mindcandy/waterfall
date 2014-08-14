@@ -16,8 +16,8 @@ trait RedshiftIOConfig extends IOConfig {
 case class RedshiftIOSourceConfig(url: String, username: String, password: String, query: String) extends RedshiftIOConfig {
   override def toString = "RedshiftIOSourceConfig(%s, %s)".format(url, query)
 }
-case class RedshiftIOSinkConfig(url: String, username: String, password: String, tableName: String, columnNames: Option[List[String]] = None) extends RedshiftIOConfig {
-  override def toString = "RedshiftIOSourceConfig(%s, %s, %s)".format(url, tableName, columnNames)
+case class RedshiftIOSinkConfig(url: String, username: String, password: String, tableName: String, columnNames: Option[List[String]] = None, truncateTargetTable: Boolean = false) extends RedshiftIOConfig {
+  override def toString = "RedshiftIOSourceConfig(%s, tableNamme=%s, columnNames=%s, truncateTargetTable=%s)".format(url, tableName, columnNames, truncateTargetTable)
 }
 
 case class RedshiftIOSource[A <: AnyRef](config: RedshiftIOSourceConfig, s3Config: Option[S3IOConfig] = None)
@@ -50,8 +50,13 @@ case class RedshiftIOSink[A <: AnyRef](config: RedshiftIOSinkConfig, s3Config: O
     }
     val combinedS3Url = s"s3://${s3Intermediate.bucketName}/${s3Intermediate.datedKeyPrefix}"
     val columns = config.columnNames.map("(" + _.mkString(",") + ")").getOrElse("")
-    logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url}")
+    logger.info(s"Copying S3 data from ${combinedS3Url} into Redshift table ${config.tableName} in db ${config.url} with truncate=${config.truncateTargetTable}")
     Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password).withSession {
+      if (config.truncateTargetTable) {
+        StaticQuery.updateNA(
+          s"TRUNCATE ${config.tableName}"
+        ).execute
+      }
       StaticQuery.updateNA(
         s"COPY ${config.tableName} ${columns} FROM '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"
       ).execute
