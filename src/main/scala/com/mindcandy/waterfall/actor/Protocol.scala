@@ -26,7 +26,8 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
-  case class DropJob(jobID: Option[Int], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
+  type JobID = Int
+  case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: List[DropJob])
   case class DropLog(logID: Option[Int], jobID: Int, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog])
@@ -42,21 +43,6 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit val stackTraceElementEncode: EncodeJson[StackTraceElement] = EncodeJson(element =>
-    jString(s"${element.getClassName}.${element.getMethodName}(${element.getFileName}:${element.getLineNumber})")
-  )
-  implicit val throwableEncode: EncodeJson[Throwable] = EncodeJson(error =>
-    ("message" := jString(error.getMessage)) ->:
-      ("stackTrace" := error.getStackTrace.toList.asJson) ->:
-      jEmptyObject
-  )
-  implicit val throwableDecode: DecodeJson[Throwable] = optionDecoder(json =>
-    for {
-      message <- json.field("message")
-      str <- message.string
-      exception <- Option(new Exception(str))
-    } yield exception, "Exception")
-
   implicit def DropJobCodecJson = casecodec8(DropJob.apply, DropJob.unapply)(
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
@@ -69,7 +55,7 @@ object Protocol {
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
     def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
-    def jobID = column[Int]("JOB_ID", O.NotNull)
+    def jobID = column[JobID]("JOB_ID", O.NotNull)
     def startTime = column[DateTime]("START_TIME", O.NotNull)
     def endTime = column[Option[DateTime]]("END_TIME")
     def content = column[Option[String]]("CONTENT")
@@ -98,7 +84,7 @@ object Protocol {
   )
 
   class DropJobs(tag: Tag) extends Table[DropJob](tag, "DROP_JOB") {
-    def jobID = column[Int]("JOB_ID", O.PrimaryKey, O.AutoInc)
+    def jobID = column[JobID]("JOB_ID", O.PrimaryKey, O.AutoInc)
     def dropUID = column[String]("DROP_UID", O.NotNull)
     def name = column[String]("NAME", O.NotNull)
     def description = column[String]("DESCRIPTION", O.NotNull)

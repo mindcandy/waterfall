@@ -2,17 +2,16 @@ package com.mindcandy.waterfall.actor
 
 import java.nio.file.{ Paths, Files }
 
-import akka.testkit.{ EventFilter, TestProbe, TestKit }
+import akka.testkit.{ TestProbe, TestKit }
 import akka.actor.ActorSystem
-import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob, DropJobList }
 import scala.concurrent.duration
-import com.mindcandy.waterfall.config.JobsDatabaseConfig
-import com.mindcandy.waterfall.database
+import com.mindcandy.waterfall.config.{ DB, JobsDatabaseConfig }
+import com.mindcandy.waterfall.config
 import org.specs2.mock.Mockito
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.Protocol.{ dropJobs, dropLogs }
@@ -20,10 +19,7 @@ import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
-    extends TestKit(
-      ActorSystem(
-        "JobDatabaseManagerSpec",
-        ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+    extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
     with SpecificationLike
     with After
     with NoTimeConversions
@@ -47,7 +43,7 @@ class JobDatabaseManagerSpec
 
   def getSchedule = {
     val probe = TestProbe()
-    val db = mock[database.DB]
+    val db = mock[DB]
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     probe.send(actor, GetSchedule())
@@ -58,7 +54,7 @@ class JobDatabaseManagerSpec
 
   def logToDatabase = {
     val probe = TestProbe()
-    val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
+    val db = new DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
     db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
@@ -76,7 +72,7 @@ class JobDatabaseManagerSpec
 
   def logsToDatabase = {
     val probe = TestProbe()
-    val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
+    val db = new DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
     db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
     db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
@@ -100,7 +96,7 @@ class JobDatabaseManagerSpec
 
   def logToDatabaseWithUnknownKey = {
     val probe = TestProbe()
-    val db = new database.DB("jdbc:sqlite:JobDatabaseManager.db")
+    val db = new DB("jdbc:sqlite:JobDatabaseManager.db")
     db.create(List(dropJobs, dropLogs))
     db.insert(dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 0 0 0 0", TimeFrame.DAY_TODAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
@@ -117,29 +113,23 @@ class JobDatabaseManagerSpec
   }
 
   def getJobCompletion() = {
-    def testFunc(dropJob: Option[DropJob]) =
-      throw new Exception(dropJob.orElse(Some("")).toString)
     val probe = TestProbe()
-    val db = mock[database.DB]
+    def testFunc(dropJob: Option[DropJob]) =
+      probe.ref ! dropJob.orElse(Some("")).toString
+    val db = mock[DB]
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
-    EventFilter[Exception](
-      message = config.dropJobList.jobs.lift(0).toString,
-      occurrences = 1) intercept {
-        probe.send(actor, GetJobForCompletion(0, testFunc))
-      } must not(throwA[AssertionError])
+    probe.send(actor, GetJobForCompletion(0, testFunc))
+    probe.expectMsg(config.dropJobList.jobs.lift(0).toString) must not(throwA[AssertionError])
   }
 
   def getScheduleCompletion() = {
-    def testFunc(ls: List[DropJob]) = throw new Exception(ls.toString)
     val probe = TestProbe()
-    val db = mock[database.DB]
+    def testFunc(ls: List[DropJob]) = probe.ref ! ls.toString
+    val db = mock[DB]
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
-    EventFilter[Exception](
-      message = config.dropJobList.jobs.toString,
-      occurrences = 1) intercept {
-        probe.send(actor, GetScheduleForCompletion(testFunc))
-      } must not(throwA[AssertionError])
+    probe.send(actor, GetScheduleForCompletion(testFunc))
+    probe.expectMsg(config.dropJobList.jobs.toString) must not(throwA[AssertionError])
   }
 }

@@ -2,7 +2,6 @@ package com.mindcandy.waterfall.actor
 
 import akka.testkit.{ TestProbe, TestKit }
 import akka.actor.ActorSystem
-import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
@@ -13,12 +12,8 @@ import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import com.mindcandy.waterfall.{ TestWaterfallDropFactory, TestPassThroughWaterfallDrop }
-import akka.testkit.EventFilter
 
-class DropSupervisorSpec extends TestKit(
-  ActorSystem(
-    "DropSupervisorSpec",
-    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     with SpecificationLike
     with After
     with NoTimeConversions {
@@ -30,8 +25,9 @@ class DropSupervisorSpec extends TestKit(
       log a failure result when a job is completed unsuccessfully $logFailure
       do not run a job that is still running $doNotStartIfRunning
       rerun a job if previous run finished $reRunAfterFinished
-      log to Error if the drop not in factory $logToErrorIfNoFactoryDrop
-      log to Error if result not in running list $logToErrorIfResultNotInList
+      log to database if the drop not in factory $logToErrorIfNoFactoryDrop
+      log to database if result not in running list $logToErrorIfResultNotInList
+      log to error if DropJob contain no JobID $logToErrorIfNoJobID
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -56,7 +52,7 @@ class DropSupervisorSpec extends TestKit(
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, 1, _, None, None, None) => success
+      case DropLog(None, 1, _, None, Some(message), None) => success
       case _ => failure
     }
   }
@@ -74,7 +70,7 @@ class DropSupervisorSpec extends TestKit(
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, 1, _, Some(endTime), None, None) => success
+      case DropLog(None, 1, _, Some(endTime), Some(message), None) => success
       case _ => failure
     }
   }
@@ -139,10 +135,9 @@ class DropSupervisorSpec extends TestKit(
       DropJob(
         Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
 
-    EventFilter.error(
-      source = actor.path.toString,
-      message = s"factory has no drop for ${dropUID}",
-      occurrences = 1) intercept { probe.send(actor, request) } must not(throwA[AssertionError])
+    probe.send(actor, request)
+    val expectedMsg = Some(s"factory has no drop for ${dropUID}")
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]).logOutput must_== expectedMsg
   }
 
   def logToErrorIfResultNotInList = {
@@ -152,14 +147,29 @@ class DropSupervisorSpec extends TestKit(
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
 
     probe.send(actor, createStartJob(TimeFrame.DAY_TODAY))
+    jobDatabaseManager.expectMsgClass(classOf[DropLog])
 
     val jobID = 2
-    EventFilter.error(
-      source = actor.path.toString,
-      message = s"job result from job ${jobID} but not present in running jobs list",
-      occurrences = 1) intercept {
-        probe.send(actor, JobResult(jobID, Success(())))
-      } must not(throwA[AssertionError])
+    probe.send(actor, JobResult(jobID, Success(())))
+
+    val expectedMsg = Some(s"job result from job ${jobID} but not present in running jobs list")
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]).logOutput must_== expectedMsg
+  }
+
+  def logToErrorIfNoJobID = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val request = StartJob(
+      DropJob(None, "test", "", "", true, "", TimeFrame.DAY_TODAY, Map()))
+
+    probe.send(actor, request)
+    // We are not testing the log.error but it should expect nothing sent from
+    // JobSupervior
+    jobDatabaseManager.expectNoMsg() must not(throwA[AssertionError])
+    worker.expectNoMsg() must not(throwA[AssertionError])
+    probe.expectNoMsg() must not(throwA[AssertionError])
   }
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {

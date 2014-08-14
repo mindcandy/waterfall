@@ -9,9 +9,9 @@ import scala.concurrent.duration._
 import com.mindcandy.waterfall.actor.{ DropSupervisor, ScheduleManager, JobDatabaseManager }
 import com.mindcandy.waterfall.app.{ ApplicationLifecycle, AbstractApplicationDaemon }
 import com.typesafe.config.ConfigFactory
-import com.mindcandy.waterfall.config.ConfigReader
+import com.mindcandy.waterfall.config.{ DB, ConfigReader }
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.database
+import com.mindcandy.waterfall.config
 import com.mindcandy.waterfall.actor.Protocol.{ dropLogs, dropJobs }
 
 trait ClassLoader[T] {
@@ -35,7 +35,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
 
       val config = ConfigFactory.load()
 
-      val db = new database.DB(logDatabase(config))
+      val db = new DB(logDatabase(config))
       db.createIfNotExists(List(dropJobs, dropLogs))
       val dropFactory = loadClass(dropFactoryClass(config))
       val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(jobsDatabaseConfig(config), db), "job-database-manager")

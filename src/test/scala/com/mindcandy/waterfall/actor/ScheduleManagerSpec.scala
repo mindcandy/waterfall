@@ -7,8 +7,7 @@ import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
 import akka.testkit.TestProbe
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.DropJobList
-import com.mindcandy.waterfall.actor.Protocol.DropJob
+import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJobList, DropJob }
 import com.github.nscala_time.time.Imports._
 import scala.language.postfixOps
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
@@ -17,13 +16,8 @@ import org.joda.time
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.mindcandy.waterfall.TestWaterfallDropFactory
 import org.specs2.mock.Mockito
-import akka.testkit.EventFilter
-import com.typesafe.config.ConfigFactory
 
-class ScheduleManagerSpec extends TestKit(
-  ActorSystem(
-    "ScheduleManagerSpec",
-    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")))
+class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     with SpecificationLike
     with After
     with NoTimeConversions
@@ -164,6 +158,10 @@ class ScheduleManagerSpec extends TestKit(
     probe.send(actor, request)
     dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(dropJob1)
     dropSupervisor.expectNoMsg(FiniteDuration(10, SECONDS)) must not(throwA[AssertionError])
+    databaseManager
+      .expectMsgClass(classOf[DropLog])
+      .logOutput
+      .getOrElse("None") must startWith(s"Job ${dropJob2.dropUID} ignored")
   }
 
   def rescheduleJobs = {
@@ -209,13 +207,15 @@ class ScheduleManagerSpec extends TestKit(
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
     val request = DropJobList(List(dropJob))
 
-    EventFilter.error(
-      source = actor.path.toString,
-      pattern = "could not resolve cron expression",
-      occurrences = 1) intercept { probe.send(actor, request) } must not(throwA[AssertionError])
+    probe.send(actor, request)
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
+    databaseManager
+      .expectMsgClass(classOf[DropLog])
+      .exception
+      .getOrElse("None") must startWith("could not resolve cron expression:")
   }
 
   def createScheduleActor(databaseManager: TestProbe, dropSupervisor: TestProbe, maxScheduleTime: FiniteDuration = FiniteDuration(1, MINUTES),
@@ -223,5 +223,5 @@ class ScheduleManagerSpec extends TestKit(
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
   private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob =
-    DropJob(None, dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    DropJob(Some(1), dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
 }

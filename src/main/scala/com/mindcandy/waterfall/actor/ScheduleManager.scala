@@ -75,11 +75,18 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       case Success(duration) if maxScheduleTime > duration =>
         Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(job))(context.dispatcher))
       case Success(duration) =>
-        log.debug(s"Job $job ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
+        val debug = s"Job ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime"
+        log.debug(debug)
+        jobDatabaseManager ! DropLog(None, job.jobID.get, DateTime.now, None, Some(debug), None)
         None
       case Failure(exception) => {
         log.debug("bad cron expression", exception)
-        log.error(s"could not resolve cron expression: ${exception.getMessage}")
+        val error = "could not resolve cron expression:"
+        log.error(error, exception)
+        jobDatabaseManager !
+          DropLog(
+            None, job.jobID.get, DateTime.now, None, None,
+            Some(s"${error}\n${exception.toString}\n${exception.getStackTraceString}"))
         None
       }
     }

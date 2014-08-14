@@ -1,9 +1,10 @@
-package com.mindcandy.waterfall.database
+package com.mindcandy.waterfall.config
+
+import java.util.Properties
 
 import scala.slick.driver.SQLiteDriver.simple._
-import scala.slick.jdbc.meta.MTable
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
-import java.util.Properties
+import scala.slick.jdbc.meta.MTable
 
 class DB(url: String) {
 

@@ -1,4 +1,4 @@
-package com.mindcandy.waterfall.database
+package com.mindcandy.waterfall.config
 
 import java.nio.file.{ Files, Paths }
 
