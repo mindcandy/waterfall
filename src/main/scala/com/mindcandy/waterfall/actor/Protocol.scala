@@ -1,15 +1,17 @@
 package com.mindcandy.waterfall.actor
 
 import java.sql.Timestamp
+import java.util.Properties
 
+import com.mindcandy.waterfall.config.{ DatabaseContainer, DatabaseConfig }
 import org.joda.time.DateTime
 import argonaut._
 import Argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory
 import WaterfallDropFactory.DropUID
+import scala.slick.driver.{ PostgresDriver, SQLiteDriver }
 import scalaz.\/
 import scala.language.implicitConversions
-import scala.slick.driver.SQLiteDriver.simple._
 
 object TimeFrame extends Enumeration {
   type TimeFrame = Value
@@ -47,6 +49,25 @@ object Protocol {
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
+
+}
+
+class DB(val config: DatabaseConfig) extends DatabaseContainer {
+  val driver = config.driver
+  import driver.simple._
+  import Protocol._
+
+  val db = {
+    val properties = new Properties()
+    val sqlDriver = config.driver match {
+      case SQLiteDriver =>
+        // notice sqlite has to set the foreign keys constraint explicitly
+        properties.setProperty("foreign_keys", "true")
+        "org.sqlite.JDBC"
+      case PostgresDriver => "org.postgresql.Driver"
+    }
+    Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
+  }
 
   implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
     { dt => new Timestamp(dt.getMillis) },
@@ -99,4 +120,5 @@ object Protocol {
   }
 
   val dropJobs = TableQuery[DropJobs]
+  val all = Seq(dropJobs, dropLogs)
 }

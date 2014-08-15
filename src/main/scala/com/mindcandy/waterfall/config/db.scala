@@ -1,19 +1,35 @@
 package com.mindcandy.waterfall.config
 
-import java.util.Properties
-
-import scala.slick.driver.SQLiteDriver.simple._
+import scala.slick.driver._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.meta.MTable
 
-class DB(url: String) {
-
-  val db = {
-    val sqlite_prop = new Properties()
-    // notice sqlite has to set the foreign keys constraint explicitly
-    sqlite_prop.setProperty("foreign_keys", "true")
-    Database.forURL(url, driver = "org.sqlite.JDBC", prop = sqlite_prop)
+// username and password by default is null instead of empty string, otherwise
+// they invalidate the properties parameter used in forURL(), at least when
+// using sqlite.
+case class DatabaseConfig(url: String, username: String = null, password: String = null) {
+  val driver: JdbcDriver = {
+    val driverRegex = "^jdbc:([^:]+):.+".r
+    val driver = url match {
+      case driverRegex(name) =>
+        name match {
+          case "sqlite" => SQLiteDriver
+          case "postgresql" => PostgresDriver
+          case _ => throw new RuntimeException("Driver not understood.")
+        }
+    }
+    driver
   }
+}
+
+trait Driver {
+  val driver: JdbcDriver
+}
+
+trait DatabaseContainer extends Driver {
+  import driver.simple._
+
+  val db: driver.backend.DatabaseDef
 
   def insert[A](table: TableQuery[_ <: Table[A]], entry: A): Int = db.withDynSession {
     table += entry

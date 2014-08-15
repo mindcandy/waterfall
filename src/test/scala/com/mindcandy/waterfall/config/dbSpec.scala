@@ -2,8 +2,9 @@ package com.mindcandy.waterfall.config
 
 import java.nio.file.{ Files, Paths }
 
-import com.mindcandy.waterfall.actor.Protocol.{ DropLog, dropLogs, DropJob, dropJobs }
+import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob }
 import com.mindcandy.waterfall.actor.TimeFrame
+import com.mindcandy.waterfall.actor.DB
 import org.joda.time.DateTime
 import org.specs2.specification.{ AfterExample, Grouped }
 import org.specs2.specification.script.Specification
@@ -13,7 +14,7 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.driver.JdbcDriver.simple._
 
 trait TestData {
-  def db = new DB("jdbc:sqlite:dbspec.db")
+  def db = new DB(DatabaseConfig("jdbc:sqlite:dbspec.db"))
   val oneDropLog = DropLog(
     None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
@@ -56,8 +57,8 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def createNewDatabase = new group {
     val logDB = db
-    logDB.create(dropLogs)
-    val tableName = dropLogs.baseTableRow.tableName
+    logDB.create(logDB.dropLogs)
+    val tableName = logDB.dropLogs.baseTableRow.tableName
     val isTableExists: Boolean = logDB.db.withDynSession {
       !MTable.getTables(tableName).list.isEmpty
     }
@@ -66,8 +67,8 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def createNewDatabaseNotOverwrite = new group {
     val logDB = db
-    logDB.createIfNotExists(dropLogs)
-    val tableName = dropLogs.baseTableRow.tableName
+    logDB.createIfNotExists(logDB.dropLogs)
+    val tableName = logDB.dropLogs.baseTableRow.tableName
     val isTableExists: Boolean = logDB.db.withDynSession {
       !MTable.getTables(tableName).list.isEmpty
     }
@@ -76,10 +77,10 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def insertToDatabase = new group {
     val logDB = db
-    logDB.create(dropJobs)
-    val numberOfInsert = logDB.insert(dropJobs, oneDropJob)
+    logDB.create(logDB.dropJobs)
+    val numberOfInsert = logDB.insert(logDB.dropJobs, oneDropJob)
     val insertedData = logDB.db.withDynSession {
-      dropJobs.list
+      logDB.dropJobs.list
     }
 
     e1 := numberOfInsert must_== 1
@@ -89,13 +90,13 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def insertTwoToDatabase = new group {
     val logDB = db
-    logDB.create(dropJobs)
+    logDB.create(logDB.dropJobs)
     val data = List(
       oneDropJob,
       DropJob(None, "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
-    val numberOfInsert = logDB.insert(dropJobs, data)
+    val numberOfInsert = logDB.insert(logDB.dropJobs, data)
     val insertedData = logDB.db.withDynSession {
-      dropJobs.list
+      logDB.dropJobs.list
     }
 
     e1 := numberOfInsert must_== Some(2)
@@ -106,11 +107,11 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def overwriteExistDatabase = new group {
     val logDB = db
-    logDB.create(dropJobs)
-    logDB.insert(dropJobs, oneDropJob)
-    logDB.create(dropJobs)
+    logDB.create(logDB.dropJobs)
+    logDB.insert(logDB.dropJobs, oneDropJob)
+    logDB.create(logDB.dropJobs)
     val insertedData = logDB.db.withDynSession {
-      dropJobs.list
+      logDB.dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beTrue
@@ -118,11 +119,11 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def notOverwriteExistDatabase = new group {
     val logDB = db
-    logDB.create(dropJobs)
-    logDB.insert(dropJobs, oneDropJob)
-    logDB.createIfNotExists(dropJobs)
+    logDB.create(logDB.dropJobs)
+    logDB.insert(logDB.dropJobs, oneDropJob)
+    logDB.createIfNotExists(logDB.dropJobs)
     val insertedData = logDB.db.withDynSession {
-      dropJobs.list
+      logDB.dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beFalse
@@ -130,10 +131,10 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def createTablesInNewDB = new group {
     val logDB = db
-    logDB.createIfNotExists(List(dropJobs, dropLogs))
+    logDB.createIfNotExists(List(logDB.dropJobs, logDB.dropLogs))
     val isTablesCreated = logDB.db.withDynSession {
-      !MTable.getTables(dropLogs.baseTableRow.tableName).list.isEmpty &&
-        !MTable.getTables(dropJobs.baseTableRow.tableName).list.isEmpty
+      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
     }
 
     e1 := isTablesCreated must beTrue
@@ -141,19 +142,19 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def createTablesOverwrite = new group {
     val logDB = db
-    logDB.create(List(dropJobs, dropLogs))
-    logDB.insert(dropJobs, oneDropJob)
-    logDB.create(List(dropJobs, dropLogs))
+    logDB.create(List(logDB.dropJobs, logDB.dropLogs))
+    logDB.insert(logDB.dropJobs, oneDropJob)
+    logDB.create(List(logDB.dropJobs, logDB.dropLogs))
     val isTablesCreated = logDB.db.withDynSession {
-      !MTable.getTables(dropLogs.baseTableRow.tableName).list.isEmpty &&
-        !MTable.getTables(dropJobs.baseTableRow.tableName).list.isEmpty
+      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
     }
 
     val dataDropJobs = logDB.db.withDynSession {
-      dropJobs.list
+      logDB.dropJobs.list
     }
     val dataDropLogs = logDB.db.withDynSession {
-      dropLogs.list
+      logDB.dropLogs.list
     }
     e1 := isTablesCreated must beTrue
     e2 := dataDropJobs must_== List()
@@ -162,11 +163,11 @@ class DBSpec extends Specification with Grouped with AfterExample with TestData 
 
   def insertDropLog = new group {
     val logDB = db
-    logDB.create(List(dropLogs, dropJobs))
-    logDB.insert(dropJobs, oneDropJob)
-    val numOfInsert = logDB.insert(dropLogs, oneDropLog)
+    logDB.create(List(logDB.dropLogs, logDB.dropJobs))
+    logDB.insert(logDB.dropJobs, oneDropJob)
+    val numOfInsert = logDB.insert(logDB.dropLogs, oneDropLog)
     val insertedData = logDB.db.withDynSession {
-      dropLogs.list
+      logDB.dropLogs.list
     }
 
     e1 := numOfInsert must_== 1

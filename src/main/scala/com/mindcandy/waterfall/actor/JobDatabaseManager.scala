@@ -6,8 +6,7 @@ import Protocol.DropJob
 import akka.actor.ActorLogging
 import com.mindcandy.waterfall.actor.Protocol.DropJobList
 import com.mindcandy.waterfall.actor.Protocol.DropLog
-import com.mindcandy.waterfall.actor.Protocol.dropLogs
-import com.mindcandy.waterfall.config.{ DB, JobsDatabaseConfig }
+import com.mindcandy.waterfall.config.JobsDatabaseConfig
 
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: Int, completionFunction: Option[DropJob] => Unit)
@@ -36,7 +35,7 @@ class JobDatabaseManager(dropJobList: DropJobList, db: DB) extends Actor with Ac
     }
     case dropLog: DropLog => {
       log.debug(s"drop log received")
-      db.insert(dropLogs, dropLog)
+      db.insert(db.dropLogs, dropLog)
     }
   }
 }

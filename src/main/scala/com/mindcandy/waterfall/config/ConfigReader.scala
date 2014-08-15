@@ -24,4 +24,12 @@ trait ConfigReader {
   def logDatabase: Reader[Config, String] = Reader(
     config => config.getString("waterfall.logDatabase")
   )
+
+  def username: Reader[Config, String] = Reader(
+    config => config.getString("waterfall.username")
+  )
+
+  def password: Reader[Config, String] = Reader(
+    config => config.getString("waterfall.password")
+  )
 }
