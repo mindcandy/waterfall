@@ -30,7 +30,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
   import ScheduleManager._
   import Protocol._
 
-  private[this] var scheduledJobs = Map[DropUID, (DropJob, Cancellable)]()
+  private[this] var scheduledJobs = Map[JobID, (DropJob, Cancellable)]()
 
   // Schedule a periodic CheckJobs message to self
   context.system.scheduler.schedule(checkJobsPeriod, checkJobsPeriod, self, CheckJobs())(context.dispatcher)
@@ -42,24 +42,24 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
     case DropJobList(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
-      val newJobUIDs = manageScheduledJobs(jobs.map(job => job.dropUID -> job).toMap)
+      val newJobUIDs = manageScheduledJobs(jobs)
       for {
-        job <- jobs
-        if (newJobUIDs contains job.dropUID)
-        cancellable <- scheduleJob(job)
+        (jobID, job) <- jobs
+        if (newJobUIDs contains jobID)
+        cancellable <- scheduleJob(jobID, job)
       } yield {
-        scheduledJobs += (job.dropUID -> (job, cancellable))
+        scheduledJobs += (jobID -> (job, cancellable))
       }
     }
     case startJob: StartJob => {
-      scheduledJobs -= startJob.job.dropUID
+      scheduledJobs -= startJob.jobID
       dropSupervisor ! startJob
     }
   }
 
-  def manageScheduledJobs(jobs: Map[DropUID, DropJob]): Set[DropUID] = {
-    val dropUIDs = jobs.keySet
-    val scheduledUIDs = scheduledJobs.keySet & dropUIDs
+  def manageScheduledJobs(jobs: Map[JobID, DropJob]): Set[JobID] = {
+    val jobIDs = jobs.keySet
+    val scheduledUIDs = scheduledJobs.keySet & jobIDs
     for {
       removableDropUID <- scheduledJobs.keySet &~ scheduledUIDs
     } yield {
@@ -67,13 +67,13 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       cancellable.cancel
       scheduledJobs -= removableDropUID
     }
-    dropUIDs &~ scheduledUIDs
+    jobIDs &~ scheduledUIDs
   }
 
-  def scheduleJob(job: DropJob): Option[Cancellable] = {
+  def scheduleJob(jobID: JobID, job: DropJob): Option[Cancellable] = {
     calculateNextFireTime(job.cron) match {
       case Success(duration) if maxScheduleTime > duration =>
-        Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(job))(context.dispatcher))
+        Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(jobID, job))(context.dispatcher))
       case Success(duration) =>
         val debug = s"Job ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime"
         log.debug(debug)

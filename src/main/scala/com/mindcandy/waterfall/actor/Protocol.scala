@@ -30,8 +30,8 @@ object TimeFrame extends Enumeration {
 object Protocol {
   type JobID = Int
   case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
-  case class DropJobList(jobs: List[DropJob])
-  case class DropLog(logID: Option[Int], jobID: Int, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
+  case class DropJobList(jobs: Map[JobID, DropJob])
+  case class DropLog(logID: Option[Int], jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog])
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))

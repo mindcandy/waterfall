@@ -22,13 +22,10 @@ case class DatabaseConfig(url: String, username: String = null, password: String
   }
 }
 
-trait Driver {
-  val driver: JdbcDriver
-}
-
-trait DatabaseContainer extends Driver {
+trait DatabaseContainer {
   import driver.simple._
 
+  val driver: JdbcDriver
   val db: driver.backend.DatabaseDef
 
   def insert[A](table: TableQuery[_ <: Table[A]], entry: A): Int = db.withDynSession {
