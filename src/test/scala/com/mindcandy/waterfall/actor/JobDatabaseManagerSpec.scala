@@ -37,9 +37,9 @@ class JobDatabaseManagerSpec
     Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
   }
 
-  val config = JobsDatabaseConfig(DropJobList(List(
-    DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-    DropJob(None, "ADX", "Adx", "desc", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
+  val config = JobsDatabaseConfig(DropJobList(Map(
+    1 -> DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
+    2 -> DropJob(None, "ADX", "Adx", "desc", true, "0 2 * * *", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties"))
   )))
 
   val databaseConfig = DatabaseConfig("jdbc:sqlite:JobDatabaseManager.db")
@@ -120,7 +120,7 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     probe.send(actor, GetJobForCompletion(0, testFunc))
-    probe.expectMsg(config.dropJobList.jobs.lift(0).toString) must not(throwA[AssertionError])
+    probe.expectMsg(config.dropJobList.jobs(0).toString) must not(throwA[AssertionError])
   }
 
   def getScheduleCompletion() = {
@@ -130,6 +130,6 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(config, db))
 
     probe.send(actor, GetScheduleForCompletion(testFunc))
-    probe.expectMsg(config.dropJobList.jobs.toString) must not(throwA[AssertionError])
+    probe.expectMsg(config.dropJobList.jobs.values.toList.toString) must not(throwA[AssertionError])
   }
 }

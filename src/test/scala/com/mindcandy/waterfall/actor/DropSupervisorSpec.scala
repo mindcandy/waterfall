@@ -27,7 +27,6 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
       rerun a job if previous run finished $reRunAfterFinished
       log to database if the drop not in factory $logToErrorIfNoFactoryDrop
       log to database if result not in running list $logToErrorIfResultNotInList
-      log to error if DropJob contain no JobID $logToErrorIfNoJobID
   """
 
   override def after: Any = TestKit.shutdownActorSystem(system)
@@ -52,7 +51,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
 
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, 1, _, None, Some(message), None) => success
+      case DropLog(None, 1, _, None, None, None) => success
       case _ => failure
     }
   }
@@ -70,7 +69,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, 1, _, Some(endTime), Some(message), None) => success
+      case DropLog(None, 1, _, Some(_), None, None) => success
       case _ => failure
     }
   }
@@ -89,7 +88,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
 
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
-      case DropLog(None, 1, _, Some(endTime), None, Some(msg)) => success
+      case DropLog(None, 1, _, Some(_), None, Some(msg)) => success
       case _ => failure
     }
   }
@@ -132,12 +131,12 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val dropUID = "drop not in factory"
     val request = StartJob(
-      DropJob(
-        Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
+      1,
+      DropJob(Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
 
     probe.send(actor, request)
     val expectedMsg = Some(s"factory has no drop for ${dropUID}")
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]).logOutput must_== expectedMsg
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception must_== expectedMsg
   }
 
   def logToErrorIfResultNotInList = {
@@ -153,27 +152,11 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     probe.send(actor, JobResult(jobID, Success(())))
 
     val expectedMsg = Some(s"job result from job ${jobID} but not present in running jobs list")
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]).logOutput must_== expectedMsg
-  }
-
-  def logToErrorIfNoJobID = {
-    val probe = TestProbe()
-    val jobDatabaseManager = TestProbe()
-    val worker = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
-    val request = StartJob(
-      DropJob(None, "test", "", "", true, "", TimeFrame.DAY_TODAY, Map()))
-
-    probe.send(actor, request)
-    // We are not testing the log.error but it should expect nothing sent from
-    // JobSupervior
-    jobDatabaseManager.expectNoMsg() must not(throwA[AssertionError])
-    worker.expectNoMsg() must not(throwA[AssertionError])
-    probe.expectNoMsg() must not(throwA[AssertionError])
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception must_== expectedMsg
   }
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
     val now = DateTime.now + Period.seconds(3)
-    StartJob(DropJob(Some(1), "test1", "Exchange Rate", "description", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
+    StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
   }
 }
