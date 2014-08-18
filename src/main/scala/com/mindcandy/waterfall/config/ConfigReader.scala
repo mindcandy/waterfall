@@ -16,7 +16,8 @@ trait ConfigReader {
       case \/-(dropJobs) => dropJobs
     }
     JobsDatabaseConfig(
-      DropJobList(dropJobs.map(x => x.jobID.getOrElse(0) -> x).toMap))
+      DropJobList(dropJobs.map(x => x.jobID.getOrElse(0) -> x).toMap)
+    )
   })
 
   def dropFactoryClass: Reader[Config, String] = Reader(config => config.getString("waterfall.dropFactoryClass"))

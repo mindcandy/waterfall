@@ -21,7 +21,7 @@ trait TestData {
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
-class DBSpec extends Specification with Grouped with AfterExample with TestData {
+class DatabaseContainerSpec extends Specification with Grouped with AfterExample with TestData {
 
   def is = sequential ^ s2"""
   DropLogging Database test
