@@ -3,15 +3,16 @@ package com.mindcandy.waterfall.actor
 import java.sql.Timestamp
 import java.util.Properties
 
-import com.mindcandy.waterfall.config.{ DatabaseContainer, DatabaseConfig }
-import org.joda.time.DateTime
+import argonaut.Argonaut._
 import argonaut._
-import Argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory
-import WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
+import org.joda.time.DateTime
+
+import scala.language.implicitConversions
 import scala.slick.driver.{ PostgresDriver, SQLiteDriver }
 import scalaz.\/
-import scala.language.implicitConversions
 
 object TimeFrame extends Enumeration {
   type TimeFrame = Value
@@ -54,8 +55,8 @@ object Protocol {
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val driver = config.driver
+  import com.mindcandy.waterfall.actor.Protocol._
   import driver.simple._
-  import Protocol._
 
   val db = {
     val properties = new Properties()

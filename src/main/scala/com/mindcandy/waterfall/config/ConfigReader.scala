@@ -1,10 +1,12 @@
 package com.mindcandy.waterfall.config
 
-import scalaz._
-import com.typesafe.config.{ ConfigRenderOptions, Config }
-import argonaut._, Argonaut._
+import argonaut.Argonaut._
+import argonaut._
 import com.mindcandy.waterfall.actor.Protocol._
+import com.typesafe.config.{ Config, ConfigRenderOptions }
+
 import scala.concurrent.duration._
+import scalaz._
 
 trait ConfigReader {
   def jobsDatabaseConfig: Reader[Config, JobsDatabaseConfig] = Reader(config => {

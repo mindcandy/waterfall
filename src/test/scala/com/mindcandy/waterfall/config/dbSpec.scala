@@ -2,16 +2,15 @@ package com.mindcandy.waterfall.config
 
 import java.nio.file.{ Files, Paths }
 
-import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob }
-import com.mindcandy.waterfall.actor.TimeFrame
-import com.mindcandy.waterfall.actor.DB
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
+import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
 import org.joda.time.DateTime
-import org.specs2.specification.{ AfterExample, Grouped }
 import org.specs2.specification.script.Specification
+import org.specs2.specification.{ AfterExample, Grouped }
 
-import scala.slick.jdbc.meta.MTable
-import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.driver.JdbcDriver.simple._
+import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
+import scala.slick.jdbc.meta.MTable
 
 trait TestData {
   def db = new DB(DatabaseConfig("jdbc:sqlite:dbspec.db"))

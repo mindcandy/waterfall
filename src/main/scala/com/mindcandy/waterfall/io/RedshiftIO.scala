@@ -1,12 +1,13 @@
 package com.mindcandy.waterfall.io
 
 import com.mindcandy.waterfall._
+import com.mindcandy.waterfall.intermediate.S3Intermediate
+import com.typesafe.scalalogging.slf4j.Logging
+
 import scala.slick.jdbc.JdbcBackend.Database
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.StaticQuery
-import com.typesafe.scalalogging.slf4j.Logging
 import scala.util.Try
-import com.mindcandy.waterfall.intermediate.S3Intermediate
 
 trait RedshiftIOConfig extends IOConfig {
   def driver: String = "org.postgresql.Driver"

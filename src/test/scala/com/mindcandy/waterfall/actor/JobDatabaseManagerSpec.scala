@@ -1,25 +1,26 @@
 package com.mindcandy.waterfall.actor
 
-import java.nio.file.{ Paths, Files }
+import java.nio.file.{ Files, Paths }
 
-import akka.testkit.{ TestProbe, TestKit }
 import akka.actor.ActorSystem
-import org.specs2.SpecificationLike
-import org.specs2.specification.After
-import org.specs2.time.NoTimeConversions
-import com.mindcandy.waterfall.actor.JobDatabaseManager._
-import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob, DropJobList }
-import scala.concurrent.duration
-import com.mindcandy.waterfall.config.{ DatabaseConfig, JobsDatabaseConfig }
-import org.specs2.mock.Mockito
+import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.actor.JobDatabaseManager._
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog }
+import com.mindcandy.waterfall.config.{ DatabaseConfig, JobsDatabaseConfig }
+import org.specs2.SpecificationLike
+import org.specs2.mock.Mockito
+import org.specs2.specification.{ AfterExample, Step }
+import org.specs2.time.NoTimeConversions
+
+import scala.concurrent.duration
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
     extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
     with SpecificationLike
-    with After
+    with AfterExample
     with NoTimeConversions
     with Mockito {
   override def is = sequential ^ s2"""
@@ -30,12 +31,11 @@ class JobDatabaseManagerSpec
       insert DropLog related to unknow Drop $logToDatabaseWithUnknownKey
       send GetJobForCompletion $getJobCompletion
       send GetScheduleForCompletion $getScheduleCompletion
-  """
+  """ ^ Step(afterAll)
 
-  override def after: Any = {
-    TestKit.shutdownActorSystem(system)
-    Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
-  }
+  def after = Files.deleteIfExists(Paths.get("JobDatabaseManager.db"))
+
+  def afterAll = TestKit.shutdownActorSystem(system)
 
   val config = JobsDatabaseConfig(DropJobList(Map(
     1 -> DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),

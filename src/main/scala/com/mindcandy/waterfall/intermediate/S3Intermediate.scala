@@ -1,17 +1,19 @@
 package com.mindcandy.waterfall.intermediate
 
+import java.nio.charset.Charset
+import java.nio.file.{ FileSystems, Files, Paths }
+
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ ObjectListing, GetObjectRequest }
+import com.amazonaws.services.s3.model.{ GetObjectRequest, ObjectListing }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall._
 import com.typesafe.scalalogging.slf4j.Logging
-import java.nio.charset.Charset
-import java.nio.file.{ FileSystems, Files, Paths }
 import resource._
+
 import scala.annotation.tailrec
-import scala.util.Try
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 case class S3IntermediateConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
                                 keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig

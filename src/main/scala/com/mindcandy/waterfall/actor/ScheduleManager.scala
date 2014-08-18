@@ -1,22 +1,15 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.Props
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import scala.util.Try
-import scala.concurrent.duration._
-import org.quartz.CronExpression
+import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import com.github.nscala_time.time.Imports._
-import scala.language.postfixOps
-import akka.actor.Cancellable
-import scala.util.Success
-import scala.util.Failure
 import com.mindcandy.waterfall.WaterfallDropFactory
-import WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
-import com.mindcandy.waterfall.WaterfallDropFactory
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
+import org.quartz.CronExpression
+
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.{ Failure, Success, Try }
 
 object ScheduleManager {
   case class CheckJobs()
@@ -27,8 +20,8 @@ object ScheduleManager {
 
 class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory,
                       maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration) extends Actor with ActorLogging {
-  import ScheduleManager._
-  import Protocol._
+  import com.mindcandy.waterfall.actor.Protocol._
+  import com.mindcandy.waterfall.actor.ScheduleManager._
 
   private[this] var scheduledJobs = Map[JobID, (DropJob, Cancellable)]()
 

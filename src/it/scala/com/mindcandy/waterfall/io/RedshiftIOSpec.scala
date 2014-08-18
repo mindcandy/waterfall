@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall.io
 
-import com.mindcandy.waterfall.drop.PassThroughWaterfallDrop
-import com.mindcandy.waterfall.intermediate.{ S3IntermediateConfig, FileIntermediate, S3Intermediate }
 import com.mindcandy.waterfall._
+import com.mindcandy.waterfall.drop.PassThroughWaterfallDrop
+import com.mindcandy.waterfall.intermediate.S3Intermediate
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

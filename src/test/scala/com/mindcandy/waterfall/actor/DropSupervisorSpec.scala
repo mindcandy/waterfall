@@ -1,17 +1,18 @@
 package com.mindcandy.waterfall.actor
 
-import akka.testkit.{ TestProbe, TestKit }
 import akka.actor.ActorSystem
+import akka.testkit.{ TestKit, TestProbe }
+import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
+import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
+import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import org.specs2.SpecificationLike
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
-import com.github.nscala_time.time.Imports._
-import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
-import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJob }
-import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
-import com.mindcandy.waterfall.{ TestWaterfallDropFactory, TestPassThroughWaterfallDrop }
 
 class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     with SpecificationLike

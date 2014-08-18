@@ -4,19 +4,16 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import com.mindcandy.waterfall.IntermediateFormat
-import com.mindcandy.waterfall.Intermediate
-import com.mindcandy.waterfall.IOConfig
-import com.mindcandy.waterfall.IOSource
-import com.typesafe.scalalogging.slf4j.Logging
-import com.mindcandy.waterfall.IOOps
+import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSource, Intermediate, IntermediateFormat }
 import com.mindcandy.waterfall.RowSeparator._
+import com.mindcandy.waterfall.intermediate.FileIntermediate
+import com.typesafe.scalalogging.slf4j.Logging
+import spray.client.pipelining._
+import spray.http._
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.Try
-import com.mindcandy.waterfall.intermediate.FileIntermediate
-import spray.http._
-import spray.client.pipelining._
 
 case class HttpIOConfig(url: String, timeout: Int = 5000) extends IOConfig
 

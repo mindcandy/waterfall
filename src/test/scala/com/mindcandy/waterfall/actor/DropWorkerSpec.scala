@@ -1,16 +1,15 @@
 package com.mindcandy.waterfall.actor
 
-import org.specs2.specification.After
-import akka.testkit.TestKit
-import org.specs2.time.NoTimeConversions
-import akka.actor.{ Terminated, ActorSystem, ActorRef, Props }
-import org.specs2.SpecificationLike
-import akka.testkit.TestProbe
-import scala.util.{ Failure, Success }
-import com.mindcandy.waterfall.actor.DropWorker.RunDrop
-import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
-import scala.concurrent.duration._
+import akka.actor.{ ActorRef, ActorSystem, Terminated }
+import akka.testkit.{ TestKit, TestProbe }
 import com.mindcandy.waterfall.TestWaterfallDropFactory
+import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
+import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+import org.specs2.SpecificationLike
+import org.specs2.specification.After
+import org.specs2.time.NoTimeConversions
+
+import scala.concurrent.duration._
 
 class DropWorkerSpec extends TestKit(ActorSystem("DropWorkerSpec")) with SpecificationLike with After with NoTimeConversions {
   override def is = s2"""

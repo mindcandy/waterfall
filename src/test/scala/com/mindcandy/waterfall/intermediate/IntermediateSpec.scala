@@ -1,16 +1,17 @@
 package com.mindcandy.waterfall.intermediate
 
+import java.io.{ File, PrintWriter }
 import java.util.ArrayList
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ ObjectMetadata, GetObjectRequest, ObjectListing, S3ObjectSummary }
+import com.amazonaws.services.s3.model.{ GetObjectRequest, ObjectListing, ObjectMetadata, S3ObjectSummary }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestFormat
-import java.io.{ PrintWriter, File }
 import org.mockito.Matchers.{ eq => meq }
 import org.specs2.mock.Mockito
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
+
 import scala.util.Try
 
 /**

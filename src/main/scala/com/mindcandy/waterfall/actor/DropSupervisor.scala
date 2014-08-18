@@ -1,19 +1,15 @@
 package com.mindcandy.waterfall.actor
 
-import com.mindcandy.waterfall.WaterfallDropFactory
-import akka.actor.Props
-import scala.util.Try
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import com.mindcandy.waterfall.actor.Protocol.{ JobID, DropJob, DropLog }
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.github.nscala_time.time.Imports._
-import scala.language.postfixOps
-import org.joda.time.format.PeriodFormat
+import com.mindcandy.waterfall.WaterfallDropFactory
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, JobID }
+import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
-import scala.util.Success
-import scala.util.Failure
-import TimeFrame._
+import org.joda.time.format.PeriodFormat
+
+import scala.language.postfixOps
+import scala.util.{ Failure, Success, Try }
 
 object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
@@ -31,7 +27,7 @@ object DropSupervisor {
 }
 
 class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
-  import DropSupervisor._
+  import com.mindcandy.waterfall.actor.DropSupervisor._
 
   private[this] var runningJobs = Map[JobID, (ActorRef, DateTime)]()
 

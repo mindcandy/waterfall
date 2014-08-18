@@ -1,8 +1,8 @@
 package com.mindcandy.waterfall.service
 
+import argonaut.Argonaut._
 import argonaut._
-import Argonaut._
-import spray.http.{ ContentTypes, ContentTypeRange, HttpCharsets, HttpEntity, MediaTypes }
+import spray.http.{ ContentTypeRange, ContentTypes, HttpCharsets, HttpEntity, MediaTypes }
 import spray.httpx.marshalling.{ BasicMarshallers, Marshaller }
 import spray.httpx.unmarshalling.{ Deserialized, MalformedContent, SimpleUnmarshaller, Unmarshaller }
 

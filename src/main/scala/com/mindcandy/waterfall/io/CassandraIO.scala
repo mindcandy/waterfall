@@ -1,16 +1,17 @@
 package com.mindcandy.waterfall.io
 
 import com.mindcandy.waterfall._
+import com.netflix.astyanax.AstyanaxContext
+import com.netflix.astyanax.connectionpool.NodeDiscoveryType
+import com.netflix.astyanax.connectionpool.impl.{ ConnectionPoolConfigurationImpl, ConnectionPoolType, CountingConnectionPoolMonitor }
+import com.netflix.astyanax.impl.AstyanaxConfigurationImpl
+import com.netflix.astyanax.model.{ ColumnFamily, ConsistencyLevel }
+import com.netflix.astyanax.serializers.StringSerializer
+import com.netflix.astyanax.thrift.ThriftFamilyFactory
 import com.typesafe.scalalogging.slf4j.Logging
 import org.joda.time.DateTime
+
 import scala.util.Try
-import com.netflix.astyanax.AstyanaxContext
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl
-import com.netflix.astyanax.connectionpool.impl.{ ConnectionPoolType, CountingConnectionPoolMonitor, ConnectionPoolConfigurationImpl }
-import com.netflix.astyanax.thrift.ThriftFamilyFactory
-import com.netflix.astyanax.model.{ ColumnFamily, ConsistencyLevel }
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType
-import com.netflix.astyanax.serializers.StringSerializer
 
 case class CassandraIOClusterConfig(name: String, keySpace: String, seedHosts: String, localDatacenter: String,
                                     maxConnsPerHost: Int = 3, maxFailoverCount: Int = 3, defaultReadConsistencyLevelPolicy: ConsistencyLevel = ConsistencyLevel.CL_ONE,

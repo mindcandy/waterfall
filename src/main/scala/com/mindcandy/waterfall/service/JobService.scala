@@ -1,13 +1,11 @@
 package com.mindcandy.waterfall.service
 
-import spray.routing.HttpService
-import akka.actor.Actor
-import argonaut._, Argonaut._
-import akka.actor.Props
-import akka.actor.ActorRef
+import akka.actor.{ Actor, ActorRef, Props }
+import argonaut.Argonaut._
+import argonaut._
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetJobForCompletion, GetScheduleForCompletion }
 import com.mindcandy.waterfall.actor.Protocol._
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetJobForCompletion
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetScheduleForCompletion
+import spray.routing.HttpService
 
 object JobServiceActor {
   def props(jobDatabaseManager: ActorRef): Props = Props(new JobServiceActor(jobDatabaseManager))

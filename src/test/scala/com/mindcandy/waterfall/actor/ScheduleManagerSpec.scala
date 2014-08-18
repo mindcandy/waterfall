@@ -1,21 +1,21 @@
 package com.mindcandy.waterfall.actor
 
+import akka.actor.{ ActorRef, ActorSystem }
+import akka.testkit.{ TestKit, TestProbe }
+import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.TestWaterfallDropFactory
+import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog }
+import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
+import org.joda.time
 import org.specs2.SpecificationLike
-import akka.testkit.TestKit
-import akka.actor.{ ActorSystem, ActorRef }
+import org.specs2.mock.Mockito
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
-import akka.testkit.TestProbe
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.{ DropLog, DropJobList, DropJob }
-import com.github.nscala_time.time.Imports._
-import scala.language.postfixOps
-import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
+
 import scala.concurrent.duration._
-import org.joda.time
-import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
-import com.mindcandy.waterfall.TestWaterfallDropFactory
-import org.specs2.mock.Mockito
+import scala.language.postfixOps
 
 class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     with SpecificationLike

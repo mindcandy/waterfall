@@ -1,16 +1,15 @@
 package com.mindcandy.waterfall.io
 
-import java.io.{ InputStreamReader, BufferedReader }
-import com.amazonaws.services.s3.model.ObjectListing
-import com.mindcandy.waterfall.intermediate.S3Ops
-import resource._
-import scala.annotation.tailrec
-import scala.collection.JavaConverters._
-import scala.util.Try
+import java.io.{ BufferedReader, InputStreamReader }
+
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
-import com.mindcandy.waterfall._
 import com.mindcandy.waterfall.RowSeparator._
+import com.mindcandy.waterfall._
+import com.mindcandy.waterfall.intermediate.S3Ops
+import resource._
+
+import scala.util.Try
 
 case class S3IOConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String) extends IOConfig {
   override def toString = "S3IOConfig(%s, %s, %s)".format(url, bucketName, keyPrefix)

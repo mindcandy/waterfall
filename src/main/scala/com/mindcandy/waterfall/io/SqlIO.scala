@@ -1,14 +1,12 @@
 package com.mindcandy.waterfall.io
 
+import com.mindcandy.waterfall.{ IOConfig, IOSource, Intermediate, IntermediateFormat }
+import com.mindcandy.waterfall.intermediate.FileIntermediate
+import com.typesafe.scalalogging.slf4j.Logging
+
 import scala.slick.jdbc.JdbcBackend.Database
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
-import scala.slick.jdbc.{ GetResult, StaticQuery, PositionedResult }
-import com.mindcandy.waterfall.IntermediateFormat
-import com.mindcandy.waterfall.Intermediate
-import com.mindcandy.waterfall.IOConfig
-import com.mindcandy.waterfall.IOSource
-import com.typesafe.scalalogging.slf4j.Logging
-import com.mindcandy.waterfall.intermediate.FileIntermediate
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 import scala.util.Try
 
 case class SqlIOConfig(url: String, driver: String, username: String, password: String, query: String) extends IOConfig {

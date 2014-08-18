@@ -1,10 +1,11 @@
 package com.mindcandy.waterfall
 
+import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.drop.PassThroughWaterfallDrop
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import com.mindcandy.waterfall.io.{ BaseIOConfig, MemoryIO }
-import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import org.joda.time.DateTime
+
 import scala.util.{ Failure, Try }
 
 case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {

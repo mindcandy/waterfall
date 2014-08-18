@@ -1,9 +1,7 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.Actor
-import akka.actor.Props
-import com.mindcandy.waterfall.actor.Protocol.{ JobID, DropJob, DropJobList, DropLog }
-import akka.actor.ActorLogging
+import akka.actor.{ Actor, ActorLogging, Props }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog, JobID }
 import com.mindcandy.waterfall.config.JobsDatabaseConfig
 
 object JobDatabaseManager {
@@ -15,7 +13,7 @@ object JobDatabaseManager {
 }
 
 class JobDatabaseManager(dropJobList: DropJobList, db: DB) extends Actor with ActorLogging {
-  import JobDatabaseManager._
+  import com.mindcandy.waterfall.actor.JobDatabaseManager._
 
   def receive = {
     case GetJobForCompletion(jobId, f) => {
