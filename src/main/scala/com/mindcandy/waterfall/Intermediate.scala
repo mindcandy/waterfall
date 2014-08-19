@@ -1,9 +1,8 @@
 package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
-import scala.util.Try
-import scala.util.Success
-import scala.util.Failure
+
+import scala.util.{ Failure, Try }
 
 trait Intermediate[A <: AnyRef] extends Logging {
   def url: String

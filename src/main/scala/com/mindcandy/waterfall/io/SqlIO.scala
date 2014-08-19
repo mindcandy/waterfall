@@ -1,15 +1,12 @@
 package com.mindcandy.waterfall.io
 
-import scala.slick.session.Database
-import scala.slick.session.Database.threadLocalSession
-import scala.slick.jdbc.{ GetResult, StaticQuery }
-import scala.slick.session.PositionedResult
-import com.mindcandy.waterfall.IntermediateFormat
-import com.mindcandy.waterfall.Intermediate
-import com.mindcandy.waterfall.IOConfig
-import com.mindcandy.waterfall.IOSource
-import com.typesafe.scalalogging.slf4j.Logging
+import com.mindcandy.waterfall.{ IOConfig, IOSource, Intermediate, IntermediateFormat }
 import com.mindcandy.waterfall.intermediate.FileIntermediate
+import com.typesafe.scalalogging.slf4j.Logging
+
+import scala.slick.jdbc.JdbcBackend.Database
+import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 import scala.util.Try
 
 case class SqlIOConfig(url: String, driver: String, username: String, password: String, query: String) extends IOConfig {
@@ -19,13 +16,13 @@ case class SqlIOConfig(url: String, driver: String, username: String, password: 
 case class SqlIOSource[A <: AnyRef](config: SqlIOConfig) extends IOSource[A] with Logging {
   def retrieveInto[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]) = {
     logger.info("Sourcing from %s".format(config))
-    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withSession {
+    Try(Database.forURL(config.url, driver = config.driver, user = config.username, password = config.password) withDynSession {
       val getResult = {
         GetResult(r => {
           processResultSet(Seq[String](), r)
         })
       }
-      val result = StaticQuery.queryNA(config.query)(getResult).elements
+      val result = StaticQuery.queryNA(config.query)(getResult).iterator
       intermediate.write { result.map(format.convertTo(_)) }
       logger.info("Retrieving into %s from %s completed".format(intermediate, config))
     })

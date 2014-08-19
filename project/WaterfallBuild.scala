@@ -11,7 +11,7 @@ object WaterfallBuild extends Build {
 
   lazy val basicDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.0.6",
-    libraryDependencies += "com.typesafe.slick" %% "slick" % "1.0.1",
+    libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0",
     libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13",
     libraryDependencies += "net.logstash.logback" % "logstash-logback-encoder" % "1.0",
     libraryDependencies += "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
@@ -23,7 +23,8 @@ object WaterfallBuild extends Build {
     libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
     libraryDependencies += "com.netflix.astyanax" % "astyanax-cassandra" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
     libraryDependencies += "com.netflix.astyanax" % "astyanax-thrift" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
-    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"))
+    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
+    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.7.2")
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,

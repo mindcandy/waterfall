@@ -1,15 +1,16 @@
 package com.mindcandy.waterfall
 
+import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.drop.PassThroughWaterfallDrop
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import com.mindcandy.waterfall.io.{ BaseIOConfig, MemoryIO }
-import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import org.joda.time.DateTime
+
 import scala.util.{ Failure, Try }
 
 case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
-  override val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
+  val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
   val source = MemoryIO[PlainTextFormat](BaseIOConfig("memory:source"))
   val sink = MemoryIO[PlainTextFormat](BaseIOConfig("memory:sink"))
@@ -17,7 +18,7 @@ case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[Plain
 
 case class TestFailingPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
-  override val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
+  val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
   val source = MemoryIO[PlainTextFormat](BaseIOConfig("memory:source"))
   val sink = MemoryIO[PlainTextFormat](BaseIOConfig("memory:sink"))

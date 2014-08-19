@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.io
 
-import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import com.mindcandy.waterfall.SimpleTestFormat
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

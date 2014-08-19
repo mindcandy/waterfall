@@ -1,10 +1,16 @@
 package com.mindcandy.waterfall.actor
 
-import org.joda.time.DateTime
+import java.sql.Timestamp
+import java.util.Properties
+
+import argonaut.Argonaut._
 import argonaut._
-import Argonaut._
-import com.mindcandy.waterfall.WaterfallDropFactory
-import WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
+import org.joda.time.DateTime
+
+import scala.language.implicitConversions
+import scala.slick.driver.{ H2Driver, PostgresDriver }
 import scalaz.\/
 
 object TimeFrame extends Enumeration {
@@ -22,9 +28,10 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
-  case class DropJob(dropUID: DropUID, name: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
-  case class DropJobList(jobs: List[DropJob])
-  case class DropLog(dropUID: DropUID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[Throwable])
+  type JobID = Int
+  case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
+  case class DropJobList(jobs: Map[JobID, DropJob])
+  case class DropLog(logID: Option[Int], jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog])
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
@@ -38,21 +45,77 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit val stackTraceElementEncode: EncodeJson[StackTraceElement] = EncodeJson(element =>
-    jString(s"${element.getClassName}.${element.getMethodName}(${element.getFileName}:${element.getLineNumber})")
-  )
-  implicit val throwableEncode: EncodeJson[Throwable] = EncodeJson(error =>
-    ("message" := jString(error.getMessage)) ->:
-      ("stackTrace" := error.getStackTrace.toList.asJson) ->:
-      jEmptyObject
-  )
-  implicit val throwableDecode: DecodeJson[Throwable] = optionDecoder(json =>
-    for {
-      message <- json.field("message")
-      str <- message.string
-      exception <- Option(new Exception(str))
-    } yield exception, "Exception")
+  implicit def DropJobCodecJson = casecodec8(DropJob.apply, DropJob.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
+  implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
+    "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
 
-  implicit def DropJobCodecJson = casecodec6(DropJob.apply, DropJob.unapply)("dropUID", "name", "enabled", "cron", "timeFrame", "configuration")
-  implicit def DropLogCodecJson = casecodec5(DropLog.apply, DropLog.unapply)("dropUID", "startTime", "endTime", "logOutput", "exception")
+}
+
+class DB(val config: DatabaseConfig) extends DatabaseContainer {
+  val driver = config.driver
+  import com.mindcandy.waterfall.actor.Protocol._
+  import driver.simple._
+
+  val db = {
+    val properties = new Properties()
+    val sqlDriver = config.driver match {
+      case H2Driver => "org.h2.Driver"
+      case PostgresDriver => "org.postgresql.Driver"
+    }
+    Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
+  }
+
+  implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
+    { dt => new Timestamp(dt.getMillis) },
+    { ts => new DateTime(ts) }
+  )
+
+  class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
+    def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
+    def jobID = column[JobID]("JOB_ID", O.NotNull)
+    def startTime = column[DateTime]("START_TIME", O.NotNull)
+    def endTime = column[Option[DateTime]]("END_TIME")
+    def content = column[Option[String]]("CONTENT")
+    def exception = column[Option[String]]("EXCEPTION")
+    def * =
+      (logID.?, jobID, startTime, endTime, content, exception) <>
+        (DropLog.tupled, DropLog.unapply)
+    def job_fk = foreignKey("JOB_FK", jobID, dropJobs)(_.jobID)
+  }
+
+  val dropLogs = TableQuery[DropLogs]
+
+  implicit val timeFrameColumnType = MappedColumnType.base[TimeFrame.TimeFrame, String](
+    { tf => tf.toString },
+    { ts => TimeFrame.withName(ts) }
+  )
+
+  implicit val MapStringStringColumnType = MappedColumnType.base[Map[String, String], String](
+    { m => m.asJson.nospaces },
+    { ts =>
+      val opt = Parse.decodeOption[Map[String, String]](ts)
+      // TODO(deo.liang): the stored value should be a valid json string, probably
+      //                  we can just do Parse.decode
+      opt.getOrElse(Map[String, String]())
+    }
+  )
+
+  class DropJobs(tag: Tag) extends Table[DropJob](tag, "DROP_JOB") {
+    def jobID = column[JobID]("JOB_ID", O.PrimaryKey, O.AutoInc)
+    def dropUID = column[String]("DROP_UID", O.NotNull)
+    def name = column[String]("NAME", O.NotNull)
+    def description = column[String]("DESCRIPTION", O.NotNull)
+    def enabled = column[Boolean]("ENABLED", O.NotNull)
+    def cron = column[String]("CRON", O.NotNull)
+    def timeFrame = column[TimeFrame.TimeFrame]("TIME_FRAME", O.NotNull)
+    // configuration stored as a json string
+    def configuration = column[Map[String, String]]("CONFIGURATION", O.NotNull)
+    def * =
+      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration) <>
+        (DropJob.tupled, DropJob.unapply)
+  }
+
+  val dropJobs = TableQuery[DropJobs]
+  val all = Seq(dropJobs, dropLogs)
 }

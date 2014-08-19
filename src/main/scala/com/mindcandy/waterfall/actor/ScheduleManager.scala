@@ -1,22 +1,15 @@
 package com.mindcandy.waterfall.actor
 
-import akka.actor.Props
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import scala.util.Try
-import scala.concurrent.duration._
-import org.quartz.CronExpression
+import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import com.github.nscala_time.time.Imports._
-import scala.language.postfixOps
-import akka.actor.Cancellable
-import scala.util.Success
-import scala.util.Failure
 import com.mindcandy.waterfall.WaterfallDropFactory
-import WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
-import com.mindcandy.waterfall.WaterfallDropFactory
+import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
+import org.quartz.CronExpression
+
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.{ Failure, Success, Try }
 
 object ScheduleManager {
   case class CheckJobs()
@@ -27,10 +20,10 @@ object ScheduleManager {
 
 class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory,
                       maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration) extends Actor with ActorLogging {
-  import ScheduleManager._
-  import Protocol._
+  import com.mindcandy.waterfall.actor.Protocol._
+  import com.mindcandy.waterfall.actor.ScheduleManager._
 
-  private[this] var scheduledJobs = Map[DropUID, (DropJob, Cancellable)]()
+  private[this] var scheduledJobs = Map[JobID, (DropJob, Cancellable)]()
 
   // Schedule a periodic CheckJobs message to self
   context.system.scheduler.schedule(checkJobsPeriod, checkJobsPeriod, self, CheckJobs())(context.dispatcher)
@@ -42,44 +35,51 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
     case DropJobList(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
-      val newJobUIDs = manageScheduledJobs(jobs.map(job => job.dropUID -> job).toMap)
+      val newJobUIDs = manageScheduledJobs(jobs)
       for {
-        job <- jobs
-        if (newJobUIDs contains job.dropUID)
-        cancellable <- scheduleJob(job)
+        (jobID, job) <- jobs
+        if (newJobUIDs contains jobID)
+        cancellable <- scheduleJob(jobID, job)
       } yield {
-        scheduledJobs += (job.dropUID -> (job, cancellable))
+        scheduledJobs += (jobID -> (job, cancellable))
       }
     }
     case startJob: StartJob => {
-      scheduledJobs -= startJob.job.dropUID
+      scheduledJobs -= startJob.jobID
       dropSupervisor ! startJob
     }
   }
 
-  def manageScheduledJobs(jobs: Map[DropUID, DropJob]): Set[DropUID] = {
-    val dropUIDs = jobs.keySet
-    val scheduledUIDs = scheduledJobs.keySet & dropUIDs
+  def manageScheduledJobs(jobs: Map[JobID, DropJob]): Set[JobID] = {
+    val jobIDs = jobs.keySet
+    val scheduledUIDs = scheduledJobs.keySet & jobIDs
     for {
       removableDropUID <- scheduledJobs.keySet &~ scheduledUIDs
     } yield {
-      val (job, cancellable) = scheduledJobs(removableDropUID)
+      val (_, cancellable) = scheduledJobs(removableDropUID)
       cancellable.cancel
       scheduledJobs -= removableDropUID
     }
-    dropUIDs &~ scheduledUIDs
+    jobIDs &~ scheduledUIDs
   }
 
-  def scheduleJob(job: DropJob): Option[Cancellable] = {
+  def scheduleJob(jobID: JobID, job: DropJob): Option[Cancellable] = {
     calculateNextFireTime(job.cron) match {
       case Success(duration) if maxScheduleTime > duration =>
-        Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(job))(context.dispatcher))
+        Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(jobID, job))(context.dispatcher))
       case Success(duration) =>
-        log.debug(s"Job $job ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
+        val debug = s"Job ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime"
+        log.debug(debug)
+        jobDatabaseManager ! DropLog(None, job.jobID.get, DateTime.now, None, Some(debug), None)
         None
       case Failure(exception) => {
         log.debug("bad cron expression", exception)
-        log.error(s"could not resolve cron expression: ${exception.getMessage}")
+        val error = "could not resolve cron expression:"
+        log.error(error, exception)
+        jobDatabaseManager !
+          DropLog(
+            None, job.jobID.get, DateTime.now, None, None,
+            Some(s"${error}\n${exception.toString}\n${exception.getStackTraceString}"))
         None
       }
     }

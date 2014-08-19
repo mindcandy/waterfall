@@ -1,19 +1,16 @@
 package com.mindcandy.waterfall.io
 
+import java.nio.file.Files
+
 import akka.pattern.AskTimeoutException
+import com.mindcandy.waterfall.{ PlainTextFormat, RowSeparator }
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
+import fr.simply.{ DynamicServerResponse, GET, StaticServerResponse, StubServer }
+import fr.simply.util.ContentType
 import org.junit.runner.RunWith
 import org.specs2.Specification
 import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
-import java.nio.file.Files
-import fr.simply.StubServer
-import fr.simply.util.ContentType
-import com.mindcandy.waterfall.PlainTextFormat
-import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import com.mindcandy.waterfall.RowSeparator
-import fr.simply.GET
-import fr.simply.DynamicServerResponse
-import fr.simply.StaticServerResponse
 
 @RunWith(classOf[JUnitRunner])
 class HttpIOSpec extends Specification with Mockito {

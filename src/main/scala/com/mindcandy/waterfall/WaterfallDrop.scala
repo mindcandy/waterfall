@@ -1,8 +1,9 @@
 package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
-import scala.util.Try
 import org.joda.time.DateTime
+
+import scala.util.Try
 
 trait WaterfallDrop[A <: AnyRef, B <: AnyRef] extends Logging {
   def source: IOSource[A]
@@ -29,7 +30,7 @@ object WaterfallDropFactory {
 }
 
 trait WaterfallDropFactory {
-  import WaterfallDropFactory._
+  import com.mindcandy.waterfall.WaterfallDropFactory._
 
   def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_ <: AnyRef, _ <: AnyRef]]
 }

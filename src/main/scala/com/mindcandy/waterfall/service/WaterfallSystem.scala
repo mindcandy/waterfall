@@ -2,15 +2,16 @@ package com.mindcandy.waterfall.service
 
 import akka.actor.ActorSystem
 import akka.io.IO
-import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.concurrent.duration._
-import com.mindcandy.waterfall.actor.{ DropSupervisor, ScheduleManager, JobDatabaseManager }
-import com.mindcandy.waterfall.app.{ ApplicationLifecycle, ApplicationRunner, AbstractApplicationDaemon }
-import com.typesafe.config.ConfigFactory
-import com.mindcandy.waterfall.config.ConfigReader
 import com.mindcandy.waterfall.WaterfallDropFactory
+import com.mindcandy.waterfall.actor.{ DB, DropSupervisor, JobDatabaseManager, ScheduleManager }
+import com.mindcandy.waterfall.app.{ AbstractApplicationDaemon, ApplicationLifecycle }
+import com.mindcandy.waterfall.config.{ ConfigReader, DatabaseConfig }
+import com.typesafe.config.ConfigFactory
+import spray.can.Http
+
+import scala.concurrent.duration._
 
 trait ClassLoader[T] {
   def loadClass(className: String): T = {
@@ -33,8 +34,11 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
 
       val config = ConfigFactory.load()
 
+      val databaseConfig = DatabaseConfig(logDatabase(config), username(config), password(config))
+      val db = new DB(databaseConfig)
+      db.createIfNotExists(db.all)
       val dropFactory = loadClass(dropFactoryClass(config))
-      val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(jobsDatabaseConfig(config)), "job-database-manager")
+      val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(db), "job-database-manager")
       val dropSupervisor = system.actorOf(DropSupervisor.props(jobDatabaseManager, dropFactory), "drop-supervisor")
       val scheduleManager = system.actorOf(ScheduleManager.props(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime(config), checkJobsPeriod(config)), "schedule-manager")
 

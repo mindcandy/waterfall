@@ -1,6 +1,7 @@
 package com.mindcandy.waterfall
 
 import com.typesafe.scalalogging.slf4j.Logging
+
 import scala.util.Try
 
 trait IOConfig {
@@ -13,7 +14,7 @@ object RowSeparator extends Enumeration {
 }
 
 trait IOOps[A <: AnyRef] {
-  import RowSeparator._
+  import com.mindcandy.waterfall.RowSeparator._
 
   val columnSeparator: Option[String]
 

@@ -1,18 +1,14 @@
 package com.mindcandy.waterfall.io
 
-import com.mindcandy.waterfall.IntermediateFormat
-import com.mindcandy.waterfall.Intermediate
-import com.mindcandy.waterfall.IOConfig
-import com.mindcandy.waterfall.IOSource
-import com.mindcandy.waterfall.IOSink
-import org.apache.commons.vfs2.VFS
 import java.io._
-import resource._
-import com.mindcandy.waterfall.IOOps
+
+import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSink, IOSource, Intermediate, IntermediateFormat, IntermediateOps }
 import com.mindcandy.waterfall.RowSeparator._
-import scala.util.Try
-import com.mindcandy.waterfall.IntermediateOps
 import com.mindcandy.waterfall.intermediate.{ FileIntermediate, MemoryIntermediate }
+import org.apache.commons.vfs2.VFS
+import resource._
+
+import scala.util.Try
 
 case class BaseIOConfig(url: String) extends IOConfig
 

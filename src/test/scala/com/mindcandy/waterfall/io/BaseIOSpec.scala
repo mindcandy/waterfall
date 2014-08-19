@@ -1,24 +1,21 @@
 package com.mindcandy.waterfall.io
 
+import java.io.IOException
+import java.nio.charset.Charset
+import java.nio.file.Files
+
+import com.mindcandy.waterfall.{ Intermediate, IntermediateFormat, PlainTextFormat, RowSeparator, TestFormat }
+import com.mindcandy.waterfall.intermediate.MemoryIntermediate
+import fr.simply.StubServer
+import fr.simply.util.ContentType
 import org.junit.runner.RunWith
 import org.specs2.Specification
 import org.specs2.mock.Mockito
 import org.specs2.runner.JUnitRunner
-import com.mindcandy.waterfall.TestFormat
-import com.mindcandy.waterfall.Intermediate
-import com.mindcandy.waterfall.IntermediateFormat
 import resource._
-import java.io.IOException
-import java.nio.file.Files
-import fr.simply.StubServer
-import fr.simply.util.ContentType
-import com.mindcandy.waterfall.PlainTextFormat
-import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import java.nio.charset.Charset
+
 import scala.collection.JavaConverters._
-import com.mindcandy.waterfall.RowSeparator
-import scala.util.Try
-import scala.util.Failure
+import scala.util.{ Failure, Try }
 
 @RunWith(classOf[JUnitRunner])
 class BaseIOSpec extends Specification with Mockito {
