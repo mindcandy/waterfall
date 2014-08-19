@@ -1,19 +1,19 @@
 package com.mindcandy.waterfall.config
 
-import java.nio.file.{ Files, Paths }
+import java.util.UUID
 
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
 import org.joda.time.DateTime
 import org.specs2.specification.script.Specification
-import org.specs2.specification.{ AfterExample, Grouped }
+import org.specs2.specification.Grouped
 
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.meta.MTable
 
 trait TestData {
-  def db = new DB(DatabaseConfig("jdbc:sqlite:dbspec.db"))
+  def db = new DB(DatabaseConfig(s"jdbc:h2:mem:test${UUID.randomUUID()};DB_CLOSE_DELAY=-1"))
   val oneDropLog = DropLog(
     None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
@@ -21,9 +21,9 @@ trait TestData {
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
-class DatabaseContainerSpec extends Specification with Grouped with AfterExample with TestData {
+class DatabaseContainerSpec extends Specification with Grouped with TestData {
 
-  def is = sequential ^ s2"""
+  def is = s2"""
   DropLogging Database test
 
   ==============================================================================
@@ -52,23 +52,21 @@ class DatabaseContainerSpec extends Specification with Grouped with AfterExample
     inserted DropLog is correct ${insertDropLog.e2}
   """
 
-  def after() = Files.delete(Paths.get("dbspec.db"))
-
   def createNewDatabase = new group {
     val logDB = db
-    logDB.create(logDB.dropLogs)
-    val tableName = logDB.dropLogs.baseTableRow.tableName
-    val isTableExists: Boolean = logDB.db.withDynSession {
-      !MTable.getTables(tableName).list.isEmpty
+    logDB.create(logDB.all)
+    val isTablesExist: Boolean = logDB.executeInSession {
+      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
     }
-    e1 := isTableExists must beTrue
+    e1 := isTablesExist must beTrue
   }
 
   def createNewDatabaseNotOverwrite = new group {
     val logDB = db
-    logDB.createIfNotExists(logDB.dropLogs)
-    val tableName = logDB.dropLogs.baseTableRow.tableName
-    val isTableExists: Boolean = logDB.db.withDynSession {
+    logDB.createIfNotExists(logDB.dropJobs)
+    val tableName = logDB.dropJobs.baseTableRow.tableName
+    val isTableExists: Boolean = logDB.executeInSession {
       !MTable.getTables(tableName).list.isEmpty
     }
     e1 := isTableExists must beTrue
@@ -130,7 +128,7 @@ class DatabaseContainerSpec extends Specification with Grouped with AfterExample
 
   def createTablesInNewDB = new group {
     val logDB = db
-    logDB.createIfNotExists(List(logDB.dropJobs, logDB.dropLogs))
+    logDB.createIfNotExists(logDB.all)
     val isTablesCreated = logDB.db.withDynSession {
       !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
@@ -141,20 +139,16 @@ class DatabaseContainerSpec extends Specification with Grouped with AfterExample
 
   def createTablesOverwrite = new group {
     val logDB = db
-    logDB.create(List(logDB.dropJobs, logDB.dropLogs))
+    logDB.create(logDB.all)
     logDB.insert(logDB.dropJobs, oneDropJob)
-    logDB.create(List(logDB.dropJobs, logDB.dropLogs))
+    logDB.create(logDB.all)
     val isTablesCreated = logDB.db.withDynSession {
       !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
     }
 
-    val dataDropJobs = logDB.db.withDynSession {
-      logDB.dropJobs.list
-    }
-    val dataDropLogs = logDB.db.withDynSession {
-      logDB.dropLogs.list
-    }
+    val dataDropJobs = logDB.executeInSession(logDB.dropJobs.list)
+    val dataDropLogs = logDB.executeInSession(logDB.dropLogs.list)
     e1 := isTablesCreated must beTrue
     e2 := dataDropJobs must_== List()
     e3 := dataDropLogs must_== List()
@@ -162,7 +156,7 @@ class DatabaseContainerSpec extends Specification with Grouped with AfterExample
 
   def insertDropLog = new group {
     val logDB = db
-    logDB.create(List(logDB.dropLogs, logDB.dropJobs))
+    logDB.create(logDB.all)
     logDB.insert(logDB.dropJobs, oneDropJob)
     val numOfInsert = logDB.insert(logDB.dropLogs, oneDropLog)
     val insertedData = logDB.db.withDynSession {

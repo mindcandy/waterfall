@@ -190,7 +190,7 @@ class FileIntermediateSpec extends Specification with Grouped {
     the content read is identical to what's written   ${readFromFile.e2}
   """
 
-  val singleFile = new group {
+  def singleFile = new group {
     // get a temporary file path and url
     val testFile = File.createTempFile("test", "")
     val pathFile = testFile.getAbsolutePath
@@ -204,7 +204,7 @@ class FileIntermediateSpec extends Specification with Grouped {
     e3 := writeOp must beSuccessfulTry
   }
 
-  val fileNotExists = new group {
+  def fileNotExists = new group {
     val testFile = File.createTempFile("test", "")
     val pathFile = testFile.getAbsolutePath
     val pathURL = testFile.toURI.toURL.toString
@@ -219,7 +219,7 @@ class FileIntermediateSpec extends Specification with Grouped {
     e2 := testFile.length must be_==(TestData.dataSize)
   }
 
-  val appendToFile = new group {
+  def appendToFile = new group {
     val testFile = File.createTempFile("test", "")
     val pathFile = testFile.getAbsolutePath
     val pathURL = testFile.toURI.toURL.toString
@@ -232,7 +232,7 @@ class FileIntermediateSpec extends Specification with Grouped {
     e2 := appendOp must beSuccessfulTry
   }
 
-  val readFromFile = new group {
+  def readFromFile = new group {
     val testFile = File.createTempFile("test", "")
     val pathFile = testFile.getAbsolutePath
     val pathURL = testFile.toURI.toURL.toString
@@ -272,7 +272,7 @@ class MemoryIntermediateSpec extends Specification with Grouped {
     The content is cleared                             ${clear.e1}
   """
 
-  val read = new group {
+  def read = new group {
     val intermediate = new MemoryIntermediate[TestFormat]("unused param")
     intermediate.write(TestData.iteratorSingle)
 
@@ -283,7 +283,7 @@ class MemoryIntermediateSpec extends Specification with Grouped {
     e2 := actual.get.zip(expect).count(x => x._1 != x._2) must be_==(0)
   }
 
-  val write = new group {
+  def write = new group {
     val intermediate = new MemoryIntermediate[TestFormat]("unused param")
     val writeOp = intermediate.write(TestData.iteratorSingle)
 
@@ -295,7 +295,7 @@ class MemoryIntermediateSpec extends Specification with Grouped {
       intermediate.getData(), expect) must beTrue
   }
 
-  val append = new group {
+  def append = new group {
     val intermediate = new MemoryIntermediate[TestFormat]("unused param")
     intermediate.write(TestData.iteratorSingle)
     val appendOp = intermediate.write(TestData.iteratorSingle)
@@ -309,7 +309,7 @@ class MemoryIntermediateSpec extends Specification with Grouped {
       intermediate.getData(), expect) must beTrue
   }
 
-  val clear = new group {
+  def clear = new group {
     val intermediate = new MemoryIntermediate[TestFormat]("unused param")
     intermediate.write(TestData.iteratorSingle)
     intermediate.clearData()

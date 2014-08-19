@@ -38,7 +38,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
       val db = new DB(databaseConfig)
       db.createIfNotExists(db.all)
       val dropFactory = loadClass(dropFactoryClass(config))
-      val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(jobsDatabaseConfig(config), db), "job-database-manager")
+      val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(db), "job-database-manager")
       val dropSupervisor = system.actorOf(DropSupervisor.props(jobDatabaseManager, dropFactory), "drop-supervisor")
       val scheduleManager = system.actorOf(ScheduleManager.props(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime(config), checkJobsPeriod(config)), "schedule-manager")
 

@@ -13,7 +13,7 @@ case class DatabaseConfig(url: String, username: String = null, password: String
     val driver = url match {
       case driverRegex(name) =>
         name match {
-          case "sqlite" => SQLiteDriver
+          case "h2" => H2Driver
           case "postgresql" => PostgresDriver
           case _ => throw new RuntimeException("Driver not understood.")
         }
@@ -67,4 +67,6 @@ trait DatabaseContainer {
     if (!tablesToBeCreated.isEmpty)
       tablesToBeCreated.map(_.ddl).reduce(_ ++ _).create
   }
+
+  def executeInSession[T](f: => T): T = db.withDynSession(f)
 }

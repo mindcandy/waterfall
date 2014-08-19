@@ -11,7 +11,7 @@ import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import org.joda.time
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
-import org.specs2.specification.After
+import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
 
 import scala.concurrent.duration._
@@ -19,10 +19,9 @@ import scala.language.postfixOps
 
 class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     with SpecificationLike
-    with After
     with NoTimeConversions
     with Mockito {
-  override def is = s2"""
+  def is = s2"""
     ScheduleManager should
       automatically schedule a CheckJobs message to itself $autoCheckJobs
       contact job database on check jobs message $checkJobs
@@ -35,9 +34,9 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
       reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
       do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
       do not schedule a job if it's cron is malformed $malformedCron
-  """
+  """ ^ Step(afterAll)
 
-  override def after: Any = TestKit.shutdownActorSystem(system)
+  def afterAll = TestKit.shutdownActorSystem(system)
 
   def autoCheckJobs = {
     val databaseManager: TestProbe = TestProbe()

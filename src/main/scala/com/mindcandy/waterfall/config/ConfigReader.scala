@@ -9,17 +9,6 @@ import scala.concurrent.duration._
 import scalaz._
 
 trait ConfigReader {
-  def jobsDatabaseConfig: Reader[Config, JobsDatabaseConfig] = Reader(config => {
-    val jsonString: String = config.getList("waterfall.dropJobList").render(ConfigRenderOptions.concise())
-    val dropJobs = jsonString.decodeEither[List[DropJob]] match {
-      case -\/(error) => throw new IllegalArgumentException(error)
-      case \/-(dropJobs) => dropJobs
-    }
-    JobsDatabaseConfig(
-      DropJobList(dropJobs.map(x => x.jobID.getOrElse(0) -> x).toMap)
-    )
-  })
-
   def dropFactoryClass: Reader[Config, String] = Reader(config => config.getString("waterfall.dropFactoryClass"))
 
   def maxScheduleTime: Reader[Config, FiniteDuration] = Reader(config => FiniteDuration(config.getInt("waterfall.maxScheduleTimeInMinutes"), MINUTES))
@@ -27,14 +16,14 @@ trait ConfigReader {
   def checkJobsPeriod: Reader[Config, FiniteDuration] = Reader(config => FiniteDuration(config.getInt("waterfall.checkJobsPeriodInMinutes"), MINUTES))
 
   def logDatabase: Reader[Config, String] = Reader(
-    config => config.getString("waterfall.logDatabase")
+    config => config.getString("waterfall.database.url")
   )
 
   def username: Reader[Config, String] = Reader(
-    config => config.getString("waterfall.username")
+    config => config.getString("waterfall.database.username")
   )
 
   def password: Reader[Config, String] = Reader(
-    config => config.getString("waterfall.password")
+    config => config.getString("waterfall.database.password")
   )
 }

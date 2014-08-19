@@ -5,13 +5,12 @@ import java.util.Properties
 
 import argonaut.Argonaut._
 import argonaut._
-import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
 
 import scala.language.implicitConversions
-import scala.slick.driver.{ PostgresDriver, SQLiteDriver }
+import scala.slick.driver.{ H2Driver, PostgresDriver }
 import scalaz.\/
 
 object TimeFrame extends Enumeration {
@@ -61,10 +60,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val db = {
     val properties = new Properties()
     val sqlDriver = config.driver match {
-      case SQLiteDriver =>
-        // notice sqlite has to set the foreign keys constraint explicitly
-        properties.setProperty("foreign_keys", "true")
-        "org.sqlite.JDBC"
+      case H2Driver => "org.h2.Driver"
       case PostgresDriver => "org.postgresql.Driver"
     }
     Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
