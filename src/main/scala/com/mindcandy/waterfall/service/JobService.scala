@@ -2,7 +2,7 @@ package com.mindcandy.waterfall.service
 
 import akka.actor.{ Actor, ActorRef, Props }
 import argonaut.Argonaut._
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetJobForCompletion, GetScheduleForCompletion }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ UpdateJobForCompletion, PostJobForCompletion, GetJobForCompletion, GetScheduleForCompletion }
 import com.mindcandy.waterfall.actor.Protocol._
 import spray.routing.HttpService
 
@@ -19,14 +19,42 @@ trait JobService extends HttpService with ArgonautMarshallers {
   def jobDatabaseManager: ActorRef
 
   val route = {
-    path("jobs" / IntNumber) { id =>
+    path("jobs") {
       get {
-        produce(instanceOf[Option[DropJob]]) { completionFunction =>
+        // list all DropJob
+        produce(instanceOf[List[DropJob]]) { completionFunction =>
           context =>
-            jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+            jobDatabaseManager ! GetScheduleForCompletion(completionFunction)
         }
-      }
+      } ~
+        post {
+          // create a new DropJob
+          entity(as[DropJob]) { dropJob =>
+            produce(instanceOf[Option[DropJob]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
+            }
+          }
+        }
     } ~
+      path("jobs" / IntNumber) { id =>
+        get {
+          // get information of a certain DropJob
+          produce(instanceOf[Option[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+          }
+        } ~
+          post {
+            // update a certain DropJob
+            entity(as[DropJob]) { dropJob =>
+              produce(instanceOf[Option[DropJob]]) { completionFunction =>
+                context =>
+                  jobDatabaseManager ! UpdateJobForCompletion(id, dropJob, completionFunction)
+              }
+            }
+          }
+      } ~
       path("schedule") {
         get {
           produce(instanceOf[List[DropJob]]) { completionFunction =>

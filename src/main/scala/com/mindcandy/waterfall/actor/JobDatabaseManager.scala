@@ -9,7 +9,8 @@ object JobDatabaseManager {
   case class GetJobForCompletion(jobId: JobID, completionFunction: Option[DropJob] => Unit)
   case class GetScheduleForCompletion(completionFunction: List[DropJob] => Unit)
   case class GetSchedule()
-  case class PutJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
+  case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
+  case class UpdateJobForCompletion(jobID: JobID, dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
@@ -37,9 +38,15 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"drop log received")
       db.insert(db.dropLogs, dropLog)
     }
-    case PutJobForCompletion(dropJob, f) => {
+    case PostJobForCompletion(dropJob, f) => {
       val result = db.executeInSession {
         maybeExists(dropJob).fold(insertAndReturn(dropJob))(_ => updateAndReturn(dropJob))
+      }
+      f(result)
+    }
+    case UpdateJobForCompletion(jobIDToUpdate, dropJob, f) => {
+      val result = db.executeInSession {
+        updateAndReturn(dropJob.copy(jobID = Some(jobIDToUpdate)))
       }
       f(result)
     }

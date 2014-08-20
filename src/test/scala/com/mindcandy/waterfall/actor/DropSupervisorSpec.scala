@@ -136,7 +136,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
       DropJob(Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
 
     probe.send(actor, request)
-    val expectedMsg = Some(s"factory has no drop for ${dropUID}")
+    val expectedMsg = Some(s"factory has no drop for job ${request.jobID} and drop uid ${request.job.dropUID}")
     jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception must_== expectedMsg
   }
 
