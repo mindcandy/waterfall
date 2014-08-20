@@ -5,8 +5,8 @@ import java.util.UUID
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
 import org.joda.time.DateTime
-import org.specs2.specification.script.Specification
 import org.specs2.specification.Grouped
+import org.specs2.specification.script.Specification
 
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession

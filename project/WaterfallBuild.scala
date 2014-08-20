@@ -42,7 +42,8 @@ object WaterfallBuild extends Build {
     libraryDependencies += "org.specs2" %% "specs2" % "2.3.8" % "test,it",
     libraryDependencies += "junit" % "junit" % "4.11" % "test,it",
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4" % "test,it",
-    libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it")
+    libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it",
+    libraryDependencies += "com.h2database" % "h2" % "1.4.180" % "test,it")
 
   lazy val formattingSettings = FormattingPreferences()
     .setPreference(AlignParameters, true)

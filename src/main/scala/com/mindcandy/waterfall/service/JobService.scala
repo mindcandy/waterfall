@@ -2,7 +2,6 @@ package com.mindcandy.waterfall.service
 
 import akka.actor.{ Actor, ActorRef, Props }
 import argonaut.Argonaut._
-import argonaut._
 import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetJobForCompletion, GetScheduleForCompletion }
 import com.mindcandy.waterfall.actor.Protocol._
 import spray.routing.HttpService

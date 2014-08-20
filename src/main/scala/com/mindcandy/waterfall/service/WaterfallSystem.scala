@@ -34,7 +34,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
 
       val config = ConfigFactory.load()
 
-      val databaseConfig = DatabaseConfig(logDatabase(config), username(config), password(config))
+      val databaseConfig = DatabaseConfig(databaseURL(config), databaseUsername(config), databasePassword(config))
       val db = new DB(databaseConfig)
       db.createIfNotExists(db.all)
       val dropFactory = loadClass(dropFactoryClass(config))

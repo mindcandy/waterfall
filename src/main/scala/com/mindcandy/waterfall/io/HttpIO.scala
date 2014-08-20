@@ -4,9 +4,9 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSource, Intermediate, IntermediateFormat }
 import com.mindcandy.waterfall.RowSeparator._
 import com.mindcandy.waterfall.intermediate.FileIntermediate
+import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSource, Intermediate, IntermediateFormat }
 import com.typesafe.scalalogging.slf4j.Logging
 import spray.client.pipelining._
 import spray.http._

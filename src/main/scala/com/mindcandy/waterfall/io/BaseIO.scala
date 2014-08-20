@@ -2,9 +2,9 @@ package com.mindcandy.waterfall.io
 
 import java.io._
 
-import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSink, IOSource, Intermediate, IntermediateFormat, IntermediateOps }
 import com.mindcandy.waterfall.RowSeparator._
 import com.mindcandy.waterfall.intermediate.{ FileIntermediate, MemoryIntermediate }
+import com.mindcandy.waterfall.{ IOConfig, IOOps, IOSink, IOSource, Intermediate, IntermediateFormat, IntermediateOps }
 import org.apache.commons.vfs2.VFS
 import resource._
 

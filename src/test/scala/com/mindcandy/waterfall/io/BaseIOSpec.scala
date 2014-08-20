@@ -4,8 +4,8 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-import com.mindcandy.waterfall.{ Intermediate, IntermediateFormat, PlainTextFormat, RowSeparator, TestFormat }
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
+import com.mindcandy.waterfall.{ Intermediate, IntermediateFormat, PlainTextFormat, RowSeparator, TestFormat }
 import fr.simply.StubServer
 import fr.simply.util.ContentType
 import org.junit.runner.RunWith

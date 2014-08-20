@@ -2,19 +2,21 @@ package com.mindcandy.waterfall.actor
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog, JobID }
+
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: JobID, completionFunction: Option[DropJob] => Unit)
   case class GetScheduleForCompletion(completionFunction: List[DropJob] => Unit)
   case class GetSchedule()
-  case class PutJobIntoDatabase(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
+  case class PutJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
 
 class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
   import com.mindcandy.waterfall.actor.JobDatabaseManager._
+
   import scala.slick.driver.JdbcDriver.simple._
 
   def receive = {
@@ -35,7 +37,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"drop log received")
       db.insert(db.dropLogs, dropLog)
     }
-    case PutJobIntoDatabase(dropJob, f) => {
+    case PutJobForCompletion(dropJob, f) => {
       val result = db.executeInSession {
         maybeExists(dropJob).fold(insertAndReturn(dropJob))(_ => updateAndReturn(dropJob))
       }

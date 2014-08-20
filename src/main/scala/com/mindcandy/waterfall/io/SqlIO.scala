@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.io
 
-import com.mindcandy.waterfall.{ IOConfig, IOSource, Intermediate, IntermediateFormat }
 import com.mindcandy.waterfall.intermediate.FileIntermediate
+import com.mindcandy.waterfall.{ IOConfig, IOSource, Intermediate, IntermediateFormat }
 import com.typesafe.scalalogging.slf4j.Logging
 
 import scala.slick.jdbc.JdbcBackend.Database

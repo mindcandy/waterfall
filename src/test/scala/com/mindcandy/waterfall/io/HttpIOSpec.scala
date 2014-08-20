@@ -3,10 +3,10 @@ package com.mindcandy.waterfall.io
 import java.nio.file.Files
 
 import akka.pattern.AskTimeoutException
-import com.mindcandy.waterfall.{ PlainTextFormat, RowSeparator }
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import fr.simply.{ DynamicServerResponse, GET, StaticServerResponse, StubServer }
+import com.mindcandy.waterfall.{ PlainTextFormat, RowSeparator }
 import fr.simply.util.ContentType
+import fr.simply.{ DynamicServerResponse, GET, StaticServerResponse, StubServer }
 import org.junit.runner.RunWith
 import org.specs2.Specification
 import org.specs2.mock.Mockito
