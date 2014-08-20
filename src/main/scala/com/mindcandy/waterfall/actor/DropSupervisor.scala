@@ -44,11 +44,11 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         val runtime = PeriodFormat.getDefault().print(new Period((startTime to endTime)))
         result match {
           case Success(_) => {
-            log.info(s"success for drop $jobID after ${runtime}")
+            log.info(s"success for job $jobID after $runtime")
             jobDatabaseManager ! DropLog(None, jobID, startTime, Some(endTime), None, None)
           }
           case Failure(exception) => {
-            log.error(s"failure for drop $jobID after ${runtime}", exception)
+            log.error(s"failure for job $jobID after $runtime", exception)
             jobDatabaseManager !
               DropLog(None, jobID, startTime, Some(endTime), None, Some(s"${exception.toString}\n${exception.getStackTraceString}"))
           }
@@ -65,7 +65,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def runJob(jobID: JobID, job: DropJob) = runningJobs.get(jobID) match {
     case Some((actorRef, timestamp)) => {
-      val warning = s"job ${job.dropUID} already running as actor $actorRef started at $timestamp"
+      val warning = s"job $jobID and drop uid ${job.dropUID} already running as actor $actorRef started at $timestamp"
       log.warning(warning)
       jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(DateTime.now), None, Some(warning))
     }
@@ -79,7 +79,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           jobDatabaseManager ! DropLog(None, jobID, startTime, None, None, None)
         }
         case None => {
-          val error = s"factory has no drop for ${job.dropUID}"
+          val error = s"factory has no drop for job $jobID and drop uid ${job.dropUID}"
           log.error(error)
           jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(DateTime.now), None, Some(error))
         }
