@@ -1,16 +1,18 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor.{ Actor, ActorLogging, Props }
+import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog, JobID }
 
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: JobID, completionFunction: Option[DropJob] => Unit)
+  case class GetJobsForCompletion(completionFunction: List[DropJob] => Unit)
+  case class GetJobsWithDropUIDForCompletion(dropUID: DropUID, completionFunction: List[DropJob] => Unit)
   case class GetScheduleForCompletion(completionFunction: List[DropJob] => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
-  case class UpdateJobForCompletion(jobID: JobID, dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
@@ -25,9 +27,17 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"job lookup for id $jobId")
       f(db.executeInSession(db.dropJobs.filter(_.jobID === jobId).firstOption))
     }
+    case GetJobsForCompletion(f) => {
+      log.debug(s"Get all jobs")
+      f(db.executeInSession(db.dropJobs.list))
+    }
+    case GetJobsWithDropUIDForCompletion(dropUID, f) => {
+      log.debug(s"Get all jobs with dropUID: $dropUID")
+      f(db.executeInSession(db.dropJobs.filter(_.dropUID === dropUID).list))
+    }
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
-      f(db.executeInSession(db.dropJobs.list))
+      f(db.executeInSession(db.dropJobs.filter(_.enabled).list))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
@@ -41,12 +51,6 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case PostJobForCompletion(dropJob, f) => {
       val result = db.executeInSession {
         maybeExists(dropJob).fold(insertAndReturn(dropJob))(_ => updateAndReturn(dropJob))
-      }
-      f(result)
-    }
-    case UpdateJobForCompletion(jobIDToUpdate, dropJob, f) => {
-      val result = db.executeInSession {
-        updateAndReturn(dropJob.copy(jobID = Some(jobIDToUpdate)))
       }
       f(result)
     }
