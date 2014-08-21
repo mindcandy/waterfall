@@ -21,38 +21,92 @@ trait JobService extends HttpService with ArgonautMarshallers {
   val route = {
     // format: OFF
     pathPrefix("jobs") {
-      get {
-        // list all DropJob
-        produce(instanceOf[List[DropJob]]) { completionFunction =>
-          context =>
-            jobDatabaseManager ! GetJobsForCompletion(completionFunction)
+      pathEndOrSingleSlash {
+        get {
+          // list all DropJob
+          produce(instanceOf[List[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetJobsForCompletion(completionFunction)
+          }
+        } ~
+        post {
+          // create or update a DropJob
+          entity(as[DropJob]) { dropJob =>
+            produce(instanceOf[Option[DropJob]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
+            }
+          }
         }
       } ~
-      post {
-        // create or update a DropJob
-        entity(as[DropJob]) { dropJob =>
+      path(IntNumber) { id =>
+        get {
+          // get information of a certain DropJob
           produce(instanceOf[Option[DropJob]]) { completionFunction =>
             context =>
-              jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
+              jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+          }
+        }
+      } ~
+      path(Segment) { dropUID =>
+        get {
+          // get jobs by dropUID
+          println(dropUID)
+          produce(instanceOf[List[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetJobsWithDropUIDForCompletion(dropUID, completionFunction)
           }
         }
       }
     } ~
-    path("jobs" / IntNumber) { id =>
-      get {
-        // get information of a certain DropJob
-        produce(instanceOf[Option[DropJob]]) { completionFunction =>
-          context =>
-            jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+    pathPrefix("logs") {
+      pathEndOrSingleSlash {
+        get {
+          // list all logs
+          produce(instanceOf[List[DropLog]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetLogsForCompletion(None, None, None, completionFunction)
+          }
+        } ~
+        post {
+          // insert a log to database, for testing purpose
+          entity(as[DropLog]) { dropLog =>
+            produce(instanceOf[Option[DropLog]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! PostLogForCompletion(dropLog, completionFunction)
+            }
+          }
         }
-      }
-    } ~
-    path("jobs" / Rest) { dropUID =>
-      get {
-        // get jobs by dropUID
-        produce(instanceOf[List[DropJob]]) { completionFunction =>
-          context =>
-            jobDatabaseManager ! GetJobsWithDropUIDForCompletion(dropUID, completionFunction)
+      } ~
+      pathPrefix(Map("log" -> false, "error" -> true)) { isException =>
+        pathEndOrSingleSlash {
+          get {
+            // list logs without/with exception field not null
+            produce(instanceOf[List[DropLog]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! GetLogsForCompletion(None, None, Some(isException), completionFunction)
+            }
+          }
+        } ~
+        pathPrefix(IntNumber) { time =>
+          pathEndOrSingleSlash {
+            get {
+              // further filter logs within not older than x hours
+              produce(instanceOf[List[DropLog]]) { completionFunction =>
+                context =>
+                  jobDatabaseManager ! GetLogsForCompletion(None, Some(time), Some(isException), completionFunction)
+              }
+            }
+          } ~
+          path(IntNumber) { jobID =>
+            get {
+              // further filter logs by jobID
+              produce(instanceOf[List[DropLog]]) { completionFunction =>
+                context =>
+                  jobDatabaseManager ! GetLogsForCompletion(Some(jobID), Some(time), Some(isException), completionFunction)
+              }
+            }
+          }
         }
       }
     } ~

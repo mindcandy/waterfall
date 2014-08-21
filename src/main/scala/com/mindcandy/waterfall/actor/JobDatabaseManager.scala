@@ -2,7 +2,8 @@ package com.mindcandy.waterfall.actor
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog, JobID }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog, JobID, dateTimeColumnType }
+import com.github.nscala_time.time.Imports._
 
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
@@ -13,6 +14,8 @@ object JobDatabaseManager {
   case class GetScheduleForCompletion(completionFunction: List[DropJob] => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
+  case class GetLogsForCompletion(jobID: Option[JobID], withinHours: Option[Int], isException: Option[Boolean], completionFunction: List[DropLog] => Unit)
+  case class PostLogForCompletion(dropLog: DropLog, completionFunction: Option[DropLog] => Unit)
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
@@ -54,6 +57,37 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       }
       f(result)
     }
+    case GetLogsForCompletion(jobID, withinHours, isException, f) => {
+      // TODO(deo.liang): use intersect when it's available in slick2.2
+      log.debug(s"Quesry logs for jobID:${jobID.getOrElse(None)}, time:${withinHours.getOrElse(None)}, isException:${isException.getOrElse(None)}")
+      val result = db.executeInSession {
+        val resultFilterTime = withinHours.fold(db.dropLogs.sortBy(_.logID.desc)) { time =>
+          val timeFrom = getCurrentTime - time.hour
+          db.dropLogs
+            .filter(x =>
+            (x.endTime.isDefined && x.endTime >= timeFrom) ||
+              (x.endTime.isEmpty && x.startTime >= timeFrom))
+            .sortBy(_.logID.desc)
+        }
+        val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))
+        isException match {
+          case Some(true) => resultFilterJobID.filter(_.exception.isDefined).list
+          case Some(false) => resultFilterJobID.filter(_.exception.isEmpty).list
+          case None => resultFilterJobID.list
+        }
+      }
+      f(result)
+    }
+    case PostLogForCompletion(dropLog, f) => {
+      log.debug("Insert a log")
+      val result = db.executeInSession(
+        (db.dropLogs
+          returning db.dropLogs.map(_.logID)
+          into ((log, id) => Some(log.copy(logID = Some(id))))
+        ) += dropLog
+      )
+      f(result)
+    }
   }
 
   def maybeExists(dropJob: DropJob): Option[DropJob] =
@@ -70,4 +104,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     job.update(dropJob)
     job.firstOption
   }
+
+  // for test injection
+  def getCurrentTime = DateTime.now
 }

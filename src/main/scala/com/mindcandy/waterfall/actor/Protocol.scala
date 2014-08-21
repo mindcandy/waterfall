@@ -9,6 +9,7 @@ import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
 
+
 import scala.language.implicitConversions
 import scala.slick.driver.{ H2Driver, PostgresDriver }
 import scalaz.\/
@@ -28,6 +29,7 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
+  import scala.slick.driver.JdbcDriver.simple._
   type JobID = Int
   case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: Map[JobID, DropJob])
@@ -50,6 +52,10 @@ object Protocol {
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
 
+  implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
+    { dt => new Timestamp(dt.getMillis) },
+    { ts => new DateTime(ts) }
+  )
 }
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
@@ -65,11 +71,6 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
     Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
   }
-
-  implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
-    { dt => new Timestamp(dt.getMillis) },
-    { ts => new DateTime(ts) }
-  )
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
     def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
