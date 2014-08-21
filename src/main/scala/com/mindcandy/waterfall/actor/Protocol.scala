@@ -5,6 +5,7 @@ import java.util.Properties
 
 import argonaut.Argonaut._
 import argonaut._
+import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
@@ -29,7 +30,6 @@ object TimeFrame extends Enumeration {
 }
 
 object Protocol {
-  import scala.slick.driver.JdbcDriver.simple._
   type JobID = Int
   case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: Map[JobID, DropJob])
@@ -51,17 +51,13 @@ object Protocol {
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
-
-  implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
-    { dt => new Timestamp(dt.getMillis) },
-    { ts => new DateTime(ts) }
-  )
 }
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val driver = config.driver
   import com.mindcandy.waterfall.actor.Protocol._
   import driver.simple._
+  import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
   val db = {
     val properties = new Properties()
@@ -71,6 +67,11 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
     Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
   }
+
+  implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
+    { dt => new Timestamp(dt.getMillis) },
+    { ts => new DateTime(ts) }
+  )
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
     def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
@@ -119,4 +120,42 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
 
   val dropJobs = TableQuery[DropJobs]
   val all = Seq(dropJobs, dropLogs)
+
+  def maybeExists(dropJob: DropJob): Option[DropJob] =
+    dropJob.jobID.flatMap(jid => dropJobs.filter(_.jobID === jid).firstOption)
+
+  def insertAndReturnDropJob(dropJob: DropJob): Option[DropJob] = {
+    (dropJobs returning dropJobs.map(_.jobID) into ((job, id) => Some(job.copy(jobID = Some(id))))) += dropJob
+  }
+
+  def insertAndReturnDropLog(dropLog: DropLog): Option[DropLog] = {
+    (dropLogs returning dropLogs.map(_.logID) into ((log, id) => Some(log.copy(logID = Some(id))))) += dropLog
+  }
+
+  def updateAndReturn(dropJob: DropJob): Option[DropJob] = {
+    val job = dropJobs.filter(_.jobID === dropJob.jobID)
+    job.update(dropJob)
+    job.firstOption
+  }
+
+  def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] =
+    maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturn(dropJob))
+
+  def selectDropLog(jobID: Option[JobID], time: Option[Int], isException: Option[Boolean]): List[DropLog] = {
+    // TODO(deo.liang): use intersect when it's available in slick2.2
+    val resultFilterTime = time.fold(dropLogs.sortBy(_.logID.desc)) { time =>
+      val timeFrom = DateTime.now - time.hour
+      dropLogs
+        .filter(x =>
+        (x.endTime.isDefined && x.endTime >= timeFrom) ||
+          (x.endTime.isEmpty && x.startTime >= timeFrom))
+        .sortBy(_.logID.desc)
+    }
+    val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))
+    isException match {
+      case Some(true) => resultFilterJobID.filter(_.exception.isDefined).list
+      case Some(false) => resultFilterJobID.filter(_.exception.isEmpty).list
+      case None => resultFilterJobID.list
+    }
+  }
 }
