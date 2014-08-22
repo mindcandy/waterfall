@@ -50,10 +50,9 @@ trait JobService extends HttpService with ArgonautMarshallers {
           }
         }
     } ~
-    path("drops" / Segment) { dropUID =>
+    path("drops" / Segment / "jobs") { dropUID =>
       get {
         // get jobs by dropUID
-        println(dropUID)
         produce(instanceOf[DropJobList]) { completionFunction =>
           context =>
             jobDatabaseManager ! GetJobsWithDropUIDForCompletion(dropUID, completionFunction)

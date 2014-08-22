@@ -10,7 +10,6 @@ import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
 
-
 import scala.language.implicitConversions
 import scala.slick.driver.{ H2Driver, PostgresDriver }
 import scalaz.\/
@@ -55,20 +54,20 @@ object Protocol {
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
-  implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson (
+  implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
     (dropJobList: DropJobList) =>
       ("count" := dropJobList.count) ->:
-      ("jobs" := dropJobList.jobs.values.toList) ->:
-      jEmptyObject,
+        ("jobs" := dropJobList.jobs.values.toList) ->:
+        jEmptyObject,
     json => for {
       jobs <- (json --\ "jobs").as[List[DropJob]]
     } yield DropJobList(jobs.map(x => x.jobID.getOrElse(-1) -> x).toMap)
   )
-  implicit def DropHistoryCodecJson: CodecJson[DropHistory] = CodecJson (
+  implicit def DropHistoryCodecJson: CodecJson[DropHistory] = CodecJson(
     (dropHistory: DropHistory) =>
       ("count" := dropHistory.count) ->:
-      ("logs" := dropHistory.logs) ->:
-      jEmptyObject,
+        ("logs" := dropHistory.logs) ->:
+        jEmptyObject,
     json => for {
       logs <- (json --\ "logs").as[List[DropLog]]
     } yield DropHistory(logs)
@@ -79,6 +78,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val driver = config.driver
   import com.mindcandy.waterfall.actor.Protocol._
   import driver.simple._
+
   import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
   val db = {
@@ -169,8 +169,8 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       val timeFrom = DateTime.now - time.hour
       dropLogs
         .filter(x =>
-        (x.endTime.isDefined && x.endTime >= timeFrom) ||
-          (x.endTime.isEmpty && x.startTime >= timeFrom))
+          (x.endTime.isDefined && x.endTime >= timeFrom) ||
+            (x.endTime.isEmpty && x.startTime >= timeFrom))
         .sortBy(_.logID.desc)
     }
     val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))

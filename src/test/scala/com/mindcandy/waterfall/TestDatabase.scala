@@ -2,12 +2,11 @@ package com.mindcandy.waterfall
 
 import java.util.UUID
 
-import com.mindcandy.waterfall.actor.Protocol.{DropLog, DropJob}
-import com.mindcandy.waterfall.actor.{DB, TimeFrame}
+import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
+import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
 import com.mindcandy.waterfall.config.DatabaseConfig
 import org.joda.time.DateTime
-import com.github.nscala_time.time.Imports._
-
 
 trait TestDatabase {
 

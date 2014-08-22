@@ -1,10 +1,8 @@
 package com.mindcandy.waterfall.config
 
-import java.util.UUID
-
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
-import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
+import com.mindcandy.waterfall.actor.TimeFrame
 import org.joda.time.DateTime
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
@@ -12,7 +10,6 @@ import org.specs2.specification.script.Specification
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.meta.MTable
-import com.github.nscala_time.time.Imports._
 
 trait TestData {
 
@@ -24,10 +21,10 @@ trait TestData {
 }
 
 class DatabaseContainerSpec
-  extends Specification
-  with Grouped
-  with TestData
-  with TestDatabase {
+    extends Specification
+    with Grouped
+    with TestData
+    with TestDatabase {
 
   def is = s2"""
   DB test
@@ -185,7 +182,7 @@ class DatabaseContainerSpec
     e2 := insertedData must_== List(
       DropLog(Some(1), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None))
   }
-  
+
   def selectDropLog = new group {
     val db = testDatabase
     e1 := db.executeInSession(db.selectDropLog(None, None, None)).size must_== 16

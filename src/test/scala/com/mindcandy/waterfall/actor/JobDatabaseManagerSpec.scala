@@ -1,14 +1,11 @@
 package com.mindcandy.waterfall.actor
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol._
-import com.mindcandy.waterfall.config.DatabaseConfig
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
 import org.specs2.specification.Step
@@ -21,7 +18,7 @@ class JobDatabaseManagerSpec
     extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
     with SpecificationLike
     with NoTimeConversions
-    with Mockito 
+    with Mockito
     with TestDatabase {
   def is = s2"""
     JobDatabaseManager should
