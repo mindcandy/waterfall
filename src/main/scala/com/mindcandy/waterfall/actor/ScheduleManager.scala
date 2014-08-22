@@ -52,15 +52,15 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
   def manageScheduledJobs(jobs: Map[JobID, DropJob]): Set[JobID] = {
     val jobIDs = jobs.keySet
-    val scheduledUIDs = scheduledJobs.keySet & jobIDs
+    val scheduledIDs = scheduledJobs.keySet & jobIDs
     for {
-      removableDropUID <- scheduledJobs.keySet &~ scheduledUIDs
+      removableDropUID <- scheduledJobs.keySet &~ scheduledIDs
     } yield {
       val (_, cancellable) = scheduledJobs(removableDropUID)
       cancellable.cancel
       scheduledJobs -= removableDropUID
     }
-    jobIDs &~ scheduledUIDs
+    jobIDs &~ scheduledIDs
   }
 
   def scheduleJob(jobID: JobID, job: DropJob): Option[Cancellable] = {
@@ -68,18 +68,10 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       case Success(duration) if maxScheduleTime > duration =>
         Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(jobID, job))(context.dispatcher))
       case Success(duration) =>
-        val debug = s"Job ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime"
-        log.debug(debug)
-        jobDatabaseManager ! DropLog(None, job.jobID.get, DateTime.now, None, Some(debug), None)
+        log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
         None
       case Failure(exception) => {
-        log.debug("bad cron expression", exception)
-        val error = "could not resolve cron expression:"
-        log.error(error, exception)
-        jobDatabaseManager !
-          DropLog(
-            None, job.jobID.get, DateTime.now, None, None,
-            Some(s"${error}\n${exception.toString}\n${exception.getStackTraceString}"))
+        log.error(s"could not resolve cron expression for ${job.jobID} with drop uid ${job.dropUID}", exception)
         None
       }
     }
