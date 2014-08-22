@@ -30,25 +30,25 @@ trait JobService extends HttpService with ArgonautMarshallers {
               jobDatabaseManager ! GetJobsForCompletion(completionFunction)
           }
         } ~
-          post {
-            // create or update a job
-            entity(as[DropJob]) { dropJob =>
-              produce(instanceOf[Option[DropJob]]) { completionFunction =>
-                context =>
-                  jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
-              }
-            }
-          }
-      } ~
-        path(IntNumber) { id =>
-          get {
-            // get information of a certain job
+        post {
+          // create or update a job
+          entity(as[DropJob]) { dropJob =>
             produce(instanceOf[Option[DropJob]]) { completionFunction =>
               context =>
-                jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+                jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
             }
           }
         }
+      } ~
+      path(IntNumber) { id =>
+        get {
+          // get information of a certain job
+          produce(instanceOf[Option[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+          }
+        }
+      }
     } ~
     path("drops" / Segment / "jobs") { dropUID =>
       get {
