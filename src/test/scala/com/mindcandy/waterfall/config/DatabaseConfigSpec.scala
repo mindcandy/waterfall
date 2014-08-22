@@ -2,6 +2,7 @@ package com.mindcandy.waterfall.config
 
 import java.util.UUID
 
+import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.{ DB, TimeFrame }
 import org.joda.time.DateTime
@@ -11,9 +12,10 @@ import org.specs2.specification.script.Specification
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.meta.MTable
+import com.github.nscala_time.time.Imports._
 
 trait TestData {
-  def db = new DB(DatabaseConfig(s"jdbc:h2:mem:test${UUID.randomUUID()};DB_CLOSE_DELAY=-1"))
+
   val oneDropLog = DropLog(
     None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
@@ -21,10 +23,14 @@ trait TestData {
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
-class DatabaseContainerSpec extends Specification with Grouped with TestData {
+class DatabaseContainerSpec
+  extends Specification
+  with Grouped
+  with TestData
+  with TestDatabase {
 
   def is = s2"""
-  DropLogging Database test
+  DB test
 
   ==============================================================================
 
@@ -50,34 +56,46 @@ class DatabaseContainerSpec extends Specification with Grouped with TestData {
 
     successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
     inserted DropLog is correct ${insertDropLog.e2}
+    
+    select DropLog
+      select all have correct record size ${selectDropLog.e1}
+      select jobID=1 have correct record size${selectDropLog.e2}
+      select jobID have correct jobID ${selectDropLog.e3}
+      select newer than 1 hour ago have correct record size ${selectDropLog.e4}
+      select newer than 10 hour ago have correct record size ${selectDropLog.e5}
+      select failed log have correct record size ${selectDropLog.e6}
+      select failed log all have exception field ${selectDropLog.e7}
+      select successful log have corect record size ${selectDropLog.e8}
+      select successful log don't have exception field ${selectDropLog.e9}
+      select successful log no older than 1 hour for jobID=1 ${selectDropLog.e10}
   """
 
   def createNewDatabase = new group {
-    val logDB = db
-    logDB.create(logDB.all)
-    val isTablesExist: Boolean = logDB.executeInSession {
-      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
-        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
+    val db = newDB
+    db.create(db.all)
+    val isTablesExist: Boolean = db.executeInSession {
+      !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
     }
     e1 := isTablesExist must beTrue
   }
 
   def createNewDatabaseNotOverwrite = new group {
-    val logDB = db
-    logDB.createIfNotExists(logDB.dropJobs)
-    val tableName = logDB.dropJobs.baseTableRow.tableName
-    val isTableExists: Boolean = logDB.executeInSession {
+    val db = newDB
+    db.createIfNotExists(db.dropJobs)
+    val tableName = db.dropJobs.baseTableRow.tableName
+    val isTableExists: Boolean = db.executeInSession {
       !MTable.getTables(tableName).list.isEmpty
     }
     e1 := isTableExists must beTrue
   }
 
   def insertToDatabase = new group {
-    val logDB = db
-    logDB.create(logDB.dropJobs)
-    val numberOfInsert = logDB.insert(logDB.dropJobs, oneDropJob)
-    val insertedData = logDB.db.withDynSession {
-      logDB.dropJobs.list
+    val db = newDB
+    db.create(db.dropJobs)
+    val numberOfInsert = db.insert(db.dropJobs, oneDropJob)
+    val insertedData = db.db.withDynSession {
+      db.dropJobs.list
     }
 
     e1 := numberOfInsert must_== 1
@@ -86,14 +104,14 @@ class DatabaseContainerSpec extends Specification with Grouped with TestData {
   }
 
   def insertTwoToDatabase = new group {
-    val logDB = db
-    logDB.create(logDB.dropJobs)
+    val db = newDB
+    db.create(db.dropJobs)
     val data = List(
       oneDropJob,
       DropJob(None, "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
-    val numberOfInsert = logDB.insert(logDB.dropJobs, data)
-    val insertedData = logDB.db.withDynSession {
-      logDB.dropJobs.list
+    val numberOfInsert = db.insert(db.dropJobs, data)
+    val insertedData = db.db.withDynSession {
+      db.dropJobs.list
     }
 
     e1 := numberOfInsert must_== Some(2)
@@ -103,68 +121,82 @@ class DatabaseContainerSpec extends Specification with Grouped with TestData {
   }
 
   def overwriteExistDatabase = new group {
-    val logDB = db
-    logDB.create(logDB.dropJobs)
-    logDB.insert(logDB.dropJobs, oneDropJob)
-    logDB.create(logDB.dropJobs)
-    val insertedData = logDB.db.withDynSession {
-      logDB.dropJobs.list
+    val db = newDB
+    db.create(db.dropJobs)
+    db.insert(db.dropJobs, oneDropJob)
+    db.create(db.dropJobs)
+    val insertedData = db.db.withDynSession {
+      db.dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beTrue
   }
 
   def notOverwriteExistDatabase = new group {
-    val logDB = db
-    logDB.create(logDB.dropJobs)
-    logDB.insert(logDB.dropJobs, oneDropJob)
-    logDB.createIfNotExists(logDB.dropJobs)
-    val insertedData = logDB.db.withDynSession {
-      logDB.dropJobs.list
+    val db = newDB
+    db.create(db.dropJobs)
+    db.insert(db.dropJobs, oneDropJob)
+    db.createIfNotExists(db.dropJobs)
+    val insertedData = db.db.withDynSession {
+      db.dropJobs.list
     }
 
     e1 := insertedData.isEmpty must beFalse
   }
 
   def createTablesInNewDB = new group {
-    val logDB = db
-    logDB.createIfNotExists(logDB.all)
-    val isTablesCreated = logDB.db.withDynSession {
-      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
-        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
+    val db = newDB
+    db.createIfNotExists(db.all)
+    val isTablesCreated = db.db.withDynSession {
+      !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
     }
 
     e1 := isTablesCreated must beTrue
   }
 
   def createTablesOverwrite = new group {
-    val logDB = db
-    logDB.create(logDB.all)
-    logDB.insert(logDB.dropJobs, oneDropJob)
-    logDB.create(logDB.all)
-    val isTablesCreated = logDB.db.withDynSession {
-      !MTable.getTables(logDB.dropLogs.baseTableRow.tableName).list.isEmpty &&
-        !MTable.getTables(logDB.dropJobs.baseTableRow.tableName).list.isEmpty
+    val db = newDB
+    db.create(db.all)
+    db.insert(db.dropJobs, oneDropJob)
+    db.create(db.all)
+    val isTablesCreated = db.db.withDynSession {
+      !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
+        !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
     }
 
-    val dataDropJobs = logDB.executeInSession(logDB.dropJobs.list)
-    val dataDropLogs = logDB.executeInSession(logDB.dropLogs.list)
+    val dataDropJobs = db.executeInSession(db.dropJobs.list)
+    val dataDropLogs = db.executeInSession(db.dropLogs.list)
     e1 := isTablesCreated must beTrue
     e2 := dataDropJobs must_== List()
     e3 := dataDropLogs must_== List()
   }
 
   def insertDropLog = new group {
-    val logDB = db
-    logDB.create(logDB.all)
-    logDB.insert(logDB.dropJobs, oneDropJob)
-    val numOfInsert = logDB.insert(logDB.dropLogs, oneDropLog)
-    val insertedData = logDB.db.withDynSession {
-      logDB.dropLogs.list
+    val db = newDB
+    db.create(db.all)
+    db.insert(db.dropJobs, oneDropJob)
+    val numOfInsert = db.insert(db.dropLogs, oneDropLog)
+    val insertedData = db.db.withDynSession {
+      db.dropLogs.list
     }
 
     e1 := numOfInsert must_== 1
     e2 := insertedData must_== List(
       DropLog(Some(1), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None))
+  }
+  
+  def selectDropLog = new group {
+    val db = testDatabase
+    e1 := db.executeInSession(db.selectDropLog(None, None, None)).size must_== 16
+    e2 := db.executeInSession(db.selectDropLog(Some(1), None, None)).size must_== 8
+    e3 := db.executeInSession(db.selectDropLog(Some(1), None, None)).count(_.jobID == 1) must_== 8
+    e4 := db.executeInSession(db.selectDropLog(None, Some(1), None)).size must_== 8
+    e5 := db.executeInSession(db.selectDropLog(None, Some(10), None)).size must_== 16
+    e6 := db.executeInSession(db.selectDropLog(None, None, Some(true))).size must_== 8
+    e7 := db.executeInSession(db.selectDropLog(None, None, Some(true))).count(_.exception.isDefined) must_== 8
+    e8 := db.executeInSession(db.selectDropLog(None, None, Some(false))).size must_== 8
+    e9 := db.executeInSession(db.selectDropLog(None, None, Some(false))).count(_.exception.isEmpty) must_== 8
+    e10 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(true))).size must_== 2
   }
 }

@@ -32,9 +32,13 @@ object TimeFrame extends Enumeration {
 object Protocol {
   type JobID = Int
   case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
-  case class DropJobList(jobs: Map[JobID, DropJob])
+  case class DropJobList(jobs: Map[JobID, DropJob]) {
+    val count = jobs.size
+  }
   case class DropLog(logID: Option[Int], jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
-  case class DropHistory(logs: List[DropLog])
+  case class DropHistory(logs: List[DropLog]) {
+    val count = logs.size
+  }
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)
@@ -51,6 +55,24 @@ object Protocol {
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
+  implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson (
+    (dropJobList: DropJobList) =>
+      ("count" := dropJobList.count) ->:
+      ("jobs" := dropJobList.jobs.values.toList) ->:
+      jEmptyObject,
+    json => for {
+      jobs <- (json --\ "jobs").as[List[DropJob]]
+    } yield DropJobList(jobs.map(x => x.jobID.getOrElse(-1) -> x).toMap)
+  )
+  implicit def DropHistoryCodecJson: CodecJson[DropHistory] = CodecJson (
+    (dropHistory: DropHistory) =>
+      ("count" := dropHistory.count) ->:
+      ("logs" := dropHistory.logs) ->:
+      jEmptyObject,
+    json => for {
+      logs <- (json --\ "logs").as[List[DropLog]]
+    } yield DropHistory(logs)
+  )
 }
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {

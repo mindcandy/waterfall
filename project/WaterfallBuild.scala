@@ -1,8 +1,11 @@
 import sbt._
 import sbt.Keys._
+import sbtbuildinfo.Plugin._
 import sbtrelease.ReleasePlugin._
 import scalariform.formatter.preferences._
 import com.typesafe.sbt.SbtScalariform._
+import scoverage.ScoverageSbtPlugin
+
 
 object WaterfallBuild extends Build {
   val akkaVersion = "2.3.2"
@@ -23,8 +26,8 @@ object WaterfallBuild extends Build {
     libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
     libraryDependencies += "com.netflix.astyanax" % "astyanax-cassandra" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
     libraryDependencies += "com.netflix.astyanax" % "astyanax-thrift" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
-    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
-    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.7.2")
+    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12")
+  )
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
     libraryDependencies += "io.spray"             %   "spray-can"     % sprayVersion,
@@ -77,10 +80,11 @@ object WaterfallBuild extends Build {
     if (vcsBuildNumber == null) "" else vcsBuildNumber
   }
 
+
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ buildInfoSettings ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
@@ -94,9 +98,14 @@ object WaterfallBuild extends Build {
           Some("snapshots" at repo + "libs-snapshot-local" + props)
         else
           Some("releases" at repo + "libs-release-local" + props)
-      }
+      },
+      ScoverageSbtPlugin.ScoverageKeys.highlighting := true,
+      // build info
+      sourceGenerators in Compile <+= buildInfo,
+      buildInfoKeys := Seq[BuildInfoKey](name, version),
+      buildInfoPackage := "com.mindcandy.waterfall.info"
     )
   ).configs( IntegrationTest )
-   .settings( Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
+   .settings( ScoverageSbtPlugin.instrumentSettings ++ ScctPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
 
 }
