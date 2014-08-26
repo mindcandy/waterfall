@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
 
+import scala.slick.driver
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 import scala.slick.jdbc.meta.MTable
@@ -195,11 +196,11 @@ class DatabaseContainerSpec
     e3 := db.executeInSession(db.selectDropLog(Some(1), None, None)).count(_.jobID == 1) must_== 8
     e4 := db.executeInSession(db.selectDropLog(None, Some(1), None)).size must_== 8
     e5 := db.executeInSession(db.selectDropLog(None, Some(10), None)).size must_== 16
-    e6 := db.executeInSession(db.selectDropLog(None, None, Some(true))).size must_== 8
-    e7 := db.executeInSession(db.selectDropLog(None, None, Some(true))).count(_.exception.isDefined) must_== 8
-    e8 := db.executeInSession(db.selectDropLog(None, None, Some(false))).size must_== 8
-    e9 := db.executeInSession(db.selectDropLog(None, None, Some(false))).count(_.exception.isEmpty) must_== 8
-    e10 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(true))).size must_== 2
+    e6 := db.executeInSession(db.selectDropLog(None, None, Some("failure"))).size must_== 8
+    e7 := db.executeInSession(db.selectDropLog(None, None, Some("failure"))).count(_.exception.isDefined) must_== 8
+    e8 := db.executeInSession(db.selectDropLog(None, None, Some("success"))).size must_== 8
+    e9 := db.executeInSession(db.selectDropLog(None, None, Some("success"))).count(_.exception.isEmpty) must_== 8
+    e10 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some("failure"))).size must_== 2
   }
 
   def insertOrUpdateDropJob = new group {
@@ -219,5 +220,36 @@ class DatabaseContainerSpec
       val expect = DropJob(Some(3), "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(expect)
     }
+  }
+}
+
+class DatabaseConfigSpec extends Specification with Grouped {
+  def is = s2"""
+  DatabaseConfig test
+  ==============================================================================
+    parse h2 url
+      correct h2 driver ${parseH2URL.e1}
+      correct h2 driver class string ${parseH2URL.e2}
+    parse postgresql url
+      correct postgresql driver ${parsePostgresqlURL.e1}
+      correct postgresql driver class string ${parsePostgresqlURL.e2}
+    parse unsupported url
+      RuntimeException raised ${parseUnsupportedURL.e1}
+  """
+
+  def parseH2URL = new group {
+    val config = DatabaseConfig("jdbc:h2:test.db")
+    e1 := config.driver must_== driver.H2Driver
+    e2 := config.driverClass must_== "org.h2.Driver"
+  }
+
+  def parsePostgresqlURL = new group {
+    val config = DatabaseConfig("jdbc:postgresql:test.db")
+    e1 := config.driver must_== driver.PostgresDriver
+    e2 := config.driverClass must_== "org.postgresql.Driver"
+  }
+
+  def parseUnsupportedURL = new group {
+    e1 := DatabaseConfig("jdbc:sqlite:test.db") must throwA[RuntimeException]("Driver not understood.")
   }
 }

@@ -20,6 +20,10 @@ case class DatabaseConfig(url: String, username: String = null, password: String
     }
     driver
   }
+  val driverClass = driver match {
+    case H2Driver => "org.h2.Driver"
+    case PostgresDriver => "org.postgresql.Driver"
+  }
 }
 
 trait DatabaseContainer {

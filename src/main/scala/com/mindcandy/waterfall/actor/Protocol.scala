@@ -1,7 +1,6 @@
 package com.mindcandy.waterfall.actor
 
 import java.sql.Timestamp
-import java.util.Properties
 
 import argonaut.Argonaut._
 import argonaut._
@@ -12,7 +11,7 @@ import org.joda.time.DateTime
 import org.quartz.CronExpression
 
 import scala.language.implicitConversions
-import scala.slick.driver.{ H2Driver, PostgresDriver }
+import scala.util.{ Try, Success }
 import scalaz.\/
 
 object TimeFrame extends Enumeration {
@@ -24,6 +23,20 @@ object TimeFrame extends Enumeration {
     DecodeResult(hcursor.as[String].result.flatMap { value =>
       \/.fromTryCatch { TimeFrame.withName(value) }.leftMap { exception =>
         (s"Invalid TimeFrame value: $value", CursorHistory(List.empty[CursorOp]))
+      }
+    })
+  )
+}
+
+object LogStatus extends Enumeration {
+  type LogStatus = Value
+  val RUNNING, FAILURE, SUCCESS = Value
+
+  implicit val TimeFrameEncodeJson: EncodeJson[LogStatus] = EncodeJson(a => jString(a.toString))
+  implicit val TimeFrameDecodeJson: DecodeJson[LogStatus] = DecodeJson(hcursor =>
+    DecodeResult(hcursor.as[String].result.flatMap { value =>
+      \/.fromTryCatch { LogStatus.withName(value) }.leftMap { exception =>
+        (s"Invalid LogStatus value: $value", CursorHistory(List.empty[CursorOp]))
       }
     })
   )
@@ -82,14 +95,9 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
 
   import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
-  val db = {
-    val properties = new Properties()
-    val sqlDriver = config.driver match {
-      case H2Driver => "org.h2.Driver"
-      case PostgresDriver => "org.postgresql.Driver"
-    }
-    Database.forURL(config.url, config.username, config.password, prop = properties, driver = sqlDriver)
-  }
+  val db = Database.forURL(
+    config.url, config.username, config.password, driver = config.driverClass
+  )
 
   implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
     { dt => new Timestamp(dt.getMillis) },
@@ -151,10 +159,6 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     (dropJobs returning dropJobs.map(_.jobID) into ((job, id) => Some(job.copy(jobID = Some(id))))) += dropJob
   }
 
-  def insertAndReturnDropLog(dropLog: DropLog): Option[DropLog] = {
-    (dropLogs returning dropLogs.map(_.logID) into ((log, id) => Some(log.copy(logID = Some(id))))) += dropLog
-  }
-
   def updateAndReturn(dropJob: DropJob): Option[DropJob] = {
     val job = dropJobs.filter(_.jobID === dropJob.jobID)
     job.update(dropJob)
@@ -168,7 +172,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
   }
 
-  def selectDropLog(jobID: Option[JobID], time: Option[Int], isException: Option[Boolean]): List[DropLog] = {
+  def selectDropLog(jobID: Option[JobID], time: Option[Int], status: Option[String]): List[DropLog] = {
     // TODO(deo.liang): use intersect when it's available in slick2.2
     val resultFilterTime = time.fold(dropLogs.sortBy(_.startTime.desc)) { time =>
       val timeFrom = DateTime.now - time.hour
@@ -179,10 +183,11 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
         .sortBy(_.startTime.desc)
     }
     val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))
-    isException match {
-      case Some(true) => resultFilterJobID.filter(_.exception.isDefined).list
-      case Some(false) => resultFilterJobID.filter(_.exception.isEmpty).list
-      case None => resultFilterJobID.list
+    Try(LogStatus.withName(status.get.toUpperCase)) match {
+      case Success(LogStatus.FAILURE) => resultFilterJobID.filter(_.exception.isDefined).list
+      case Success(LogStatus.SUCCESS) => resultFilterJobID.filter(_.exception.isEmpty).list
+      case Success(LogStatus.RUNNING) => resultFilterJobID.filter(_.endTime.isEmpty).list
+      case _ => resultFilterJobID.list
     }
   }
 }

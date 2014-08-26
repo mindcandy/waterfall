@@ -62,15 +62,9 @@ trait JobService extends HttpService with ArgonautMarshallers {
     pathPrefix("logs") {
       anyParams('status.as[String].?, 'period.as[Int].?, 'jobID.as[Int].?) { (status, period, jobID) =>
         get {
-          // list logs with optional filters
-          val isException = status match {
-            case Some("failure") => Some(true)
-            case Some("success") => Some(false)
-            case _ => None
-          }
           produce(instanceOf[DropHistory]) { completionFunction =>
             context =>
-              jobDatabaseManager ! GetLogsForCompletion(jobID, period, isException, completionFunction)
+              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, completionFunction)
           }
         }
       }
