@@ -32,6 +32,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
       schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
       only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
       reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
+      schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
       do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
       do not schedule a job if it's cron is malformed $malformedCron
   """ ^ Step(afterAll)
@@ -158,6 +159,22 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
+  def scheduleJobsWithIdenticalDropUID = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+
+    val dropUID = "EXRATE"
+    val currentTime = DateTime.now + Period.seconds(3)
+    val dropJob1 = createDropJob(dropUID, "Exchange Rate", currentTime)
+    val dropJob2 = createDropJob(dropUID, "Exchange Rate", currentTime)
+    val request = DropJobList(Map(1 -> dropJob1, 2 -> dropJob2))
+
+    probe.send(actor, request)
+    dropSupervisor.expectMsgAllOf(StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
+  }
+
   def rescheduleJobs = {
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
@@ -169,7 +186,6 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val request = DropJobList(Map(1 -> dropJob))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsg(StartJob(1, dropJob))
 
     val newTime = DateTime.now + Period.seconds(3)
     val newDropJob = createDropJob("EXRATE", "Exchange Rate", newTime)

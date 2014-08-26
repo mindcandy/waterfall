@@ -67,7 +67,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     case Some((actorRef, timestamp)) => {
       val warning = s"job $jobID and drop uid ${job.dropUID} already running as actor $actorRef started at $timestamp"
       log.warning(warning)
-      jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(DateTime.now), None, Some(warning))
+      jobDatabaseManager ! DropLog(None, jobID, DateTime.now, None, None, Some(warning))
     }
     case None => {
       val worker = dropWorkerFactory.createActor

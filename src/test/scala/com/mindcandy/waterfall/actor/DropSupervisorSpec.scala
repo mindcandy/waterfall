@@ -8,17 +8,15 @@ import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import org.specs2.SpecificationLike
-import org.specs2.specification.After
+import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
 
-import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
 class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     with SpecificationLike
-    with After
     with NoTimeConversions {
-  override def is = s2"""
+  def is = s2"""
     DropSupervisor should
       run the job when it receives a start job message $runJobOnStartJob
       log the job when it receives a start job message $logJobOnStartJob
@@ -28,9 +26,9 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
       rerun a job if previous run finished $reRunAfterFinished
       log to database if the drop not in factory $logToErrorIfNoFactoryDrop
       log to database if result not in running list $logToErrorIfResultNotInList
-  """
+  """ ^ Step(afterAll)
 
-  override def after: Any = TestKit.shutdownActorSystem(system)
+  def afterAll: Any = TestKit.shutdownActorSystem(system)
 
   def runJobOnStartJob = {
     val probe = TestProbe()
@@ -41,7 +39,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
 
     probe.send(actor, request)
     val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
-    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
+    worker.expectMsg(expectedMessage) must not(throwA[AssertionError])
   }
 
   def logJobOnStartJob = {
@@ -51,7 +49,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val request = createStartJob()
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
       case DropLog(None, 1, _, None, None, None) => success
       case _ => failure
     }
@@ -66,10 +64,10 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val result = JobResult(1, Success(()))
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog])
+    jobDatabaseManager.expectMsgClass(classOf[DropLog])
 
     probe.send(actor, result)
-    jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
       case DropLog(None, 1, _, Some(_), None, None) => success
       case _ => failure
     }
@@ -85,10 +83,10 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val result = JobResult(1, Failure(exception))
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog])
+    jobDatabaseManager.expectMsgClass(classOf[DropLog])
 
     probe.send(actor, result)
-    jobDatabaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[DropLog]) match {
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
       case DropLog(None, 1, _, Some(_), None, Some(msg)) => success
       case _ => failure
     }
@@ -102,11 +100,11 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val request = createStartJob(TimeFrame.DAY_YESTERDAY)
 
     probe.send(actor, request)
-    probe.send(actor, request)
-    probe.send(actor, request)
     val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
-    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
-    worker.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    worker.expectMsg(expectedMessage)
+    jobDatabaseManager.expectMsgClass(classOf[DropLog])
+    probe.send(actor, request)
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception.getOrElse("") must startWith(s"job 1 and drop uid test1 already running as actor")
   }
 
   def reRunAfterFinished = {
@@ -118,11 +116,11 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
 
     probe.send(actor, request)
-    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
+    worker.expectMsg(expectedMessage)
 
     probe.send(actor, JobResult(1, Success(Unit)))
     probe.send(actor, request)
-    worker.expectMsg(FiniteDuration(5, SECONDS), expectedMessage) must_== expectedMessage
+    worker.expectMsg(expectedMessage) must not(throwA[AssertionError])
   }
 
   def logToErrorIfNoFactoryDrop = {

@@ -35,10 +35,10 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
     case DropJobList(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
-      val newJobUIDs = manageScheduledJobs(jobs)
+      val newJobIDs = manageScheduledJobs(jobs)
       for {
         (jobID, job) <- jobs
-        if (newJobUIDs contains jobID)
+        if (newJobIDs contains jobID)
         cancellable <- scheduleJob(jobID, job)
       } yield {
         scheduledJobs += (jobID -> (job, cancellable))
@@ -54,11 +54,11 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     val jobIDs = jobs.keySet
     val scheduledIDs = scheduledJobs.keySet & jobIDs
     for {
-      removableDropUID <- scheduledJobs.keySet &~ scheduledIDs
+      removableJobID <- scheduledJobs.keySet &~ scheduledIDs
     } yield {
-      val (_, cancellable) = scheduledJobs(removableDropUID)
+      val (_, cancellable) = scheduledJobs(removableJobID)
       cancellable.cancel
-      scheduledJobs -= removableDropUID
+      scheduledJobs -= removableJobID
     }
     jobIDs &~ scheduledIDs
   }
