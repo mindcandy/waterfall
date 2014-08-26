@@ -31,22 +31,22 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
       val jobs = db.executeInSession(db.dropJobs.list)
-      f(DropJobList(jobs.map(x => x.jobID.getOrElse(-1) -> x).toMap))
+      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")
       val jobs = db.executeInSession(db.dropJobs.filter(_.dropUID === dropUID).list)
-      f(DropJobList(jobs.map(x => x.jobID.getOrElse(-1) -> x).toMap))
+      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
       val jobs = db.executeInSession(db.dropJobs.filter(_.enabled).list)
-      f(DropJobList(jobs.map(x => x.jobID.getOrElse(-1) -> x).toMap))
+      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
       val dropJobs = db.executeInSession(db.dropJobs.list)
-      sender ! DropJobList(dropJobs.map(x => x.jobID.getOrElse(-1) -> x).toMap)
+      sender ! DropJobList(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
     case dropLog: DropLog => {
       log.debug(s"drop log received")

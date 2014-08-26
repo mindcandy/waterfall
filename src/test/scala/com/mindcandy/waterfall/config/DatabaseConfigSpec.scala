@@ -65,6 +65,11 @@ class DatabaseContainerSpec
       select successful log have corect record size ${selectDropLog.e8}
       select successful log don't have exception field ${selectDropLog.e9}
       select successful log no older than 1 hour for jobID=1 ${selectDropLog.e10}
+
+    insertOrUpdateDropJob
+      insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
+      update a job ${insertOrUpdateDropJob.e2}
+      insert a new job ${insertOrUpdateDropJob.e3}
   """
 
   def createNewDatabase = new group {
@@ -195,5 +200,24 @@ class DatabaseContainerSpec
     e8 := db.executeInSession(db.selectDropLog(None, None, Some(false))).size must_== 8
     e9 := db.executeInSession(db.selectDropLog(None, None, Some(false))).count(_.exception.isEmpty) must_== 8
     e10 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(true))).size must_== 2
+  }
+
+  def insertOrUpdateDropJob = new group {
+    val db = testDatabase
+    e1 := {
+      val dropJob = DropJob(None, "", "", "", true, "malformed cron", TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
+    }
+
+    e2 := {
+      val dropJob = DropJob(Some(1), "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(dropJob)
+    }
+
+    e3 := {
+      val dropJob = DropJob(None, "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
+      val expect = DropJob(Some(3), "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(expect)
+    }
   }
 }

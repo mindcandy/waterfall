@@ -44,13 +44,13 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = newDB
     db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetSchedule())
 
     val expectedMessage = DropJobList(
-      Map(1 -> DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+      Map(1 -> DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     )
     probe.expectMsg(expectedMessage) must not(throwA[AssertionError])
   }
@@ -59,7 +59,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = newDB
     db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     val start = DateTime.now
@@ -76,8 +76,8 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = newDB
     db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     val start = DateTime.now
@@ -125,7 +125,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     def testFunction(dropJob: Option[DropJob]) = probe.ref ! dropJob
     val db = testDatabase
-    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, PostJobForCompletion(dropJob, testFunction))
@@ -141,14 +141,14 @@ class JobDatabaseManagerSpec
     db.insert(
       db.dropJobs,
       List(
-        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(None, "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetJobForCompletion(2, testFunc))
-    val expectedDropJob = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+    val expectedDropJob = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
   }
 
@@ -161,8 +161,8 @@ class JobDatabaseManagerSpec
     db.insert(
       db.dropJobs,
       List(
-        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(None, "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     val actor = system.actorOf(JobDatabaseManager.props(db))
@@ -170,8 +170,8 @@ class JobDatabaseManagerSpec
     probe.send(actor, GetJobsForCompletion(testFunc))
     val expectedDropJob = DropJobList(
       Map(
-        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        2 -> DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        2 -> DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
@@ -187,9 +187,9 @@ class JobDatabaseManagerSpec
     db.insert(
       db.dropJobs,
       List(
-        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, dropUID, "Exchange Rate", "desc", false, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, dropUID, "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(None, dropUID, "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(None, dropUID, "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     val actor = system.actorOf(JobDatabaseManager.props(db))
@@ -197,8 +197,8 @@ class JobDatabaseManagerSpec
     probe.send(actor, GetJobsWithDropUIDForCompletion(dropUID, testFunc))
     val expectedDropJob = DropJobList(
       Map(
-        2 -> DropJob(Some(2), dropUID, "Exchange Rate", "desc", false, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        3 -> DropJob(Some(3), dropUID, "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        2 -> DropJob(Some(2), dropUID, "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        3 -> DropJob(Some(3), dropUID, "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
@@ -210,7 +210,7 @@ class JobDatabaseManagerSpec
       probe.ref ! dropJob.orElse(Some("")).get.toString
     val db = newDB
     db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    db.insert(db.dropJobs, DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetJobForCompletion(2, testFunc))
@@ -226,7 +226,7 @@ class JobDatabaseManagerSpec
     probe.send(actor, GetScheduleForCompletion(testFunc))
     val expectedSchedule = DropJobList(
       Map(
-        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     probe.expectMsg(expectedSchedule.toString) must not(throwA[AssertionError])
@@ -240,8 +240,8 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID
-    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
-    val expectDropJob = DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
+    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
+    val expectDropJob = DropJob(Some(1), "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     probe.expectMsg(Some(expectDropJob).toString)
     db.executeInSession(db.dropJobs.list) must_== List(expectDropJob)
   }
@@ -255,15 +255,15 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID
-    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
+    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
     probe.expectNoMsg()
     // input with arbitary jobID
-    probe.send(actor, PostJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
+    probe.send(actor, PostJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
 
-    val expectDropJob = DropJob(Some(2), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
+    val expectDropJob = DropJob(Some(2), "EXRATE2", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     probe.expectMsg(Some(expectDropJob).toString)
     db.executeInSession(db.dropJobs.list) must_== List(
-      DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()),
+      DropJob(Some(1), "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
       expectDropJob
     )
   }
@@ -277,17 +277,17 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID
-    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
+    probe.send(actor, PostJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
     probe.expectNoMsg()
     // input with arbitary jobID
-    probe.send(actor, PostJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
+    probe.send(actor, PostJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
     probe.expectNoMsg()
     // input with existing jobID
-    probe.send(actor, PostJobForCompletion(DropJob(Some(2), "EXRATE3", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
-    val expectDropJob = DropJob(Some(2), "EXRATE3", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
+    probe.send(actor, PostJobForCompletion(DropJob(Some(2), "EXRATE3", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
+    val expectDropJob = DropJob(Some(2), "EXRATE3", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     probe.expectMsg(Some(expectDropJob).toString)
     db.executeInSession(db.dropJobs.list) must_== List(
-      DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()),
+      DropJob(Some(1), "EXRATE1", "", "", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
       expectDropJob
     )
   }

@@ -9,6 +9,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
+import org.quartz.CronExpression
 
 import scala.language.implicitConversions
 import scala.slick.driver.{ H2Driver, PostgresDriver }
@@ -160,18 +161,22 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     job.firstOption
   }
 
-  def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] =
-    maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturn(dropJob))
+  def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
+    CronExpression.isValidExpression(dropJob.cron) match {
+      case false => None
+      case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturn(dropJob))
+    }
+  }
 
   def selectDropLog(jobID: Option[JobID], time: Option[Int], isException: Option[Boolean]): List[DropLog] = {
     // TODO(deo.liang): use intersect when it's available in slick2.2
-    val resultFilterTime = time.fold(dropLogs.sortBy(_.logID.desc)) { time =>
+    val resultFilterTime = time.fold(dropLogs.sortBy(_.startTime.desc)) { time =>
       val timeFrom = DateTime.now - time.hour
       dropLogs
         .filter(x =>
           (x.endTime.isDefined && x.endTime >= timeFrom) ||
             (x.endTime.isEmpty && x.startTime >= timeFrom))
-        .sortBy(_.logID.desc)
+        .sortBy(_.startTime.desc)
     }
     val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))
     isException match {

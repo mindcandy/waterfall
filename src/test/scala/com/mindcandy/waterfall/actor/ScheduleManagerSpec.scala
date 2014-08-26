@@ -6,9 +6,9 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestWaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList }
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
-import org.joda.time
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
 import org.specs2.specification.Step
@@ -17,7 +17,7 @@ import org.specs2.time.NoTimeConversions
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
+class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", ConfigFactory.parseString("akka.test.timefactor=2")))
     with SpecificationLike
     with NoTimeConversions
     with Mockito {
@@ -37,13 +37,14 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
   """ ^ Step(afterAll)
 
   def afterAll = TestKit.shutdownActorSystem(system)
+  def before = akka.testkit.TestDuration(FiniteDuration(5, SECONDS))
 
   def autoCheckJobs = {
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor, checkJobsPeriod = FiniteDuration(3, SECONDS))
 
-    databaseManager.expectMsgClass(FiniteDuration(5, SECONDS), classOf[GetSchedule]) must_== GetSchedule()
+    databaseManager.expectMsg(GetSchedule()) must not(throwA[AssertionError])
   }
 
   def checkJobs = {
@@ -54,7 +55,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val request = CheckJobs()
 
     probe.send(actor, request)
-    databaseManager.expectMsgClass(classOf[GetSchedule]) must_== GetSchedule()
+    databaseManager.expectMsg(GetSchedule()) must not(throwA[AssertionError])
   }
 
   def scheduleOneJob = {
@@ -68,7 +69,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val request = DropJobList(Map(1 -> dropJob))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsgClass(FiniteDuration(10, SECONDS), classOf[StartJob]) must_== StartJob(1, dropJob)
+    dropSupervisor.expectMsg(StartJob(1, dropJob)) must not(throwA[AssertionError])
   }
 
   def scheduleTwoJobsAtDifferentTimes = {
@@ -84,8 +85,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val request = DropJobList(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(1, dropJob1)
-    dropSupervisor.expectMsgClass(FiniteDuration(10, SECONDS), classOf[StartJob]) must_== StartJob(2, dropJob2)
+    dropSupervisor.expectMsgAllOf(StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
   }
 
   def cancelOneJob = {
@@ -101,7 +101,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def cancelOneJobAndKeepAnother = {
@@ -118,8 +118,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(2, dropJob2)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    dropSupervisor.expectMsg(StartJob(2, dropJob2))
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def scheduleNewJobAndCancelOther = {
@@ -137,8 +137,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
-    dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(2, dropJob2), StartJob(3, dropJob3))
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    dropSupervisor.expectMsgAllOf(StartJob(2, dropJob2), StartJob(3, dropJob3))
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def scheduleOnlyWithinTimeFrame = {
@@ -154,12 +154,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val request = DropJobList(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(1, dropJob1)
-    dropSupervisor.expectNoMsg(FiniteDuration(10, SECONDS)) must not(throwA[AssertionError])
-    databaseManager
-      .expectMsgClass(classOf[DropLog])
-      .logOutput
-      .getOrElse("None") must startWith(s"Job ${dropJob2.dropUID} ignored")
+    dropSupervisor.expectMsg(StartJob(1, dropJob1))
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def rescheduleJobs = {
@@ -171,16 +167,16 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val currentTime = DateTime.now + Period.seconds(3)
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
     val request = DropJobList(Map(1 -> dropJob))
-    probe.send(actor, request)
 
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(1, dropJob)
+    probe.send(actor, request)
+    dropSupervisor.expectMsg(StartJob(1, dropJob))
 
     val newTime = DateTime.now + Period.seconds(3)
     val newDropJob = createDropJob("EXRATE", "Exchange Rate", newTime)
     val rescheduleRequest = DropJobList(Map(2 -> newDropJob))
-    probe.send(actor, rescheduleRequest)
 
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(2, newDropJob)
+    probe.send(actor, rescheduleRequest)
+    dropSupervisor.expectMsg(StartJob(2, newDropJob)) must not(throwA[AssertionError])
   }
 
   def doNotRescheduleJobs = {
@@ -196,8 +192,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
 
     probe.send(actor, request)
     probe.send(actor, rescheduleRequest)
-    dropSupervisor.expectMsgClass(FiniteDuration(5, SECONDS), classOf[StartJob]) must_== StartJob(1, dropJob)
-    dropSupervisor.expectNoMsg(FiniteDuration(5, SECONDS)) must not(throwA[AssertionError])
+    dropSupervisor.expectMsg(StartJob(1, dropJob))
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def malformedCron = {
@@ -209,17 +205,14 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec"))
     val request = DropJobList(Map(1 -> dropJob))
 
     probe.send(actor, request)
-    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
-    databaseManager
-      .expectMsgClass(classOf[DropLog])
-      .exception
-      .getOrElse("None") must startWith("could not resolve cron expression:")
+    dropSupervisor.expectNoMsg()
+    databaseManager.expectNoMsg() must not(throwA[AssertionError])
   }
 
   def createScheduleActor(databaseManager: TestProbe, dropSupervisor: TestProbe, maxScheduleTime: FiniteDuration = FiniteDuration(1, MINUTES),
                           checkJobsPeriod: FiniteDuration = FiniteDuration(1, HOURS)): ActorRef =
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
-  private def createDropJob(dropUid: String, name: String, currentTime: time.DateTime): DropJob =
+  private def createDropJob(dropUid: String, name: String, currentTime: DateTime): DropJob =
     DropJob(Some(1), dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
 }

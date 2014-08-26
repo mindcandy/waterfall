@@ -24,8 +24,8 @@ trait TestDatabase {
     db.insert(
       db.dropJobs,
       List(
-        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(None, "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
     db.insert(
