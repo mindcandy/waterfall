@@ -1,6 +1,7 @@
 package com.mindcandy.waterfall.actor
 
 import java.sql.Timestamp
+import java.util.UUID
 
 import argonaut.Argonaut._
 import argonaut._
@@ -48,7 +49,7 @@ object Protocol {
   case class DropJobList(jobs: Map[JobID, DropJob]) {
     val count = jobs.size
   }
-  case class DropLog(logID: Option[Int], jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
+  case class DropLog(runUID: UUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog]) {
     val count = logs.size
   }

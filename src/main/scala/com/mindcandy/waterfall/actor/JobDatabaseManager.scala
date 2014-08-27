@@ -1,8 +1,11 @@
 package com.mindcandy.waterfall.actor
 
+import java.util.UUID
+
 import akka.actor.{ Actor, ActorLogging, Props }
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.Protocol._
+import org.joda.time.DateTime
 
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
@@ -14,6 +17,10 @@ object JobDatabaseManager {
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
   case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[String], completionFunction: DropHistory => Unit)
+
+  case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
+  case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[String])
+  case class StartAndFinishDropLog(runUID: UUID, jobID: Int, startTime: DateTime, endTime: DateTime, logOutput: Option[String], exception: Option[String])
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
