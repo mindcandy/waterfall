@@ -12,7 +12,7 @@ import org.joda.time.DateTime
 import org.quartz.CronExpression
 
 import scala.language.implicitConversions
-import scala.util.{ Try, Success }
+import scala.util.{ Success, Try }
 import scalaz.\/
 
 object TimeFrame extends Enumeration {
@@ -45,11 +45,12 @@ object LogStatus extends Enumeration {
 
 object Protocol {
   type JobID = Int
+  type RunUID = UUID
   case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
   case class DropJobList(jobs: Map[JobID, DropJob]) {
     val count = jobs.size
   }
-  case class DropLog(runUID: UUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
+  case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog]) {
     val count = logs.size
   }
@@ -87,6 +88,18 @@ object Protocol {
       logs <- (json --\ "logs").as[List[DropLog]]
     } yield DropHistory(logs)
   )
+  implicit def UUIDCodecJson: CodecJson[UUID] = CodecJson(
+    (uuid: UUID) =>
+      jString(uuid.toString),
+    hcursor =>
+      DecodeResult(
+        hcursor.as[String].result.flatMap { value =>
+          \/.fromTryCatch { UUID.fromString(value) }.leftMap { exception =>
+            (exception.getMessage, CursorHistory(List.empty[CursorOp]))
+          }
+        }
+      )
+  )
 }
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
@@ -106,14 +119,14 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   )
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
-    def logID = column[Int]("LOG_ID", O.PrimaryKey, O.AutoInc)
+    def runUID = column[RunUID]("LOG_ID", O.PrimaryKey)
     def jobID = column[JobID]("JOB_ID", O.NotNull)
     def startTime = column[DateTime]("START_TIME", O.NotNull)
     def endTime = column[Option[DateTime]]("END_TIME")
     def content = column[Option[String]]("CONTENT")
     def exception = column[Option[String]]("EXCEPTION")
     def * =
-      (logID.?, jobID, startTime, endTime, content, exception) <>
+      (runUID, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
     def job_fk = foreignKey("JOB_FK", jobID, dropJobs)(_.jobID)
   }
@@ -160,16 +173,22 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     (dropJobs returning dropJobs.map(_.jobID) into ((job, id) => Some(job.copy(jobID = Some(id))))) += dropJob
   }
 
-  def updateAndReturn(dropJob: DropJob): Option[DropJob] = {
+  def updateAndReturnDropJob(dropJob: DropJob): Option[DropJob] = {
     val job = dropJobs.filter(_.jobID === dropJob.jobID)
     job.update(dropJob)
     job.firstOption
   }
 
+  def updateDropLog(runUID: RunUID, endTime: DateTime, logOutput: Option[String], exception: Option[String]) = {
+    dropLogs
+      .filter(_.runUID === runUID)
+      .map(log => (log.endTime, log.content, log.exception))
+      .update((Some(endTime), logOutput, exception))
+  }
   def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
     CronExpression.isValidExpression(dropJob.cron) match {
       case false => None
-      case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturn(dropJob))
+      case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
     }
   }
 

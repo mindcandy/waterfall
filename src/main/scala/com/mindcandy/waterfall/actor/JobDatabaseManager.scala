@@ -20,7 +20,6 @@ object JobDatabaseManager {
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
   case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[String])
-  case class StartAndFinishDropLog(runUID: UUID, jobID: Int, startTime: DateTime, endTime: DateTime, logOutput: Option[String], exception: Option[String])
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
 }
@@ -52,12 +51,20 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
-      val dropJobs = db.executeInSession(db.dropJobs.list)
+      val dropJobs = db.executeInSession(db.dropJobs.filter(_.enabled).list)
       sender ! DropJobList(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
     case dropLog: DropLog => {
       log.debug(s"drop log received")
       db.insert(db.dropLogs, dropLog)
+    }
+    case StartDropLog(runUID, jobID, startTime) => {
+      log.debug(s"received StartDropLog")
+      db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, None, None, None))
+    }
+    case FinishDropLog(runUID, endTime, logOutput, exception) => {
+      log.debug(s"received StartDropLog")
+      db.executeInSession(db.updateDropLog(runUID, endTime, logOutput, exception))
     }
     case PostJobForCompletion(dropJob, f) => {
       log.debug(s"Insert or update a job")

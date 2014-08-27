@@ -1,10 +1,13 @@
 package com.mindcandy.waterfall.actor
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartDropLog }
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import org.specs2.SpecificationLike
@@ -38,8 +41,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val request = createStartJob()
 
     probe.send(actor, request)
-    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
-    worker.expectMsg(expectedMessage) must not(throwA[AssertionError])
+    worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).waterfallDrop must_== TestPassThroughWaterfallDrop()
   }
 
   def logJobOnStartJob = {
@@ -49,10 +51,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val request = createStartJob()
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
-      case DropLog(None, 1, _, None, None, None) => success
-      case _ => failure
-    }
+    jobDatabaseManager.expectMsgClass(classOf[StartDropLog]).jobID must_== 1
   }
 
   def logSuccess = {
@@ -61,14 +60,14 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val request = createStartJob(TimeFrame.DAY_THREE_DAYS_AGO)
-    val result = JobResult(1, Success(()))
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog])
+    val runUID = jobDatabaseManager.expectMsgClass(classOf[StartDropLog]).runUID
 
+    val result = JobResult(runUID, Success(()))
     probe.send(actor, result)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
-      case DropLog(None, 1, _, Some(_), None, None) => success
+    jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
+      case FinishDropLog(`runUID`, _, None, None) => success
       case _ => failure
     }
   }
@@ -80,14 +79,14 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val request = createStartJob(TimeFrame.DAY_TWO_DAYS_AGO)
     val exception = new RuntimeException("test exception")
-    val result = JobResult(1, Failure(exception))
 
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog])
+    val runUID = jobDatabaseManager.expectMsgClass(classOf[StartDropLog]).runUID
 
+    val result = JobResult(runUID, Failure(exception))
     probe.send(actor, result)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
-      case DropLog(None, 1, _, Some(_), None, Some(msg)) => success
+    jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
+      case FinishDropLog(`runUID`, _, None, Some(msg)) => success
       case _ => failure
     }
   }
@@ -100,11 +99,13 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val request = createStartJob(TimeFrame.DAY_YESTERDAY)
 
     probe.send(actor, request)
-    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
-    worker.expectMsg(expectedMessage)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog])
+    worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
+    jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception.getOrElse("") must startWith(s"job 1 and drop uid test1 already running as actor")
+    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
+      case DropLog(_, 1, _, _, None, Some("job 1 and drop uid test1 has already been running")) => success
+      case _ => failure
+    }
   }
 
   def reRunAfterFinished = {
@@ -113,14 +114,15 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val worker = TestProbe()
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
     val request = createStartJob(TimeFrame.DAY_TODAY)
-    val expectedMessage = RunDrop(1, TestPassThroughWaterfallDrop())
 
     probe.send(actor, request)
-    worker.expectMsg(expectedMessage)
+    val runUID = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).runUID
 
-    probe.send(actor, JobResult(1, Success(Unit)))
+    probe.send(actor, JobResult(runUID, Success(Unit)))
     probe.send(actor, request)
-    worker.expectMsg(expectedMessage) must not(throwA[AssertionError])
+
+    val newRunUID = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).runUID
+    runUID must_!= newRunUID
   }
 
   def logToErrorIfNoFactoryDrop = {
@@ -145,13 +147,16 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
 
     probe.send(actor, createStartJob(TimeFrame.DAY_TODAY))
-    jobDatabaseManager.expectMsgClass(classOf[DropLog])
+    jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
 
-    val jobID = 2
-    probe.send(actor, JobResult(jobID, Success(())))
+    val runUID = UUID.randomUUID()
+    probe.send(actor, JobResult(runUID, Success(())))
 
-    val expectedMsg = Some(s"job result from job ${jobID} but not present in running jobs list")
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception must_== expectedMsg
+    val expectedMsg = Some(s"job result from runUID ${runUID} but not present in running jobs list")
+    jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
+      case FinishDropLog(`runUID`, _, None, `expectedMsg`) => success
+      case _ => failure
+    }
   }
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {

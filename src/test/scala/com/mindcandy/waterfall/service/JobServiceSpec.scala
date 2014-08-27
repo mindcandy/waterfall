@@ -1,14 +1,12 @@
 package com.mindcandy.waterfall.service
 
 import com.mindcandy.waterfall.TestDatabase
-import com.mindcandy.waterfall.actor.JobDatabaseManager
 import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
-import com.mindcandy.waterfall.actor.TimeFrame
+import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
-import spray.routing.MalformedRequestContentRejection
 import spray.http.StatusCode.int2StatusCode
-
+import spray.routing.MalformedRequestContentRejection
 import spray.testkit.Specs2RouteTest
 
 class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase {

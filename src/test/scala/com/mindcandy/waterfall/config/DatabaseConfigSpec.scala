@@ -1,5 +1,7 @@
 package com.mindcandy.waterfall.config
 
+import java.util.UUID
+
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.TimeFrame
@@ -15,7 +17,7 @@ import scala.slick.jdbc.meta.MTable
 trait TestData {
 
   val oneDropLog = DropLog(
-    None, 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
+    UUID.fromString("1762d13c-23b4-40fc-a0d0-2fefa1893c72"), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
     None, "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
     Map[String, String]("configFile" -> "/adx/config.properties"))
@@ -57,15 +59,13 @@ class DatabaseContainerSpec
     
     select DropLog
       select all have correct record size ${selectDropLog.e1}
-      select jobID=1 have correct record size${selectDropLog.e2}
-      select jobID have correct jobID ${selectDropLog.e3}
-      select newer than 1 hour ago have correct record size ${selectDropLog.e4}
-      select newer than 10 hour ago have correct record size ${selectDropLog.e5}
-      select failed log have correct record size ${selectDropLog.e6}
-      select failed log all have exception field ${selectDropLog.e7}
-      select successful log have corect record size ${selectDropLog.e8}
-      select successful log don't have exception field ${selectDropLog.e9}
-      select successful log no older than 1 hour for jobID=1 ${selectDropLog.e10}
+      select jobID=1 have correct record size and correct jobID ${selectDropLog.e2}
+      select newer than 1 hour ago have correct record size ${selectDropLog.e3}
+      select newer than 10 hour ago have correct record size ${selectDropLog.e4}
+      select failed log have correct record size and exception field ${selectDropLog.e5}
+      select successful log have correct record size and don't have exception field ${selectDropLog.e6}
+      select successful log no older than 1 hour for jobID=1 ${selectDropLog.e7}
+      select running log have correct size and no endtime field ${selectDropLog.e8}
 
     insertOrUpdateDropJob
       insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
@@ -185,22 +185,31 @@ class DatabaseContainerSpec
     }
 
     e1 := numOfInsert must_== 1
-    e2 := insertedData must_== List(
-      DropLog(Some(1), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None))
+    e2 := insertedData must_== List(oneDropLog)
   }
 
   def selectDropLog = new group {
     val db = testDatabase
     e1 := db.executeInSession(db.selectDropLog(None, None, None)).size must_== 16
-    e2 := db.executeInSession(db.selectDropLog(Some(1), None, None)).size must_== 8
-    e3 := db.executeInSession(db.selectDropLog(Some(1), None, None)).count(_.jobID == 1) must_== 8
-    e4 := db.executeInSession(db.selectDropLog(None, Some(1), None)).size must_== 8
-    e5 := db.executeInSession(db.selectDropLog(None, Some(10), None)).size must_== 16
-    e6 := db.executeInSession(db.selectDropLog(None, None, Some("failure"))).size must_== 8
-    e7 := db.executeInSession(db.selectDropLog(None, None, Some("failure"))).count(_.exception.isDefined) must_== 8
-    e8 := db.executeInSession(db.selectDropLog(None, None, Some("success"))).size must_== 8
-    e9 := db.executeInSession(db.selectDropLog(None, None, Some("success"))).count(_.exception.isEmpty) must_== 8
-    e10 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some("failure"))).size must_== 2
+    e2 := {
+      val result = db.executeInSession(db.selectDropLog(Some(1), None, None))
+      (result.size must_== 8) and (result.count(_.jobID == 1) must_== 8)
+    }
+    e3 := db.executeInSession(db.selectDropLog(None, Some(1), None)).size must_== 8
+    e4 := db.executeInSession(db.selectDropLog(None, Some(10), None)).size must_== 16
+    e5 := {
+      val result = db.executeInSession(db.selectDropLog(None, None, Some("failure")))
+      (result.size must_== 8) and (result.count(_.exception.isDefined) must_== 8)
+    }
+    e6 := {
+      val result = db.executeInSession(db.selectDropLog(None, None, Some("success")))
+      (result.size must_== 8) and (result.count(_.exception.isEmpty) must_== 8)
+    }
+    e7 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some("failure"))).size must_== 2
+    e8 := {
+      val result = db.executeInSession(db.selectDropLog(None, None, Some("ruNNing")))
+      (result.size must_== 8) and (result.count(_.endTime.isEmpty) must_== 8)
+    }
   }
 
   def insertOrUpdateDropJob = new group {
