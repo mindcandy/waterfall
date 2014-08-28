@@ -1,16 +1,13 @@
 package com.mindcandy.waterfall.actor
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.testkit.{ TestKit, TestProbe }
-import com.github.nscala_time.time.Imports._
+import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobList, DropLog }
-import com.mindcandy.waterfall.config.DatabaseConfig
+import com.mindcandy.waterfall.actor.Protocol._
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
-import org.specs2.specification.Step
+import org.specs2.specification.{ Grouped, Step }
 import org.specs2.time.NoTimeConversions
 
 import scala.slick.driver.JdbcDriver.simple._
@@ -20,7 +17,9 @@ class JobDatabaseManagerSpec
     extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
     with SpecificationLike
     with NoTimeConversions
-    with Mockito {
+    with Mockito
+    with Grouped
+    with TestDatabase {
   def is = s2"""
     JobDatabaseManager should
       send correct schedule $getSchedule
@@ -28,193 +27,188 @@ class JobDatabaseManagerSpec
       multiple logs to database correctly $logsToDatabase
       insert DropLog related to unknow Drop $logToDatabaseWithUnknownKey
       send GetJobForCompletion $getJobCompletion
+      send GetJobsForCompletion $getJobsCompletion
+      send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
       send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
       send GetScheduleForCompletion $getScheduleCompletion
-      insert new DropJob into database ${insertDropJobNew}
-      insert DropJob with unknown JobID into database ${insertDropJobArbitaryJobID}
-      insert DropJob with existing JobID into database ${insertDropJobExistingJobID}
+      send GetLogsForCompletion $getLogsForCompletion
+      send PostJobForCompletion $postJobForCompletion
+      insert new DropJob into database ${insertDropJob.e1}
+      insert DropJob with unknown JobID into database ${insertDropJob.e2}
+      insert DropJob with existing JobID into database ${insertDropJob.e3}
   """ ^ Step(afterAll)
 
   def afterAll = TestKit.shutdownActorSystem(system)
 
-  def newDatabase = new DB(DatabaseConfig(s"jdbc:h2:mem:JobDatabaseManager${UUID.randomUUID()}.db;DB_CLOSE_DELAY=-1"))
-
   def getSchedule = {
     val probe = TestProbe()
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
+    val expectedMessage = DropJobList(
+      testDropJobs.filter(_.enabled).map(job => job.jobID.get -> job).toMap
+    )
 
     probe.send(actor, GetSchedule())
-
-    val expectedMessage = DropJobList(
-      Map(1 -> DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
-    )
     probe.expectMsg(expectedMessage) must not(throwA[AssertionError])
   }
 
   def logToDatabase = {
     val probe = TestProbe()
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    val start = DateTime.now
-    val end = Some(DateTime.now + 1.hour)
-    val log = DropLog(None, 1, start, end, Some("test log"), None)
-    probe.send(actor, log)
+    val dropLog1 = testDropLogs(0)
+    probe.send(actor, StartAndFinishDropLog(dropLog1.runUID, dropLog1.jobID, dropLog1.startTime, dropLog1.endTime.get, dropLog1.logOutput, None))
     probe.expectNoMsg()
 
     val actual = db.executeInSession(db.dropLogs.list)
-    actual must_== List(DropLog(Some(1), 1, start, end, Some("test log"), None))
+    actual must_== testDropLogs.take(1)
   }
 
   def logsToDatabase = {
     val probe = TestProbe()
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    val start = DateTime.now
-    val end = Some(DateTime.now + 1.hour)
-    val log = DropLog(None, 1, start, end, Some("test log"), None)
-    val log2 = DropLog(None, 2, start, None, None, Some("exception"))
-
-    probe.send(actor, log)
+    val dropLog1 = testDropLogs(0)
+    probe.send(actor, StartAndFinishDropLog(dropLog1.runUID, dropLog1.jobID, dropLog1.startTime, dropLog1.endTime.get, dropLog1.logOutput, None))
     probe.expectNoMsg()
-    probe.send(actor, log2)
+    val dropLog2 = testDropLogs(4)
+    probe.send(actor, StartAndFinishDropLog(dropLog2.runUID, dropLog2.jobID, dropLog2.startTime, dropLog2.endTime.get, dropLog2.logOutput, standardException))
     probe.expectNoMsg()
-    db.executeInSession(db.dropLogs.list) must_== List(
-      DropLog(Some(1), 1, start, end, Some("test log"), None),
-      DropLog(Some(2), 2, start, None, None, Some("exception"))
-    )
+    db.executeInSession(db.dropLogs.list) must_== List(dropLog1, dropLog2)
   }
 
   def logToDatabaseWithUnknownKey = {
     val probe = TestProbe()
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 0 0 0 0", TimeFrame.DAY_TODAY, Map()))
+    val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    val start = DateTime.now
-    val end = Some(DateTime.now + 1.hour)
-    val log = DropLog(None, -1, start, end, Some("test log"), None)
+    val log = testDropLogs(0).copy(jobID = -1)
 
     probe.send(actor, log)
     probe.expectNoMsg()
     db.executeInSession(db.dropLogs.list) must_== List()
   }
 
-  def getJobCompletion = {
+  def getLogsForCompletion = {
     val probe = TestProbe()
-    def testFunc(dropJob: Option[DropJob]) =
-      probe.ref ! dropJob.orElse(Some("")).get.toString
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(
-      db.dropJobs,
-      List(
-        DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(None, "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
-      )
-    )
+    def testFunction(dropHistory: DropHistory) = probe.ref ! dropHistory
+    val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, GetJobForCompletion(2, testFunc))
-    val expectedDropJob = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
+    probe.send(actor, GetLogsForCompletion(None, None, None, testFunction))
+    probe.expectMsgClass(classOf[DropHistory]).count must_== 16
+  }
+
+  def postJobForCompletion = {
+    val probe = TestProbe()
+    def testFunction(dropJob: Option[DropJob]) = probe.ref ! dropJob
+    val db = testDatabaseWithJobsAndLogs
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    val actor = system.actorOf(JobDatabaseManager.props(db))
+
+    probe.send(actor, PostJobForCompletion(dropJob, testFunction))
+    probe.expectMsgClass(classOf[Option[DropJob]]).isDefined must beTrue
+  }
+
+  def getJobCompletion = {
+    val probe = TestProbe()
+    def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
+    val db = testDatabaseWithJobs
+    val actor = system.actorOf(JobDatabaseManager.props(db))
+
+    val jobID = 2
+    probe.send(actor, GetJobForCompletion(jobID, testFunc))
+    val expectedDropJob = Option(testDropJobs.filter(_.jobID == Option(jobID)).head)
+    probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
+  }
+
+  def getJobsCompletion = {
+    val probe = TestProbe()
+    def testFunc(dropJobList: DropJobList) =
+      probe.ref ! dropJobList.toString
+    val db = testDatabaseWithJobs
+    val actor = system.actorOf(JobDatabaseManager.props(db))
+
+    probe.send(actor, GetJobsForCompletion(testFunc))
+    val expectedDropJob = DropJobList(
+      testDropJobs.map(job => job.jobID.get -> job).toMap
+    )
+    probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
+  }
+
+  def getJobsWithDropUIDCompletion = {
+    val probe = TestProbe()
+    def testFunc(dropJobList: DropJobList) =
+      probe.ref ! dropJobList.toString
+    val db = testDatabaseWithJobs
+    db.insert(db.dropJobs, testDropJobs(1))
+    val actor = system.actorOf(JobDatabaseManager.props(db))
+    val expectedDropJob = DropJobList(
+      Map(
+        2 -> testDropJobs(1),
+        3 -> testDropJobs(1).copy(jobID = Some(3))
+      )
+    )
+
+    probe.send(actor, GetJobsWithDropUIDForCompletion("EXRATE2", testFunc))
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
   }
 
   def getJobCompletionWithWrongJobID = {
     val probe = TestProbe()
     def testFunc(dropJob: Option[DropJob]) =
-      probe.ref ! dropJob.orElse(Some("")).get.toString
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+      probe.ref ! dropJob.toString
+    val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, GetJobForCompletion(2, testFunc))
-    probe.expectMsg("") must not(throwA[AssertionError])
+    probe.send(actor, GetJobForCompletion(3, testFunc))
+    probe.expectMsg("None") must not(throwA[AssertionError])
   }
 
   def getScheduleCompletion = {
     val probe = TestProbe()
-    def testFunc(ls: List[DropJob]) = probe.ref ! ls.toString
-    val db = newDatabase
-    db.create(db.all)
-    db.insert(db.dropJobs, DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map()))
+    def testFunc(ls: DropJobList) = probe.ref ! ls.toString
+    val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetScheduleForCompletion(testFunc))
-    val expectedSchedule = List(
-      DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, "0 1 * * *", TimeFrame.DAY_YESTERDAY, Map())
-    )
+    val expectedSchedule = DropJobList(Map(1 -> testDropJobs(0)))
     probe.expectMsg(expectedSchedule.toString) must not(throwA[AssertionError])
   }
 
-  def insertDropJobNew = {
+  def insertDropJob = new group {
     val probe = TestProbe()
+
     def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
-    val db = newDatabase
+
+    val db = newDB
     db.create(db.all)
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID
-    probe.send(actor, PutJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
-    val expectDropJob = DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
-    probe.expectMsg(Some(expectDropJob).toString)
-    db.executeInSession(db.dropJobs.list) must_== List(expectDropJob)
-  }
+    probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
+    probe.expectMsg(Some(testDropJobs(0)).toString)
 
-  def insertDropJobArbitaryJobID = {
-    val probe = TestProbe()
-    def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
-    def testFuncNoOps(dropJob: Option[DropJob]) = ()
-    val db = newDatabase
-    db.create(db.all)
-    val actor = system.actorOf(JobDatabaseManager.props(db))
+    e1 := db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1)
+    e2 := {
+      // input with arbitrary jobID
+      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), testFunc))
+      probe.expectMsg(Some(testDropJobs(1)).toString)
 
-    // input with no jobID
-    probe.send(actor, PutJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
-    probe.expectNoMsg()
-    // input with arbitary jobID
-    probe.send(actor, PutJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
+      db.executeInSession(db.dropJobs.list) must_== testDropJobs
+    }
+    e3 := {
+      // input with arbitrary jobID
+      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), testFunc))
+      probe.expectMsg(Some(testDropJobs(1)).toString)
 
-    val expectDropJob = DropJob(Some(2), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
-    probe.expectMsg(Some(expectDropJob).toString)
-    db.executeInSession(db.dropJobs.list) must_== List(
-      DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()),
-      expectDropJob
-    )
-  }
-
-  def insertDropJobExistingJobID = {
-    val probe = TestProbe()
-    def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
-    def testFuncNoOps(dropJob: Option[DropJob]) = ()
-    val db = newDatabase
-    db.create(db.all)
-    val actor = system.actorOf(JobDatabaseManager.props(db))
-
-    // input with no jobID
-    probe.send(actor, PutJobForCompletion(DropJob(None, "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
-    probe.expectNoMsg()
-    // input with arbitary jobID
-    probe.send(actor, PutJobForCompletion(DropJob(Some(3), "EXRATE2", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFuncNoOps))
-    probe.expectNoMsg()
-    // input with existing jobID
-    probe.send(actor, PutJobForCompletion(DropJob(Some(2), "EXRATE3", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()), testFunc))
-    val expectDropJob = DropJob(Some(2), "EXRATE3", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map())
-    probe.expectMsg(Some(expectDropJob).toString)
-    db.executeInSession(db.dropJobs.list) must_== List(
-      DropJob(Some(1), "EXRATE1", "", "", true, "", TimeFrame.DAY_YESTERDAY, Map()),
-      expectDropJob
-    )
+      val expectDropJob = testDropJobs(1).copy(name = "test")
+      // input with existing jobID
+      probe.send(actor, PostJobForCompletion(expectDropJob, testFunc))
+      probe.expectMsg(Some(expectDropJob).toString)
+      db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1) :+ expectDropJob
+    }
   }
 }

@@ -2,8 +2,9 @@ package com.mindcandy.waterfall.service
 
 import akka.actor.{ Actor, ActorRef, Props }
 import argonaut.Argonaut._
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetJobForCompletion, GetScheduleForCompletion }
+import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol._
+import com.mindcandy.waterfall.info.BuildInfo
 import spray.routing.HttpService
 
 object JobServiceActor {
@@ -19,21 +20,73 @@ trait JobService extends HttpService with ArgonautMarshallers {
   def jobDatabaseManager: ActorRef
 
   val route = {
-    path("jobs" / IntNumber) { id =>
-      get {
-        produce(instanceOf[Option[DropJob]]) { completionFunction =>
-          context =>
-            jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
-        }
-      }
-    } ~
-      path("schedule") {
+    // format: OFF
+    pathPrefix("jobs") {
+      pathEndOrSingleSlash {
         get {
-          produce(instanceOf[List[DropJob]]) { completionFunction =>
+          // list all jobs
+          produce(instanceOf[DropJobList]) { completionFunction =>
             context =>
-              jobDatabaseManager ! GetScheduleForCompletion(completionFunction)
+              jobDatabaseManager ! GetJobsForCompletion(completionFunction)
+          }
+        } ~
+        post {
+          // create or update a job
+          entity(as[DropJob]) { dropJob =>
+            produce(instanceOf[Option[DropJob]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
+            }
+          }
+        }
+      } ~
+      path(IntNumber) { id =>
+        get {
+          // get information of a certain job
+          produce(instanceOf[Option[DropJob]]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
           }
         }
       }
+    } ~
+    path("drops" / Segment / "jobs") { dropUID =>
+      get {
+        // get jobs by dropUID
+        produce(instanceOf[DropJobList]) { completionFunction =>
+          context =>
+            jobDatabaseManager ! GetJobsWithDropUIDForCompletion(dropUID, completionFunction)
+        }
+      }
+    } ~
+    pathPrefix("logs") {
+      anyParams('status.as[String].?, 'period.as[Int].?, 'jobID.as[Int].?) { (status, period, jobID) =>
+        get {
+          produce(instanceOf[DropHistory]) { completionFunction =>
+            context =>
+              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, completionFunction)
+          }
+        }
+      }
+    } ~
+    path("schedule") {
+      // list DropJob with enabled=true
+      get {
+        produce(instanceOf[DropJobList]) { completionFunction =>
+          context =>
+            jobDatabaseManager ! GetScheduleForCompletion(completionFunction)
+        }
+      }
+    } ~
+    path("status" / "info") {
+      get {
+        _.complete(
+          ("version" := BuildInfo.version) ->:
+          ("appName" := BuildInfo.name) ->:
+          jEmptyObject
+        )
+      }
+    }
+    // format: ON
   }
 }

@@ -23,6 +23,8 @@ class BaseIOSpec extends Specification with Mockito {
     FileIO
       fail readInto with an io exception if the file to read is not found                  ${FileIOTests.failReadFileNotFound}
       fail storeFrom with an io exception if the underlying intermediate cannot read       ${FileIOTests.failWriteBadIntermediate}
+      read successfully                                                                    ${FileIOTests.successfulRead}
+      write successfully                                                                    ${FileIOTests.successfulWrite}
     ApacheVfsIO
       should retrieveFrom with a http url on vfs                                           ${ApacheVfsIOTests.retrieveWithLineSeparator}
       should retrieveFrom with a http url on vfs using no separator                        ${ApacheVfsIOTests.retrieveWithNoSeparator}
@@ -60,17 +62,42 @@ class BaseIOSpec extends Specification with Mockito {
 
   object FileIOTests {
     def failReadFileNotFound = {
-      val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file-does-not-exists.tsv"))
-      val result = fileIO.retrieveInto(FailingIntermediate[TestFormat]("nothing"))
+      val fileIO = FileIO[PlainTextFormat](BaseIOConfig("file:///tmp/waterfall-test-file-does-not-exists.tsv"))
+      val result = fileIO.retrieveInto(MemoryIntermediate[PlainTextFormat]("memory:FileIOTest"))
 
       result must beFailedTry.withThrowable[IOException]
     }
 
     def failWriteBadIntermediate = {
-      val fileIO = FileIO[TestFormat](BaseIOConfig("file:///tmp/waterfall-test-file.tsv"))
+      val fileIO = FileIO[TestFormat](BaseIOConfig(Files.createTempFile("", "").toUri.toURL.toString))
       val result = fileIO.storeFrom(FailingIntermediate[TestFormat]("nothing"))
 
       result must beFailedTry.withThrowable[IOException]
+    }
+
+    def successfulRead = {
+      val testFile = Files.createTempFile("", "")
+      val testData = "line1\nline2"
+      Files.write(testFile, testData.getBytes())
+      val fileIO = FileIO[PlainTextFormat](BaseIOConfig(testFile.toUri.toURL.toString))
+      val intermediate = MemoryIntermediate[PlainTextFormat]("memory:FileIOTest")
+      val readOp = fileIO.retrieveInto(intermediate)
+
+      (readOp must beSuccessfulTry) and {
+        intermediate.getData must_== List(List("line1"), List("line2"))
+      }
+    }
+
+    def successfulWrite = {
+      val testFile = Files.createTempFile("", "")
+      val fileIO = FileIO[PlainTextFormat](BaseIOConfig(testFile.toUri.toURL.toString))
+      val intermediate = MemoryIntermediate[PlainTextFormat]("memory:FileIOTest")
+      intermediate.data ++= List(List("line1"), List("line2"))
+      val writeOp = fileIO.storeFrom(intermediate)
+
+      (writeOp must beSuccessfulTry) and {
+        Files.readAllLines(testFile, Charset.defaultCharset).asScala must_== List("line1", "line2")
+      }
     }
   }
 

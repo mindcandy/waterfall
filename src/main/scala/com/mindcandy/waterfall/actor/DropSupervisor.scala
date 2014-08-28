@@ -1,9 +1,12 @@
 package com.mindcandy.waterfall.actor
 
+import java.util.UUID
+
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, JobID }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ StartAndFinishDropLog, FinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormat
@@ -13,7 +16,7 @@ import scala.util.{ Failure, Success, Try }
 
 object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
-  case class JobResult(jobID: JobID, result: Try[Unit])
+  case class JobResult(runUID: RunUID, result: Try[Unit])
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
     case DAY_TODAY => Some(DateTime.now)
@@ -29,59 +32,62 @@ object DropSupervisor {
 class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
   import com.mindcandy.waterfall.actor.DropSupervisor._
 
-  private[this] var runningJobs = Map[JobID, (ActorRef, DateTime)]()
+  private[this] var runningJobs = Map[RunUID, (ActorRef, DateTime, JobID)]()
 
   def receive = {
     case StartJob(jobID, job) => runJob(jobID, job)
-    case JobResult(jobID, result) => processResult(jobID, result)
+    case JobResult(runUID, result) => processResult(runUID, result)
   }
 
-  def processResult(jobID: JobID, result: Try[Unit]) = {
+  def processResult(runUID: RunUID, result: Try[Unit]) = {
     val endTime = DateTime.now
-    runningJobs.get(jobID) match {
-      case Some((worker, startTime)) => {
-        val endTime = DateTime.now
+    runningJobs.get(runUID) match {
+      case Some((worker, startTime, jobID)) => {
         val runtime = PeriodFormat.getDefault().print(new Period((startTime to endTime)))
         result match {
           case Success(_) => {
-            log.info(s"success for drop $jobID after ${runtime}")
-            jobDatabaseManager ! DropLog(None, jobID, startTime, Some(endTime), None, None)
+            log.info(s"success for job $jobID after $runtime")
+            jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
           }
           case Failure(exception) => {
-            log.error(s"failure for drop $jobID after ${runtime}", exception)
-            jobDatabaseManager !
-              DropLog(None, jobID, startTime, Some(endTime), None, Some(s"${exception.toString}\n${exception.getStackTraceString}"))
+            log.error(s"failure for job $runUID after $runtime", exception)
+            jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(exception))
           }
         }
-        runningJobs -= jobID
+        runningJobs -= runUID
       }
       case None => {
-        val error = s"job result from job $jobID but not present in running jobs list"
+        val error = s"job result from runUID $runUID but not present in running jobs list"
         log.error(error)
-        jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(endTime), None, Some(error))
+        jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(new IllegalArgumentException(error)))
       }
     }
   }
 
-  def runJob(jobID: JobID, job: DropJob) = runningJobs.get(jobID) match {
-    case Some((actorRef, timestamp)) => {
-      val warning = s"job ${job.dropUID} already running as actor $actorRef started at $timestamp"
-      log.warning(warning)
-      jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(DateTime.now), None, Some(warning))
-    }
-    case None => {
-      val worker = dropWorkerFactory.createActor
-      dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
-        case Some(drop) => {
-          val startTime = DateTime.now
-          runningJobs += (jobID -> (worker, startTime))
-          worker ! DropWorker.RunDrop(jobID, drop)
-          jobDatabaseManager ! DropLog(None, jobID, startTime, None, None, None)
-        }
-        case None => {
-          val error = s"factory has no drop for ${job.dropUID}"
-          log.error(error)
-          jobDatabaseManager ! DropLog(None, jobID, DateTime.now, Some(DateTime.now), None, Some(error))
+  def runJob(jobID: JobID, job: DropJob) = {
+    val runUID = UUID.randomUUID()
+    val startTime = DateTime.now
+    val runningJobID = runningJobs.values.map(_._3).toSet
+    runningJobID.contains(jobID) match {
+      case true => {
+        // TODO(deo.liang): flag this to allow paralleled running
+        val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running"
+        log.error(error)
+        jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
+      }
+      case false => {
+        dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
+          case Some(drop) => {
+            val worker = dropWorkerFactory.createActor
+            runningJobs += (runUID -> (worker, startTime, jobID))
+            worker ! DropWorker.RunDrop(runUID, drop)
+            jobDatabaseManager ! StartDropLog(runUID, jobID, startTime)
+          }
+          case None => {
+            val error = s"factory has no drop for job $jobID with drop uid ${job.dropUID} and name ${job.name}"
+            log.error(error)
+            jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
+          }
         }
       }
     }
