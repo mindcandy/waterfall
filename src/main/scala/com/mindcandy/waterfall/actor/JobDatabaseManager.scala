@@ -19,9 +19,12 @@ object JobDatabaseManager {
   case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[String], completionFunction: DropHistory => Unit)
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
-  case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[String])
+  case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[Throwable])
+  case class StartAndFinishDropLog(runUID: UUID, jobID: Int, startTime: DateTime, endTime: DateTime, logOutput: Option[String], exception: Option[Throwable])
 
   def props(db: DB): Props = Props(new JobDatabaseManager(db))
+
+  def convertException(exception: Option[Throwable]) = exception.map(ex => s"${ex.toString}\n${ex.getStackTraceString}")
 }
 
 class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
@@ -54,17 +57,17 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       val dropJobs = db.executeInSession(db.dropJobs.filter(_.enabled).list)
       sender ! DropJobList(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
-    case dropLog: DropLog => {
-      log.debug(s"drop log received")
-      db.insert(db.dropLogs, dropLog)
-    }
     case StartDropLog(runUID, jobID, startTime) => {
       log.debug(s"received StartDropLog")
       db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, None, None, None))
     }
     case FinishDropLog(runUID, endTime, logOutput, exception) => {
       log.debug(s"received StartDropLog")
-      db.executeInSession(db.updateDropLog(runUID, endTime, logOutput, exception))
+      db.executeInSession(db.updateDropLog(runUID, endTime, logOutput, convertException(exception)))
+    }
+    case StartAndFinishDropLog(runUID, jobID, startTime, endTime, logOutput, exception) => {
+      log.debug(s"received StartAndFinishDropLog")
+      db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, Option(endTime), logOutput, convertException(exception)))
     }
     case PostJobForCompletion(dropJob, f) => {
       log.debug(s"Insert or update a job")

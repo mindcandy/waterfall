@@ -32,7 +32,7 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
   def actorRefFactory = system
 
   def jobDatabaseManager = {
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     system.actorOf(JobDatabaseManager.props(db))
   }
 

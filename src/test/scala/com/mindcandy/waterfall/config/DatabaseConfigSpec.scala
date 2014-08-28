@@ -189,7 +189,7 @@ class DatabaseContainerSpec
   }
 
   def selectDropLog = new group {
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     e1 := db.executeInSession(db.selectDropLog(None, None, None)).size must_== 16
     e2 := {
       val result = db.executeInSession(db.selectDropLog(Some(1), None, None))
@@ -213,7 +213,7 @@ class DatabaseContainerSpec
   }
 
   def insertOrUpdateDropJob = new group {
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     e1 := {
       val dropJob = DropJob(None, "", "", "", true, "malformed cron", TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone

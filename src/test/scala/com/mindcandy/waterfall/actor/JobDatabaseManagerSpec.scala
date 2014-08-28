@@ -57,7 +57,8 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, testDropLogs(0))
+    val dropLog1 = testDropLogs(0)
+    probe.send(actor, StartAndFinishDropLog(dropLog1.runUID, dropLog1.jobID, dropLog1.startTime, dropLog1.endTime.get, dropLog1.logOutput, None))
     probe.expectNoMsg()
 
     val actual = db.executeInSession(db.dropLogs.list)
@@ -69,11 +70,13 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, testDropLogs(0))
+    val dropLog1 = testDropLogs(0)
+    probe.send(actor, StartAndFinishDropLog(dropLog1.runUID, dropLog1.jobID, dropLog1.startTime, dropLog1.endTime.get, dropLog1.logOutput, None))
     probe.expectNoMsg()
-    probe.send(actor, testDropLogs(1))
+    val dropLog2 = testDropLogs(4)
+    probe.send(actor, StartAndFinishDropLog(dropLog2.runUID, dropLog2.jobID, dropLog2.startTime, dropLog2.endTime.get, dropLog2.logOutput, standardException))
     probe.expectNoMsg()
-    db.executeInSession(db.dropLogs.list) must_== testDropLogs.take(2)
+    db.executeInSession(db.dropLogs.list) must_== List(dropLog1, dropLog2)
   }
 
   def logToDatabaseWithUnknownKey = {
@@ -91,7 +94,7 @@ class JobDatabaseManagerSpec
   def getLogsForCompletion = {
     val probe = TestProbe()
     def testFunction(dropHistory: DropHistory) = probe.ref ! dropHistory
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetLogsForCompletion(None, None, None, testFunction))
@@ -101,7 +104,7 @@ class JobDatabaseManagerSpec
   def postJobForCompletion = {
     val probe = TestProbe()
     def testFunction(dropJob: Option[DropJob]) = probe.ref ! dropJob
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
@@ -167,7 +170,7 @@ class JobDatabaseManagerSpec
   def getScheduleCompletion = {
     val probe = TestProbe()
     def testFunc(ls: DropJobList) = probe.ref ! ls.toString
-    val db = testDatabase
+    val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetScheduleForCompletion(testFunc))

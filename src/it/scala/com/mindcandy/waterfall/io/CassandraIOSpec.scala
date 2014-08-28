@@ -2,7 +2,7 @@ package com.mindcandy.waterfall.io
 
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.intermediate.MemoryIntermediate
-import com.mindcandy.waterfall.{IntermediateFormat, IntermediateFormatCompanion}
+import com.mindcandy.waterfall.{ IntermediateFormat, IntermediateFormatCompanion }
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.junit.runner.RunWith

@@ -119,7 +119,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   )
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
-    def runUID = column[RunUID]("LOG_ID", O.PrimaryKey)
+    def runUID = column[RunUID]("RUN_ID", O.PrimaryKey)
     def jobID = column[JobID]("JOB_ID", O.NotNull)
     def startTime = column[DateTime]("START_TIME", O.NotNull)
     def endTime = column[Option[DateTime]]("END_TIME")
@@ -142,8 +142,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     { m => m.asJson.nospaces },
     { ts =>
       val opt = Parse.decodeOption[Map[String, String]](ts)
-      // TODO(deo.liang): the stored value should be a valid json string, probably
-      //                  we can just do Parse.decode
+      // TODO(deo.liang): the stored value should be a valid json string, probably we can just do Parse.decode
       opt.getOrElse(Map[String, String]())
     }
   )

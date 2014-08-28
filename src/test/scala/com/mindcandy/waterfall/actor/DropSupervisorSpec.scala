@@ -7,7 +7,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ StartAndFinishDropLog, FinishDropLog, StartDropLog }
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import org.specs2.SpecificationLike
@@ -102,9 +102,12 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
     jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
     probe.send(actor, request)
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]) match {
-      case DropLog(_, 1, _, _, None, Some("job 1 and drop uid test1 has already been running")) => success
-      case _ => failure
+    jobDatabaseManager.expectMsgClass(classOf[StartAndFinishDropLog]) match {
+      case StartAndFinishDropLog(_, 1, _, _, None, Some(exception)) => exception.getMessage match {
+        case "job 1 with drop uid test1 and name Exchange Rate has already been running" => success
+        case _ => failure
+      }
+      case s: StartAndFinishDropLog => failure
     }
   }
 
@@ -136,8 +139,14 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
       DropJob(Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
 
     probe.send(actor, request)
-    val expectedMsg = Some(s"factory has no drop for job ${request.jobID} and drop uid ${request.job.dropUID}")
-    jobDatabaseManager.expectMsgClass(classOf[DropLog]).exception must_== expectedMsg
+    val expectedMsg = s"factory has no drop for job ${request.jobID} with drop uid ${request.job.dropUID} and name ${request.job.name}"
+    jobDatabaseManager.expectMsgClass(classOf[StartAndFinishDropLog]) match {
+      case StartAndFinishDropLog(_, 1, _, _, None, Some(exception)) => exception.getMessage match {
+        case `expectedMsg` => success
+        case _ => failure
+      }
+      case s: StartAndFinishDropLog => failure
+    }
   }
 
   def logToErrorIfResultNotInList = {
@@ -152,9 +161,12 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     val runUID = UUID.randomUUID()
     probe.send(actor, JobResult(runUID, Success(())))
 
-    val expectedMsg = Some(s"job result from runUID ${runUID} but not present in running jobs list")
+    val expectedMsg = s"job result from runUID ${runUID} but not present in running jobs list"
     jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
-      case FinishDropLog(`runUID`, _, None, `expectedMsg`) => success
+      case FinishDropLog(`runUID`, _, None, Some(exception)) => exception.getMessage match {
+        case `expectedMsg` => success
+        case _ => failure
+      }
       case _ => failure
     }
   }

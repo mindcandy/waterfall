@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ StartAndFinishDropLog, FinishDropLog, StartDropLog }
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
@@ -51,8 +51,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           }
           case Failure(exception) => {
             log.error(s"failure for job $runUID after $runtime", exception)
-            jobDatabaseManager !
-              FinishDropLog(runUID, endTime, None, Some(s"${exception.toString}\n${exception.getStackTraceString}"))
+            jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(exception))
           }
         }
         runningJobs -= runUID
@@ -60,34 +59,34 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
       case None => {
         val error = s"job result from runUID $runUID but not present in running jobs list"
         log.error(error)
-        jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(error))
+        jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(new IllegalArgumentException(error)))
       }
     }
   }
 
   def runJob(jobID: JobID, job: DropJob) = {
     val runUID = UUID.randomUUID()
-    val time = DateTime.now
+    val startTime = DateTime.now
     val runningJobID = runningJobs.values.map(_._3).toSet
     runningJobID.contains(jobID) match {
       case true => {
         // TODO(deo.liang): flag this to allow paralleled running
-        val error = s"job $jobID and drop uid ${job.dropUID} has already been running"
+        val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running"
         log.error(error)
-        jobDatabaseManager ! DropLog(runUID, jobID, time, Some(time), None, Some(error))
+        jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
       case false => {
         dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor
-            runningJobs += (runUID -> (worker, time, jobID))
+            runningJobs += (runUID -> (worker, startTime, jobID))
             worker ! DropWorker.RunDrop(runUID, drop)
-            jobDatabaseManager ! StartDropLog(runUID, jobID, time)
+            jobDatabaseManager ! StartDropLog(runUID, jobID, startTime)
           }
           case None => {
-            val error = s"factory has no drop for job $jobID and drop uid ${job.dropUID}"
+            val error = s"factory has no drop for job $jobID with drop uid ${job.dropUID} and name ${job.name}"
             log.error(error)
-            jobDatabaseManager ! DropLog(runUID, jobID, time, Some(time), None, Some(error))
+            jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
           }
         }
       }
