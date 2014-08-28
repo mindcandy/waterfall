@@ -70,7 +70,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, Option(endTime), logOutput, convertException(exception)))
     }
     case PostJobForCompletion(dropJob, f) => {
-      log.debug(s"Insert or update a job")
+      log.debug(s"Insert or update a job $dropJob")
       f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
     }
     case GetLogsForCompletion(jobID, time, status, f) => {
