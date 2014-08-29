@@ -118,17 +118,17 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     { ts => new DateTime(ts) }
   )
 
-  class DropLogs(tag: Tag) extends Table[DropLog](tag, "DROP_LOG") {
-    def runUID = column[RunUID]("RUN_ID", O.PrimaryKey)
-    def jobID = column[JobID]("JOB_ID", O.NotNull)
-    def startTime = column[DateTime]("START_TIME", O.NotNull)
-    def endTime = column[Option[DateTime]]("END_TIME")
-    def content = column[Option[String]]("CONTENT")
-    def exception = column[Option[String]]("EXCEPTION")
+  class DropLogs(tag: Tag) extends Table[DropLog](tag, "drop_log") {
+    def runUID = column[RunUID]("run_id", O.PrimaryKey)
+    def jobID = column[JobID]("job_id", O.NotNull)
+    def startTime = column[DateTime]("start_time", O.NotNull)
+    def endTime = column[Option[DateTime]]("end_time")
+    def content = column[Option[String]]("content")
+    def exception = column[Option[String]]("exception")
     def * =
       (runUID, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
-    def job_fk = foreignKey("JOB_FK", jobID, dropJobs)(_.jobID)
+    def job_fk = foreignKey("drop_log_job_id_fk", jobID, dropJobs)(_.jobID)
   }
 
   val dropLogs = TableQuery[DropLogs]
@@ -147,16 +147,16 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
   )
 
-  class DropJobs(tag: Tag) extends Table[DropJob](tag, "DROP_JOB") {
-    def jobID = column[JobID]("JOB_ID", O.PrimaryKey, O.AutoInc)
-    def dropUID = column[String]("DROP_UID", O.NotNull)
-    def name = column[String]("NAME", O.NotNull)
-    def description = column[String]("DESCRIPTION", O.NotNull)
-    def enabled = column[Boolean]("ENABLED", O.NotNull)
-    def cron = column[String]("CRON", O.NotNull)
-    def timeFrame = column[TimeFrame.TimeFrame]("TIME_FRAME", O.NotNull)
+  class DropJobs(tag: Tag) extends Table[DropJob](tag, "drop_job") {
+    def jobID = column[JobID]("job_id", O.PrimaryKey, O.AutoInc)
+    def dropUID = column[String]("drop_uid", O.NotNull)
+    def name = column[String]("name", O.NotNull)
+    def description = column[String]("description", O.NotNull)
+    def enabled = column[Boolean]("enabled", O.NotNull)
+    def cron = column[String]("cron", O.NotNull)
+    def timeFrame = column[TimeFrame.TimeFrame]("time_frame", O.NotNull)
     // configuration stored as a json string
-    def configuration = column[Map[String, String]]("CONFIGURATION", O.NotNull)
+    def configuration = column[Map[String, String]]("configuration", O.NotNull)
     def * =
       (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration) <>
         (DropJob.tupled, DropJob.unapply)
