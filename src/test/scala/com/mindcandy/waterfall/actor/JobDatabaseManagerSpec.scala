@@ -97,7 +97,7 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, GetLogsForCompletion(None, None, None, testFunction))
+    probe.send(actor, GetLogsForCompletion(None, None, None, None, testFunction))
     probe.expectMsgClass(classOf[DropHistory]).count must_== 16
   }
 
@@ -184,7 +184,7 @@ class JobDatabaseManagerSpec
     def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
 
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID

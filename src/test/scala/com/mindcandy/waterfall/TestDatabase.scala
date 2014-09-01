@@ -47,7 +47,7 @@ trait TestDatabase {
 
   def testDatabaseWithJobsAndLogs = {
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     db.insert(db.dropJobs, testDropJobs)
     db.insert(db.dropLogs, testDropLogs)
     db
@@ -55,7 +55,7 @@ trait TestDatabase {
 
   def testDatabaseWithJobs = {
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     db.insert(db.dropJobs, testDropJobs)
     db
   }

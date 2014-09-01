@@ -6,6 +6,7 @@ identity.config
 cache/
 results/
 *.pyc
+*.mv.db
 
 # IntelliJ IDEA #
 ###################

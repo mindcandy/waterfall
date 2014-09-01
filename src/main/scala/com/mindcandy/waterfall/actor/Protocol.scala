@@ -10,9 +10,10 @@ import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
 import org.quartz.CronExpression
+import spray.httpx.unmarshalling.{ MalformedContent, Deserializer }
 
 import scala.language.implicitConversions
-import scala.util.{ Success, Try }
+import scala.util.{ Failure, Success, Try }
 import scalaz.\/
 
 object TimeFrame extends Enumeration {
@@ -33,14 +34,21 @@ object LogStatus extends Enumeration {
   type LogStatus = Value
   val RUNNING, FAILURE, SUCCESS = Value
 
-  implicit val TimeFrameEncodeJson: EncodeJson[LogStatus] = EncodeJson(a => jString(a.toString))
-  implicit val TimeFrameDecodeJson: DecodeJson[LogStatus] = DecodeJson(hcursor =>
+  implicit val LogStatusEncodeJson: EncodeJson[LogStatus] = EncodeJson(a => jString(a.toString))
+  implicit val LogStatusDecodeJson: DecodeJson[LogStatus] = DecodeJson(hcursor =>
     DecodeResult(hcursor.as[String].result.flatMap { value =>
       \/.fromTryCatch { LogStatus.withName(value) }.leftMap { exception =>
         (s"Invalid LogStatus value: $value", CursorHistory(List.empty[CursorOp]))
       }
     })
   )
+
+  implicit val String2LogStatusConverter = new Deserializer[String, LogStatus] {
+    def apply(value: String) = Try(LogStatus.withName(value.toUpperCase)) match {
+      case Success(logStatus) => Right(logStatus)
+      case Failure(_) => Left(MalformedContent("'" + value + "' is not a valid log status value"))
+    }
+  }
 }
 
 object Protocol {
@@ -132,6 +140,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   }
 
   val dropLogs = TableQuery[DropLogs]
+  val dropLogsSorted = dropLogs.sortBy(_.startTime.desc)
 
   implicit val timeFrameColumnType = MappedColumnType.base[TimeFrame.TimeFrame, String](
     { tf => tf.toString },
@@ -163,7 +172,8 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   }
 
   val dropJobs = TableQuery[DropJobs]
-  val all = Seq(dropJobs, dropLogs)
+  val dropJobsSorted = dropJobs.sortBy(_.jobID.asc).sortBy(_.dropUID.asc)
+  val allTables = Seq(dropJobs, dropLogs)
 
   def maybeExists(dropJob: DropJob): Option[DropJob] =
     dropJob.jobID.flatMap(jid => dropJobs.filter(_.jobID === jid).firstOption)
@@ -191,22 +201,39 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
   }
 
-  def selectDropLog(jobID: Option[JobID], time: Option[Int], status: Option[String]): List[DropLog] = {
-    // TODO(deo.liang): use intersect when it's available in slick2.2
-    val resultFilterTime = time.fold(dropLogs.sortBy(_.startTime.desc)) { time =>
-      val timeFrom = DateTime.now - time.hour
-      dropLogs
-        .filter(x =>
-          (x.endTime.isDefined && x.endTime >= timeFrom) ||
-            (x.endTime.isEmpty && x.startTime >= timeFrom))
-        .sortBy(_.startTime.desc)
-    }
-    val resultFilterJobID = jobID.fold(resultFilterTime)(id => resultFilterTime.filter(_.jobID === id))
-    Try(LogStatus.withName(status.get.toUpperCase)) match {
-      case Success(LogStatus.FAILURE) => resultFilterJobID.filter(_.exception.isDefined).list
-      case Success(LogStatus.SUCCESS) => resultFilterJobID.filter(_.exception.isEmpty).list
-      case Success(LogStatus.RUNNING) => resultFilterJobID.filter(_.endTime.isEmpty).list
-      case _ => resultFilterJobID.list
-    }
+  def selectDropLog(jobID: Option[JobID], period: Option[Int], status: Option[LogStatus.LogStatus], dropUID: Option[DropUID]): List[DropLog] = {
+    type LogQuery = Query[(DropLogs, DropJobs), (DropLog, DropJob), Seq]
+    val logJoin = (for {
+      job <- dropJobs
+      log <- dropLogs if job.jobID === log.jobID
+    } yield (log, job)).sortBy { case (log, job) => log.startTime.desc }
+
+    val filterByTime: Option[LogQuery => LogQuery] = period.map(p => { q: LogQuery =>
+      val timeFrom = DateTime.now - p.hour
+      q.filter {
+        case (log, job) =>
+          (log.endTime.isDefined && log.endTime >= timeFrom) || (log.endTime.isEmpty && log.startTime >= timeFrom)
+      }
+    })
+    val filterByJobID: Option[LogQuery => LogQuery] = jobID.map(id => { q: LogQuery =>
+      q.filter { case (log, job) => log.jobID === id }
+    })
+    val filterByDropUID: Option[LogQuery => LogQuery] = dropUID.map(uid => { q: LogQuery =>
+      q.filter { case (log, job) => job.dropUID === uid }
+    })
+    val filterByStatus: Option[LogQuery => LogQuery] = status.map(s => { q: LogQuery =>
+      s match {
+        case LogStatus.FAILURE => q.filter { case (log, job) => log.exception.isDefined }
+        case LogStatus.SUCCESS => q.filter { case (log, job) => log.exception.isEmpty }
+        case LogStatus.RUNNING => q.filter { case (log, job) => log.endTime.isEmpty }
+      }
+    })
+
+    val allFilters: List[LogQuery => LogQuery] = List(
+      filterByTime, filterByJobID, filterByDropUID, filterByStatus
+    ).flatten
+
+    // Apply the functions, if any, to the query object
+    allFilters.foldLeft(logJoin)((logs, func) => func(logs)).list.map(_._1)
   }
 }

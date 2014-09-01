@@ -46,11 +46,11 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         val runtime = PeriodFormat.getDefault().print(new Period((startTime to endTime)))
         result match {
           case Success(_) => {
-            log.info(s"success for job $jobID after $runtime")
+            log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
           }
           case Failure(exception) => {
-            log.error(s"failure for job $runUID after $runtime", exception)
+            log.error(s"failure for run $runUID with job $runUID after $runtime", exception)
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(exception))
           }
         }
@@ -71,7 +71,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     runningJobID.contains(jobID) match {
       case true => {
         // TODO(deo.liang): flag this to allow paralleled running
-        val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running"
+        val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running, run $runUID cancelled"
         log.error(error)
         jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
@@ -82,6 +82,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
             runningJobs += (runUID -> (worker, startTime, jobID))
             worker ! DropWorker.RunDrop(runUID, drop)
             jobDatabaseManager ! StartDropLog(runUID, jobID, startTime)
+            log.info(s"starting run $runUID with job $jobID for dropUID ${job.dropUID} and name ${job.name}")
           }
           case None => {
             val error = s"factory has no drop for job $jobID with drop uid ${job.dropUID} and name ${job.name}"

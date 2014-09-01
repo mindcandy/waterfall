@@ -103,9 +103,12 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
     jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
     probe.send(actor, request)
     jobDatabaseManager.expectMsgClass(classOf[StartAndFinishDropLog]) match {
-      case StartAndFinishDropLog(_, 1, _, _, None, Some(exception)) => exception.getMessage match {
-        case "job 1 with drop uid test1 and name Exchange Rate has already been running" => success
-        case _ => failure
+      case StartAndFinishDropLog(runUID, 1, _, _, None, Some(exception)) => {
+        val expectedMsg = s"job 1 with drop uid test1 and name Exchange Rate has already been running, run $runUID cancelled"
+        exception.getMessage match {
+          case `expectedMsg` => success
+          case _ => failure
+        }
       }
       case s: StartAndFinishDropLog => failure
     }

@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
-import com.mindcandy.waterfall.actor.TimeFrame
+import com.mindcandy.waterfall.actor.{ LogStatus, TimeFrame }
 import org.joda.time.DateTime
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
@@ -66,6 +66,7 @@ class DatabaseContainerSpec
       select successful log have correct record size and don't have exception field ${selectDropLog.e6}
       select successful log no older than 1 hour for jobID=1 ${selectDropLog.e7}
       select running log have correct size and no endtime field ${selectDropLog.e8}
+      select dropUID=EXRATE1 have correct record size and correct jobID ${selectDropLog.e9}
 
     insertOrUpdateDropJob
       insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
@@ -75,7 +76,7 @@ class DatabaseContainerSpec
 
   def createNewDatabase = new group {
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     val isTablesExist: Boolean = db.executeInSession {
       !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
@@ -149,7 +150,7 @@ class DatabaseContainerSpec
 
   def createTablesInNewDB = new group {
     val db = newDB
-    db.createIfNotExists(db.all)
+    db.createIfNotExists(db.allTables)
     val isTablesCreated = db.db.withDynSession {
       !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
@@ -160,9 +161,9 @@ class DatabaseContainerSpec
 
   def createTablesOverwrite = new group {
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     db.insert(db.dropJobs, oneDropJob)
-    db.create(db.all)
+    db.create(db.allTables)
     val isTablesCreated = db.db.withDynSession {
       !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
@@ -177,7 +178,7 @@ class DatabaseContainerSpec
 
   def insertDropLog = new group {
     val db = newDB
-    db.create(db.all)
+    db.create(db.allTables)
     db.insert(db.dropJobs, oneDropJob)
     val numOfInsert = db.insert(db.dropLogs, oneDropLog)
     val insertedData = db.db.withDynSession {
@@ -190,25 +191,29 @@ class DatabaseContainerSpec
 
   def selectDropLog = new group {
     val db = testDatabaseWithJobsAndLogs
-    e1 := db.executeInSession(db.selectDropLog(None, None, None)).size must_== 16
+    e1 := db.executeInSession(db.selectDropLog(None, None, None, None)).size must_== 16
     e2 := {
-      val result = db.executeInSession(db.selectDropLog(Some(1), None, None))
+      val result = db.executeInSession(db.selectDropLog(Some(1), None, None, None))
       (result.size must_== 8) and (result.count(_.jobID == 1) must_== 8)
     }
-    e3 := db.executeInSession(db.selectDropLog(None, Some(1), None)).size must_== 8
-    e4 := db.executeInSession(db.selectDropLog(None, Some(10), None)).size must_== 16
+    e3 := db.executeInSession(db.selectDropLog(None, Some(1), None, None)).size must_== 8
+    e4 := db.executeInSession(db.selectDropLog(None, Some(10), None, None)).size must_== 16
     e5 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some("failure")))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.FAILURE), None))
       (result.size must_== 8) and (result.count(_.exception.isDefined) must_== 8)
     }
     e6 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some("success")))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.SUCCESS), None))
       (result.size must_== 8) and (result.count(_.exception.isEmpty) must_== 8)
     }
-    e7 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some("failure"))).size must_== 2
+    e7 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(LogStatus.FAILURE), None)).size must_== 2
     e8 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some("ruNNing")))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.RUNNING), None))
       (result.size must_== 8) and (result.count(_.endTime.isEmpty) must_== 8)
+    }
+    e9 := {
+      val result = db.executeInSession(db.selectDropLog(None, None, None, Some("EXRATE1")))
+      (result.size must_== 8) and (result.count(_.jobID == 1) must_== 8)
     }
   }
 

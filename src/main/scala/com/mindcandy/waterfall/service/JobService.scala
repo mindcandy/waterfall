@@ -3,6 +3,7 @@ package com.mindcandy.waterfall.service
 import akka.actor.{ Actor, ActorRef, Props }
 import argonaut.Argonaut._
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
+import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
 import spray.routing.HttpService
@@ -60,11 +61,11 @@ trait JobService extends HttpService with ArgonautMarshallers {
       }
     } ~
     pathPrefix("logs") {
-      anyParams('status.as[String].?, 'period.as[Int].?, 'jobID.as[Int].?) { (status, period, jobID) =>
+      anyParams('status.as[LogStatus].?, 'period.as[Int].?, 'jobID.as[Int].?, 'dropUID.as[String].?) { (status, period, jobID, dropUID) =>
         get {
           produce(instanceOf[DropHistory]) { completionFunction =>
             context =>
-              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, completionFunction)
+              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, dropUID, completionFunction)
           }
         }
       }

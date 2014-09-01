@@ -106,6 +106,6 @@ object WaterfallBuild extends Build {
       buildInfoPackage := "com.mindcandy.waterfall.info"
     )
   ).configs( IntegrationTest )
-   .settings( ScoverageSbtPlugin.instrumentSettings ++ ScctPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
+   .settings( ScoverageSbtPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
 
 }

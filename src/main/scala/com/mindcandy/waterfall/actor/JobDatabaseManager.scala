@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import org.joda.time.DateTime
 
@@ -16,7 +17,7 @@ object JobDatabaseManager {
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
-  case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[String], completionFunction: DropHistory => Unit)
+  case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], completionFunction: DropHistory => Unit)
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
   case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[Throwable])
@@ -39,22 +40,22 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
-      val jobs = db.executeInSession(db.dropJobs.list)
+      val jobs = db.executeInSession(db.dropJobsSorted.list)
       f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")
-      val jobs = db.executeInSession(db.dropJobs.filter(_.dropUID === dropUID).list)
+      val jobs = db.executeInSession(db.dropJobsSorted.filter(_.dropUID === dropUID).list)
       f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
-      val jobs = db.executeInSession(db.dropJobs.filter(_.enabled).list)
+      val jobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
       f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
-      val dropJobs = db.executeInSession(db.dropJobs.filter(_.enabled).list)
+      val dropJobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
       sender ! DropJobList(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
     case StartDropLog(runUID, jobID, startTime) => {
@@ -73,9 +74,9 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"Insert or update a job $dropJob")
       f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
     }
-    case GetLogsForCompletion(jobID, time, status, f) => {
-      log.debug(s"Query logs for jobID:${jobID.getOrElse(None)}, time:${time.getOrElse(None)}, status:${status.getOrElse(None)}")
-      val logs = db.executeInSession(db.selectDropLog(jobID, time, status))
+    case GetLogsForCompletion(jobID, time, status, dropUID, f) => {
+      log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID")
+      val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID))
       f(DropHistory(logs))
     }
   }
