@@ -1,15 +1,17 @@
 package com.mindcandy.waterfall.service
 
+import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
 import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
+import org.specs2.time.NoTimeConversions
 import spray.http.StatusCode.int2StatusCode
-import spray.routing.MalformedRequestContentRejection
+import spray.routing.{ MalformedQueryParamRejection, MalformedRequestContentRejection }
 import spray.testkit.Specs2RouteTest
 
-class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase {
+class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase with NoTimeConversions {
   def is = s2"""
   JobService test
   ==============================================================================
@@ -28,6 +30,14 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
     get /logs ${getLogs}
     get /logs?jobid=1 ${getLogsWithJobID}
     get /logs?period=1 ${getLogsWithPeriod}
+    get /logs?period=-1 ${getLogsWithNegativePeriod}
+    get /logs?status=success ${getLogsWithStatusSuccess}
+    get /logs?status=failure ${getLogsWithStatusFailure}
+    get /logs?status=running ${getLogsWithStatusRunning}
+    get /logs?status=ruNNing ${getLogsWithStatusRunningCaseInsensitive}
+    get /logs?status=unknown wrong status ${getLogsWithUnknownStatus}
+    GET /logs?dropUID=EXRATE1 ${getLogsWithDropUID}
+    GET /logs?dropuid=EXRATE1 ${getLogsWithUnknownParameter}
   """
   def actorRefFactory = system
 
@@ -158,15 +168,57 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
   }
 
   def getLogs = Get("/logs") ~> route ~> check {
-    responseAs[DropHistory].count === 16
+    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString))
   }
 
-  def getLogsWithJobID = Get("/logs?jobid=1") ~> route ~> check {
-    responseAs[DropHistory].count === 8
-    responseAs[DropHistory].logs.count(_.jobID == 1) === 8
+  def getLogsWithJobID = Get("/logs?jobID=1") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
   }
 
   def getLogsWithPeriod = Get("/logs?period=1") ~> route ~> check {
-    responseAs[DropHistory].count === 8
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(log => log.endTime match {
+      case Some(endTime) => endTime > DateTime.now - 1.hour
+      case None => log.startTime > DateTime.now - 1.hour
+    }) === 8)
+  }
+
+  def getLogsWithNegativePeriod = Get("/logs?period=-1") ~> route ~> check {
+    rejection === MalformedQueryParamRejection("period", "'-1' is not a valid positive integer", None)
+  }
+
+  def getLogsWithStatusSuccess = Get("/logs?status=success") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.exception.isEmpty) === 8)
+  }
+
+  def getLogsWithStatusFailure = Get("/logs?status=failure") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.exception.isDefined) === 8)
+  }
+
+  def getLogsWithStatusRunning = Get("/logs?status=running") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.endTime.isEmpty) === 8)
+  }
+
+  def getLogsWithStatusRunningCaseInsensitive = Get("/logs?status=ruNNing") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.endTime.isEmpty) === 8)
+  }
+
+  def getLogsWithUnknownStatus = Get("/logs?status=unknown") ~> route ~> check {
+    rejection === MalformedQueryParamRejection("status", "'unknown' is not a valid log status value", None)
+  }
+
+  def getLogsWithDropUID = Get("/logs?dropUID=EXRATE1") ~> route ~> check {
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
+  }
+
+  def getLogsWithUnknownParameter = Get("/logs?dropuid=EXRATE1") ~> route ~> check {
+    // TODO(deo.liang): Ideally we report unknown parameters, currently it's ignored, e.g using lower case of paramater name.
+    pending
   }
 }

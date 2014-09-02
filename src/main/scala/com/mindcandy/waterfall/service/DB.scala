@@ -4,19 +4,19 @@ import java.sql.Timestamp
 
 import argonaut.Argonaut._
 import argonaut._
+import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory._
-import com.mindcandy.waterfall.actor.{LogStatus, TimeFrame}
-import com.mindcandy.waterfall.config.{DatabaseConfig, DatabaseContainer}
+import com.mindcandy.waterfall.actor.{ LogStatus, TimeFrame }
+import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
 import org.quartz.CronExpression
-import com.github.nscala_time.time.Imports._
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val driver = config.driver
   import com.mindcandy.waterfall.actor.Protocol._
   import driver.simple._
 
-import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
+  import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
   val db = Database.forURL(
     config.url, config.username, config.password, driver = config.driverClass
@@ -41,7 +41,8 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
   }
 
   val dropLogs = TableQuery[DropLogs]
-  val dropLogsSorted = dropLogs.sortBy(_.startTime.desc)
+  // Notice that sorting on runUID is by its string representation, not UUID.
+  val dropLogsSorted = dropLogs.sortBy(log => (log.startTime.desc, log.jobID, log.runUID))
 
   implicit val timeFrameColumnType = MappedColumnType.base[TimeFrame.TimeFrame, String](
     { tf => tf.toString },
@@ -73,7 +74,7 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
   }
 
   val dropJobs = TableQuery[DropJobs]
-  val dropJobsSorted = dropJobs.sortBy(_.jobID.asc).sortBy(_.dropUID.asc)
+  val dropJobsSorted = dropJobs.sortBy(_.jobID)
   val allTables = Seq(dropJobs, dropLogs)
 
   def maybeExists(dropJob: DropJob): Option[DropJob] =
@@ -95,6 +96,7 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
       .map(log => (log.endTime, log.content, log.exception))
       .update((Some(endTime), logOutput, exception))
   }
+
   def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
     CronExpression.isValidExpression(dropJob.cron) match {
       case false => None
@@ -106,8 +108,8 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
     type LogQuery = Query[(DropLogs, DropJobs), (DropLog, DropJob), Seq]
     val logJoin = (for {
       job <- dropJobs
-      log <- dropLogs if job.jobID === log.jobID
-    } yield (log, job)).sortBy { case (log, job) => log.startTime.desc }
+      log <- dropLogsSorted if job.jobID === log.jobID
+    } yield (log, job))
 
     val filterByTime: Option[LogQuery => LogQuery] = period.map(p => { q: LogQuery =>
       val timeFrom = DateTime.now - p.hour

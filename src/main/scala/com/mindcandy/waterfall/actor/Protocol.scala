@@ -6,7 +6,7 @@ import argonaut.Argonaut._
 import argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import org.joda.time.DateTime
-import spray.httpx.unmarshalling.{ MalformedContent, Deserializer }
+import spray.httpx.unmarshalling.{ Deserializer, MalformedContent }
 
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
@@ -107,4 +107,11 @@ object Protocol {
         }
       )
   )
+
+  val String2PositiveInt = new Deserializer[String, Int] {
+    def apply(value: String) = Try(value.toInt) match {
+      case Success(integer) if integer > 0 => Right(integer)
+      case _ => Left(MalformedContent(s"'$value' is not a valid positive integer"))
+    }
+  }
 }
