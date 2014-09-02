@@ -1,5 +1,13 @@
-A sample for the Typesafe Stack (http://typesafe.com/stack).
+# Waterfall
 
-Scala sample project using Scala and SBT.
+[Waterfall](http://confluence.tool.mindcandy.com/display/PLAT/Waterfall) is a SBT project with a simple UI.
+Waterfall is a batch progressing and ETL system. Handles scheduling, dependency and provides a rich library of sources and sinks.
 
-To run and test it use SBT invoke: 'sbt run'
+To run the UI __for now__:
+
+Open com.mindcandy.waterfall.Run and set shouldRun to _true_ then run:
+
+```
+it:testOnly *RunSpec*
+```
+

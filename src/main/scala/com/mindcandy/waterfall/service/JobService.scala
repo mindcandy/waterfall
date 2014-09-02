@@ -1,12 +1,13 @@
 package com.mindcandy.waterfall.service
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import argonaut.Argonaut._
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
-import spray.routing.HttpService
+import com.mindcandy.waterfall.ui.UserInterface
+import spray.routing.{HttpService, Route}
 
 object JobServiceActor {
   def props(jobDatabaseManager: ActorRef): Props = Props(new JobServiceActor(jobDatabaseManager))
@@ -14,13 +15,14 @@ object JobServiceActor {
 
 class JobServiceActor(val jobDatabaseManager: ActorRef) extends Actor with JobService {
   def actorRefFactory = context
-  def receive = runRoute(route)
+  val ui = UserInterface()
+  def receive = runRoute(route ~ ui.route)
 }
 
 trait JobService extends HttpService with ArgonautMarshallers {
   def jobDatabaseManager: ActorRef
 
-  val route = {
+  val route: Route = {
     // format: OFF
     pathPrefix("jobs") {
       pathEndOrSingleSlash {
