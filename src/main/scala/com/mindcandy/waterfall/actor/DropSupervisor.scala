@@ -50,7 +50,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
           }
           case Failure(exception) => {
-            log.error(s"failure for run $runUID with job $runUID after $runtime", exception)
+            log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, Some(exception))
           }
         }
