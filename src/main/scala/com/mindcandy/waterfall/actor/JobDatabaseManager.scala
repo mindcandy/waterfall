@@ -6,6 +6,7 @@ import akka.actor.{ Actor, ActorLogging, Props }
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
 import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
+import com.mindcandy.waterfall.service.DB
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
@@ -41,22 +42,22 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
       val jobs = db.executeInSession(db.dropJobsSorted.list)
-      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
+      f(DropJobList(jobs))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")
       val jobs = db.executeInSession(db.dropJobsSorted.filter(_.dropUID === dropUID).list)
-      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
+      f(DropJobList(jobs))
     }
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
       val jobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
-      f(DropJobList(jobs.map(job => job.jobID.getOrElse(-1) -> job).toMap))
+      f(DropJobList(jobs))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
       val dropJobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
-      sender ! DropJobList(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
+      sender ! DropJobMap(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
     case StartDropLog(runUID, jobID, startTime) => {
       log.debug(s"received StartDropLog")

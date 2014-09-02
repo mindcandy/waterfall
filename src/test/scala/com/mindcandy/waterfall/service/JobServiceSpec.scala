@@ -38,9 +38,9 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
 
   def getJobs = Get("/jobs") ~> route ~> check {
     responseAs[DropJobList] === DropJobList(
-      Map(
-        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
-        2 -> DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      List(
+        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
+        DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
   }
@@ -135,20 +135,20 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
 
   def getJobsWithDropUID = Get("/drops/EXRATE1/jobs") ~> route ~> check {
     responseAs[DropJobList] === DropJobList(
-      Map(
-        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      List(
+        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
   }
 
   def getJobsWithUnknownDropUID = Get("/drops/UNKNOWN/jobs") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(Map())
+    responseAs[DropJobList] === DropJobList(List())
   }
 
   def getSchedule = Get("/schedule") ~> route ~> check {
     responseAs[DropJobList] === DropJobList(
-      Map(
-        1 -> DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      List(
+        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
       )
     )
   }

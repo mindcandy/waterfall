@@ -5,7 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.actor.{ DB, DropSupervisor, JobDatabaseManager, ScheduleManager }
+import com.mindcandy.waterfall.actor.{ DropSupervisor, JobDatabaseManager, ScheduleManager }
 import com.mindcandy.waterfall.app.{ AbstractApplicationDaemon, ApplicationLifecycle }
 import com.mindcandy.waterfall.config.{ ConfigReader, DatabaseConfig }
 import com.typesafe.config.ConfigFactory

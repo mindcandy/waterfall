@@ -33,7 +33,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       log.debug("Received CheckJobs message")
       jobDatabaseManager ! GetSchedule()
     }
-    case DropJobList(jobs) => {
+    case DropJobMap(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
       val newJobIDs = manageScheduledJobs(jobs)
       for {

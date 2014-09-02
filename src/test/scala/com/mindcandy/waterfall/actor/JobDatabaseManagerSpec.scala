@@ -44,7 +44,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
-    val expectedMessage = DropJobList(
+    val expectedMessage = DropJobMap(
       testDropJobs.filter(_.enabled).map(job => job.jobID.get -> job).toMap
     )
 
@@ -133,7 +133,7 @@ class JobDatabaseManagerSpec
 
     probe.send(actor, GetJobsForCompletion(testFunc))
     val expectedDropJob = DropJobList(
-      testDropJobs.map(job => job.jobID.get -> job).toMap
+      testDropJobs
     )
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
   }
@@ -145,12 +145,10 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobs
     db.insert(db.dropJobs, testDropJobs(1))
     val actor = system.actorOf(JobDatabaseManager.props(db))
-    val expectedDropJob = DropJobList(
-      Map(
-        2 -> testDropJobs(1),
-        3 -> testDropJobs(1).copy(jobID = Some(3))
-      )
-    )
+    val expectedDropJob = DropJobList(List(
+      testDropJobs(1),
+      testDropJobs(1).copy(jobID = Some(3))
+    ))
 
     probe.send(actor, GetJobsWithDropUIDForCompletion("EXRATE2", testFunc))
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
@@ -174,7 +172,7 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, GetScheduleForCompletion(testFunc))
-    val expectedSchedule = DropJobList(Map(1 -> testDropJobs(0)))
+    val expectedSchedule = DropJobList(List(testDropJobs(0)))
     probe.expectMsg(expectedSchedule.toString) must not(throwA[AssertionError])
   }
 

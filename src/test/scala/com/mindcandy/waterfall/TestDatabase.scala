@@ -4,8 +4,9 @@ import java.util.UUID
 
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
-import com.mindcandy.waterfall.actor.{ JobDatabaseManager, DB, TimeFrame }
+import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import com.mindcandy.waterfall.config.DatabaseConfig
+import com.mindcandy.waterfall.service.DB
 import org.joda.time.DateTime
 
 trait TestDatabase {
