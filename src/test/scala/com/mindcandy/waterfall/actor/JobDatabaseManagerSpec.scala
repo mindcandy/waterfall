@@ -6,6 +6,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol._
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
 import org.specs2.specification.{ Grouped, Step }
@@ -15,7 +16,7 @@ import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
-    extends TestKit(ActorSystem("JobDatabaseManagerSpec"))
+    extends TestKit(ActorSystem("JobDatabaseManagerSpec", ConfigFactory.load()))
     with SpecificationLike
     with NoTimeConversions
     with Mockito

@@ -17,7 +17,7 @@ import org.specs2.time.NoTimeConversions
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", ConfigFactory.parseString("akka.test.timefactor=2")))
+class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", ConfigFactory.load()))
     with SpecificationLike
     with NoTimeConversions
     with Mockito {
@@ -38,7 +38,6 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
   """ ^ Step(afterAll)
 
   def afterAll = TestKit.shutdownActorSystem(system)
-  def before = akka.testkit.TestDuration(FiniteDuration(5, SECONDS))
 
   def autoCheckJobs = {
     val databaseManager: TestProbe = TestProbe()
