@@ -44,11 +44,10 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       log.debug(s"Received DropJobList($jobs)")
       val newJobIDs = manageScheduledJobs(jobs)
       for {
-        (jobID, job) <- jobs
-        if (newJobIDs contains jobID)
-        cancellable <- scheduleJob(jobID, job)
+        jobID <- newJobIDs
+        cancellable <- scheduleJob(jobID, jobs(jobID))
       } yield {
-        scheduledJobs += (jobID -> (job, cancellable))
+        scheduledJobs += (jobID -> (jobs(jobID), cancellable))
       }
     }
     case startJob: StartJob => {

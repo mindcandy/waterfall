@@ -16,13 +16,13 @@ import org.specs2.runner.JUnitRunner
 class HttpIOSpec extends Specification with Mockito {
   def is = args.execute(sequential = true) ^ args.report(showtimes = true) ^ s2"""
     HttpIOSouce
-      should retrieveFrom with a http url separating lines                     ${HttpIOSouceTests.retrieveWithLinesSeparator}
-      should retrieveFrom with a http url not separating lines                 ${HttpIOSouceTests.retrieveWithNoRowSeparator}
-      should retrieveFrom receiving no data                                    ${HttpIOSouceTests.retrieveWithNoData}
-      should retrieveFrom with read timeout                                    ${HttpIOSouceTests.retrieveWithTimeout}
+      should retrieveFrom with a http url separating lines                     ${HttpIOSourceTests.retrieveWithLinesSeparator}
+      should retrieveFrom with a http url not separating lines                 ${HttpIOSourceTests.retrieveWithNoRowSeparator}
+      should retrieveFrom receiving no data                                    ${HttpIOSourceTests.retrieveWithNoData}
+      should retrieveFrom with read timeout                                    ${HttpIOSourceTests.retrieveWithTimeout}
     MultipleHttpIOSource
-      should retrieve data from multiple URLs                                  ${MultipleHttpIOSouceTests.retrieveWithLinesSeparatorFromTwoServers}
-      should retrieve with read timeout                                        ${MultipleHttpIOSouceTests.retrieveWithTimeout}
+      should retrieve data from multiple URLs                                  ${MultipleHttpIOSourceTests.retrieveWithLinesSeparatorFromTwoServers}
+      should retrieve with read timeout                                        ${MultipleHttpIOSourceTests.retrieveWithTimeout}
   """
 
   val jsonTestData1 = """|{ "test1" : "value1", "test2" : 45 }
@@ -42,12 +42,14 @@ class HttpIOSpec extends Specification with Mockito {
     file.toUri.toString
   }
 
-  object HttpIOSouceTests {
+  object HttpIOSourceTests {
     def retrieveWithLinesSeparator = {
       val server = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
 
       val intermediate = new MemoryIntermediate[PlainTextFormat]("memory:test")
-      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test"))
+      // TODO(deo.liang): When running all the tests only the first example encounters the timeout problem.
+      //                  we double the timeout temporally.
+      val vfsIO = HttpIOSource[PlainTextFormat](HttpIOConfig("http://localhost:8090/test", 10000))
       val result = vfsIO.retrieveInto(intermediate)
       server.stop
 
@@ -100,7 +102,7 @@ class HttpIOSpec extends Specification with Mockito {
     }
   }
 
-  object MultipleHttpIOSouceTests {
+  object MultipleHttpIOSourceTests {
     def retrieveWithLinesSeparatorFromTwoServers = {
       val server1 = new StubServer(8090).defaultResponse(ContentType("text/plain"), jsonTestData1, 200).start
       val server2 = new StubServer(8091).defaultResponse(ContentType("text/plain"), jsonTestData2, 200).start
