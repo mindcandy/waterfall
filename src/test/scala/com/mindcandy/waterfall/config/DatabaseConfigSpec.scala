@@ -2,10 +2,10 @@ package com.mindcandy.waterfall.config
 
 import java.util.UUID
 
-import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.{ LogStatus, TimeFrame }
+import org.joda.time.DateTime
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
 
@@ -17,7 +17,7 @@ import scala.slick.jdbc.meta.MTable
 trait TestData {
 
   val oneDropLog = DropLog(
-    UUID.fromString("1762d13c-23b4-40fc-a0d0-2fefa1893c72"), 1, new DateTime(2014, 8, 6, 9, 30, DateTimeZone.UTC), None, Some("a test message"), None)
+    UUID.fromString("1762d13c-23b4-40fc-a0d0-2fefa1893c72"), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
     None, "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
     Map[String, String]("configFile" -> "/adx/config.properties"))
