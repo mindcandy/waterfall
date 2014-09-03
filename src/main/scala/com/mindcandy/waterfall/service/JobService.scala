@@ -15,7 +15,7 @@ object JobServiceActor {
 
 class JobServiceActor(val jobDatabaseManager: ActorRef) extends Actor with JobService {
   def actorRefFactory = context
-  val ui = UserInterface()
+  val ui = UserInterface()//TODO I don't think this is the right place for this...
   def receive = runRoute(route ~ ui.route)
 }
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang='en' ng-cloakFFFF>
+<html lang='en' ng-cloak>
 <head>
     <title>Waterfall</title>
     <link rel="shortcut icon" type="image/x-icon" href="/assets/images/icon.png" />
@@ -9,7 +9,14 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body class='container-fluid'>
+<body>
+    <nav class="navbar navbar-default app-navbar" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#/jobs">Waterfall</a>
+            </div>
+        </div>
+    </nav>
     <div ng-view></div>
     <script src="/assets/js/lib/require.min.js" data-main="/assets/js/main"></script>
 </body>

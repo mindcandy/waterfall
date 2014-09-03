@@ -8,7 +8,8 @@ require.config({
     },
     'shim' : {
         'angularAMD': ['angular'],
-        'angular-route' : ['angular']
+        'angular-route' : ['angular'],
+        'bootstrap' : [ 'jquery']
     },
     deps: ['app']
 });

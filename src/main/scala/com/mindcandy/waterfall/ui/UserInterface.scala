@@ -18,11 +18,14 @@ case class UserInterface(implicit val actorRefFactory: ActorRefFactory) extends 
         getFromResource("public/index.html")
       } ~
       pathPrefix("assets") {
-        pathSuffixTest(".+?(css|html|js|png)$".r) {   _ =>
+        pathSuffixTest(".+?(css|html|js)$".r) {   _ =>
           getFromResourceDirectory("public")
         } ~
         pathSuffixTest(".+?(map)$".r) { _ =>
           respondWithMediaType(MediaTypes.`application/json`)(getFromResourceDirectory("public"))
+        } ~
+        pathSuffixTest(".+?(gif|png|ttf|woff)$".r) { _ ⇒
+          getFromResourceDirectory("public")
         }
       }
     }

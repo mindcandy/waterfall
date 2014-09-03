@@ -13,15 +13,7 @@ define([
                 controller: 'JobCtrl',
                 controllerUrl: 'controllers/job-ctrl'
             }))
-            .when("/logs", angularAMD.route({
-                templateUrl: 'assets/partials/logs.html',
-                controller: 'LogCtrl',
-                controllerUrl: 'controllers/log-ctrl'
-            }))
-            .when("/index", angularAMD.route({
-                templateUrl: 'assets/partials/index.html'
-            }))
-            .otherwise({redirectTo: "/index"});
+            .otherwise({redirectTo: "/jobs"});
     });
 
     return angularAMD.bootstrap(app);
