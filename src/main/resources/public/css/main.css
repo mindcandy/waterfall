@@ -30,3 +30,7 @@
 .statusButtonWidth {
     width: 95px;
 }
+
+.lastFetch {
+    float:right!important;
+}

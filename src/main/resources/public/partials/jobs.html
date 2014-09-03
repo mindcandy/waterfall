@@ -3,18 +3,17 @@
         <table class="table table-condensed table-hover">
             <thead>
                 <tr>
-                    <th>Job Id</th>
-                    <th>Name</th>
-                    <th>Drop Id</th>
-                    <th>Description</th>
-                    <th>Enabled</th>
-                    <th>Cron</th>
-                    <th>Time frame</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th><a href="" ng-click="predicate = 'jobID'; reverse=!reverse">Job Id</a></th>
+                    <th><a href="" ng-click="predicate = 'name'; reverse=!reverse">Name</a></th>
+                    <th><a href="" ng-click="predicate = 'dropUID'; reverse=!reverse">Drop Id</a></th>
+                    <th><a href="" ng-click="predicate = 'description'; reverse=!reverse">Description</a></th>
+                    <th><a href="" ng-click="predicate = 'enabled'; reverse=!reverse">Enabled</a></th>
+                    <th><a href="" ng-click="predicate = 'cron'; reverse=!reverse">Cron</a></th>
+                    <th><a href="" ng-click="predicate = 'timeFrame'; reverse=!reverse">Time frame</a></th>
+                    <th><a href="" ng-click="predicate = 'status'; reverse=!reverse">Status</a></th>
                 </tr>
             </thead>
-            <tbody ng-repeat="job in jobs">
+            <tbody ng-repeat="job in jobs | orderBy:predicate:reverse">
                 <tr>
                     <td>{{job.jobID}}</td>
                     <td>{{job.name}}</td>
@@ -23,7 +22,9 @@
                     <td>{{job.enabled}}</td>
                     <td>{{job.cron}}</td>
                     <td>{{job.timeFrame}}</td>
-                    <td class="statusWidth"><a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)" ng-click="show = !show">{{jobStateButtonText(job)}}</a></td>
+                    <td class="statusWidth">
+                        <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)" ng-click="show = !show">{{job.status}}</a>
+                    </td>
                 </tr>
                 <tr ng-show="show && job.logData.count != 0">
                     <td colspan="8">
@@ -51,7 +52,7 @@
                 </tr>
             </tbody>
             <tr>
-                <td colspan="8">Total: {{jobCount}}</td>
+                <td colspan="8">Job total: {{jobCount}} <i class="lastFetch">refreshed: {{lastFetch | date:'yyyy-MM-dd HH:mm:ss'}}</i></td>
             </tr>
         </table>
     </div>

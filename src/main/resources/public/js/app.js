@@ -8,12 +8,12 @@ define([
 
     app.config(function ($routeProvider) {
         $routeProvider
-            .when("/jobs", angularAMD.route({
+            .when("/", angularAMD.route({
                 templateUrl: 'assets/partials/jobs.html',
                 controller: 'JobCtrl',
                 controllerUrl: 'controllers/job-ctrl'
             }))
-            .otherwise({redirectTo: "/jobs"});
+            .otherwise({redirectTo: "/"});
     });
 
     return angularAMD.bootstrap(app);
