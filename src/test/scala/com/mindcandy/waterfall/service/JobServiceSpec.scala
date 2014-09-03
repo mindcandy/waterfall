@@ -11,7 +11,7 @@ import spray.http.StatusCode.int2StatusCode
 import spray.routing.{ MalformedQueryParamRejection, MalformedRequestContentRejection }
 import spray.testkit.Specs2RouteTest
 
-class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase with NoTimeConversions {
+/*class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase with NoTimeConversions {
   def is = s2"""
   JobService test
   ==============================================================================
@@ -222,3 +222,4 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
     (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
   }
 }
+*/

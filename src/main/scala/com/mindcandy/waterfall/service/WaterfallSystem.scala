@@ -8,7 +8,6 @@ import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.{ DropSupervisor, JobDatabaseManager, ScheduleManager }
 import com.mindcandy.waterfall.app.{ AbstractApplicationDaemon, ApplicationLifecycle }
 import com.mindcandy.waterfall.config.{ ConfigReader, DatabaseConfig }
-import com.mindcandy.waterfall.ui.UserInterface
 import com.typesafe.config.ConfigFactory
 import spray.can.Http
 
@@ -39,15 +38,13 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
       val db = new DB(databaseConfig)
       db.createIfNotExists(db.allTables)
       val dropFactory = loadClass(dropFactoryClass(config))
-      val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(db), "job-database-manager")
+      implicit val jobDatabaseManager = system.actorOf(JobDatabaseManager.props(db), "job-database-manager")
       val dropSupervisor = system.actorOf(DropSupervisor.props(jobDatabaseManager, dropFactory), "drop-supervisor")
       val scheduleManager = system.actorOf(ScheduleManager.props(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime(config), checkJobsPeriod(config)), "schedule-manager")
 
-      // user interface
-      val ui = UserInterface()
-
-      // create and start service actors
-      val service = system.actorOf(JobServiceActor.props(jobDatabaseManager, Some(ui.route)), "job-service")
+      // create the routes and start the service handler
+      val routes: Seq[ServiceRoute] = Seq(JobServiceRoute(), UserInterfaceRoute())
+      val service = system.actorOf(HandlerServiceActor.props(routes), "handler-service")
 
       implicit val timeout = Timeout(5.seconds)
       // start a new HTTP server on port 8080 with our service actor as the handler

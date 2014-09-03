@@ -40,7 +40,7 @@
                             </thead>
                             <tbody>
                                 <tr ng-repeat="log in job.logData.logs">
-                                    <td class="idWidth">{{log.logID}}</td>
+                                    <td class="idWidth">{{log.runID}}</td>
                                     <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
                                     <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
                                     <td>{{log.logOutput}}</td>

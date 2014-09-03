@@ -4,7 +4,7 @@ define(['app'], function (app) {
         $scope.fetchJobs = function() {
             $scope.lastFetch = new Date();
             console.log($scope.lastFetch + ": fetching jobs...");
-            $http.get('http://localhost:8080/jobs')
+            $http.get('/jobs')
                 .success(function (data) {
                     for (i = 0; i < data.jobs.length; i++) {
                         var jsonJob = data.jobs[i];
@@ -31,7 +31,7 @@ define(['app'], function (app) {
         };
 
         function fetchLogs(jsonJob) {
-            $http.get('http://localhost:8080/logs?jobID=' + jsonJob.jobID + "&period=168")
+            $http.get('/logs?jobID=' + jsonJob.jobID + "&period=168")
                 .success(function (data) {
                     jsonJob['logData'] = data;
                     jsonJob['status'] = jobStatus(jsonJob);
