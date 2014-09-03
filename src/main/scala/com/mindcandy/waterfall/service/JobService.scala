@@ -6,17 +6,15 @@ import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
-import com.mindcandy.waterfall.ui.UserInterface
 import spray.routing.{HttpService, Route}
 
 object JobServiceActor {
-  def props(jobDatabaseManager: ActorRef): Props = Props(new JobServiceActor(jobDatabaseManager))
+  def props(jobDatabaseManager: ActorRef, uiRoute: Option[Route] = None): Props = Props(new JobServiceActor(jobDatabaseManager, uiRoute))
 }
 
-class JobServiceActor(val jobDatabaseManager: ActorRef) extends Actor with JobService {
+class JobServiceActor(val jobDatabaseManager: ActorRef, uiRoute: Option[Route]) extends Actor with JobService {
   def actorRefFactory = context
-  val ui = UserInterface()//TODO I don't think this is the right place for this...
-  def receive = runRoute(route ~ ui.route)
+  def receive = runRoute(uiRoute.map(r => route ~ r).getOrElse(route))
 }
 
 trait JobService extends HttpService with ArgonautMarshallers {
