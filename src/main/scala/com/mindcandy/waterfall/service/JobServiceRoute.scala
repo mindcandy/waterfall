@@ -51,7 +51,7 @@ case class JobServiceRoute(implicit val actorRefFactory: ActorRefFactory, jobDat
       }
     } ~
     pathPrefix("logs") {
-      anyParams('status.as[LogStatus].?, 'period.as[Int].?, 'jobID.as[Int].?, 'dropUID.as[String].?) { (status, period, jobID, dropUID) =>
+      anyParams('status.as[LogStatus].?, 'period.as(String2PositiveInt).?, 'jobid.as(String2PositiveInt).?, 'dropuid.as[String].?) { (status, period, jobID, dropUID) =>
         get {
           produce(instanceOf[DropHistory]) { completionFunction =>
             context =>
