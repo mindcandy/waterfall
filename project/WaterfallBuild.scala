@@ -85,7 +85,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ defaultScalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ buildInfoSettings ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ scalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ buildInfoSettings ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",

@@ -3,8 +3,8 @@ package com.mindcandy.waterfall.service
 import com.github.nscala_time.time.Imports._
 import akka.actor.ActorRef
 import com.mindcandy.waterfall.TestDatabase
-import com.mindcandy.waterfall.actor.Protocol.{DropHistory, DropJob, DropJobList}
-import com.mindcandy.waterfall.actor.{JobDatabaseManager, TimeFrame}
+import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
+import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import org.specs2.ScalaCheck
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
