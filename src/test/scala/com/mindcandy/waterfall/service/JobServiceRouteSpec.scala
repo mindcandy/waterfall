@@ -16,11 +16,11 @@ import spray.testkit.Specs2RouteTest
 class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped with Specs2RouteTest with TestDatabase with ArgonautMarshallers with NoTimeConversions {
 
   def route = {
-    implicit val jobDatabaseManager: ActorRef = {
+    val jobDatabaseManager: ActorRef = {
       val db = testDatabaseWithJobsAndLogs
       system.actorOf(JobDatabaseManager.props(db))
     }
-    JobServiceRoute().route
+    JobServiceRoute(jobDatabaseManager).route
   }
 
   def is = s2"""

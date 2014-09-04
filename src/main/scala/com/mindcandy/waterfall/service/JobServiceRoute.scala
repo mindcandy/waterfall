@@ -8,7 +8,7 @@ import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
 import spray.routing.Route
 
-case class JobServiceRoute(implicit val actorRefFactory: ActorRefFactory, jobDatabaseManager: ActorRef) extends ServiceRoute with ArgonautMarshallers {
+case class JobServiceRoute(jobDatabaseManager: ActorRef)(implicit val actorRefFactory: ActorRefFactory) extends ServiceRoute with ArgonautMarshallers {
 
   val route: Route = {
     // format: OFF
