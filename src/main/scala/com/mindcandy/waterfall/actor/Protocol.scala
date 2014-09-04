@@ -76,7 +76,7 @@ object Protocol {
   implicit def DropJobCodecJson = casecodec8(DropJob.apply, DropJob.unapply)(
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
-    "logID", "jobID", "startTime", "endTime", "logOutput", "exception")
+    "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
     (dropJobList: DropJobList) =>
       ("count" := dropJobList.count) ->:

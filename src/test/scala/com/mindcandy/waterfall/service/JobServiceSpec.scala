@@ -171,7 +171,7 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
     responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString))
   }
 
-  def getLogsWithJobID = Get("/logs?jobID=1") ~> route ~> check {
+  def getLogsWithJobID = Get("/logs?jobid=1") ~> route ~> check {
     val dropHistory = responseAs[DropHistory]
     (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
   }
@@ -213,12 +213,12 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
   }
 
   def getLogsWithDropUID = Get("/logs?dropUID=EXRATE1") ~> route ~> check {
-    val dropHistory = responseAs[DropHistory]
-    (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
+    // TODO(deo.liang): support case insensitive params.
+    pending
   }
 
   def getLogsWithUnknownParameter = Get("/logs?dropuid=EXRATE1") ~> route ~> check {
-    // TODO(deo.liang): Ideally we report unknown parameters, currently it's ignored, e.g using lower case of paramater name.
-    pending
+    val dropHistory = responseAs[DropHistory]
+    (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
   }
 }

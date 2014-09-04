@@ -112,7 +112,7 @@ class DatabaseContainerSpec
       oneDropJob,
       DropJob(None, "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
     val numberOfInsert = db.insert(db.dropJobs, data)
-    val insertedData = db.db.withDynSession {
+    val insertedData = db.executeInSession {
       db.dropJobs.list
     }
 
@@ -127,7 +127,7 @@ class DatabaseContainerSpec
     db.create(db.dropJobs)
     db.insert(db.dropJobs, oneDropJob)
     db.create(db.dropJobs)
-    val insertedData = db.db.withDynSession {
+    val insertedData = db.executeInSession {
       db.dropJobs.list
     }
 
@@ -139,7 +139,7 @@ class DatabaseContainerSpec
     db.create(db.dropJobs)
     db.insert(db.dropJobs, oneDropJob)
     db.createIfNotExists(db.dropJobs)
-    val insertedData = db.db.withDynSession {
+    val insertedData = db.executeInSession {
       db.dropJobs.list
     }
 
@@ -149,7 +149,7 @@ class DatabaseContainerSpec
   def createTablesInNewDB = new group {
     val db = newDB
     db.createIfNotExists(db.allTables)
-    val isTablesCreated = db.db.withDynSession {
+    val isTablesCreated = db.executeInSession {
       !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
     }
@@ -162,7 +162,7 @@ class DatabaseContainerSpec
     db.create(db.allTables)
     db.insert(db.dropJobs, oneDropJob)
     db.create(db.allTables)
-    val isTablesCreated = db.db.withDynSession {
+    val isTablesCreated = db.executeInSession {
       !MTable.getTables(db.dropLogs.baseTableRow.tableName).list.isEmpty &&
         !MTable.getTables(db.dropJobs.baseTableRow.tableName).list.isEmpty
     }

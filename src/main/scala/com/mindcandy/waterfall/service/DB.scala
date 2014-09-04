@@ -74,7 +74,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   }
 
   val dropJobs = TableQuery[DropJobs]
-  val dropJobsSorted = dropJobs.sortBy(_.jobID)
+  val dropJobsSorted = dropJobs.sortBy(job => (job.dropUID, job.jobID))
   val allTables = Seq(dropJobs, dropLogs)
 
   def maybeExists(dropJob: DropJob): Option[DropJob] =
@@ -106,10 +106,10 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
 
   def selectDropLog(jobID: Option[JobID], period: Option[Int], status: Option[LogStatus.LogStatus], dropUID: Option[DropUID]): List[DropLog] = {
     type LogQuery = Query[(DropLogs, DropJobs), (DropLog, DropJob), Seq]
-    val logJoin = (for {
+    val logJoin = for {
       job <- dropJobs
       log <- dropLogsSorted if job.jobID === log.jobID
-    } yield (log, job))
+    } yield (log, job)
 
     val filterByTime: Option[LogQuery => LogQuery] = period.map(p => { q: LogQuery =>
       val timeFrom = DateTime.now - p.hour
