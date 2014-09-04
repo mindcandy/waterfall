@@ -80,6 +80,7 @@ object WaterfallBuild extends Build {
     if (vcsBuildNumber == null) "" else vcsBuildNumber
   }
 
+  lazy val forkedJVMOption = Seq("-Duser.timezone=UTC")
 
   lazy val waterfall = Project(
     id = "waterfall",
@@ -103,7 +104,14 @@ object WaterfallBuild extends Build {
       // build info
       sourceGenerators in Compile <+= buildInfo,
       buildInfoKeys := Seq[BuildInfoKey](name, version),
-      buildInfoPackage := "com.mindcandy.waterfall.info"
+      buildInfoPackage := "com.mindcandy.waterfall.info",
+      // forked JVM
+      fork in run := true,
+      fork in Test := true,
+      fork in testOnly := true,
+      javaOptions in run ++= forkedJVMOption,
+      javaOptions in Test ++= forkedJVMOption,
+      javaOptions in testOnly ++= forkedJVMOption
     )
   ).configs( IntegrationTest )
    .settings( ScoverageSbtPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
