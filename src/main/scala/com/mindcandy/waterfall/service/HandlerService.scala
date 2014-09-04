@@ -12,7 +12,7 @@ object HandlerServiceActor {
 }
 
 class HandlerServiceActor(routes: Seq[ServiceRoute]) extends Actor with HttpService {
-  val aggregatedRoutes = routes.map(_.route).reduceLeft((working, directive) ⇒ working ~ directive)
+  val aggregatedRoutes = routes.map(_.route).reduceLeft((working, directive) ⇒ working ~ directive) ~ reject()
   implicit val actorRefFactory = context
   def receive = runRoute(aggregatedRoutes)
 }
