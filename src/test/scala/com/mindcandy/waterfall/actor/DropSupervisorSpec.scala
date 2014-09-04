@@ -7,16 +7,17 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ StartAndFinishDropLog, FinishDropLog, StartDropLog }
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartAndFinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.Protocol.DropJob
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
 
 import scala.util.{ Failure, Success }
 
-class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec"))
+class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", ConfigFactory.load()))
     with SpecificationLike
     with NoTimeConversions {
   def is = s2"""

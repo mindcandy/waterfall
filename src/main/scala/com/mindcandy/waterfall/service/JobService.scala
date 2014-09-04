@@ -60,8 +60,8 @@ trait JobService extends HttpService with ArgonautMarshallers {
         }
       }
     } ~
-    pathPrefix("logs") {
-      anyParams('status.as[LogStatus].?, 'period.as[Int].?, 'jobID.as[Int].?, 'dropUID.as[String].?) { (status, period, jobID, dropUID) =>
+    path("logs") {
+      anyParams('status.as[LogStatus].?, 'period.as(String2PositiveInt).?, 'jobid.as(String2PositiveInt).?, 'dropuid.as[String].?) { (status, period, jobID, dropUID) =>
         get {
           produce(instanceOf[DropHistory]) { completionFunction =>
             context =>

@@ -14,6 +14,13 @@ import scala.util.{ Failure, Success, Try }
 object ScheduleManager {
   case class CheckJobs()
 
+  def calculateNextFireTime(cronString: String): Try[FiniteDuration] = Try {
+    val cronExpression = new CronExpression(cronString)
+    val now = DateTime.now
+    val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
+    (now to next).millis millis
+  }
+
   def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration): Props =
     Props(new ScheduleManager(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime, checkJobsPeriod))
 }
@@ -37,11 +44,10 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       log.debug(s"Received DropJobList($jobs)")
       val newJobIDs = manageScheduledJobs(jobs)
       for {
-        (jobID, job) <- jobs
-        if (newJobIDs contains jobID)
-        cancellable <- scheduleJob(jobID, job)
+        jobID <- newJobIDs
+        cancellable <- scheduleJob(jobID, jobs(jobID))
       } yield {
-        scheduledJobs += (jobID -> (job, cancellable))
+        scheduledJobs += (jobID -> (jobs(jobID), cancellable))
       }
     }
     case startJob: StartJob => {
@@ -76,12 +82,5 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
         None
       }
     }
-  }
-
-  def calculateNextFireTime(cronString: String): Try[FiniteDuration] = Try {
-    val cronExpression = new CronExpression(cronString)
-    val now = DateTime.now
-    val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
-    ((now to next).millis millis)
   }
 }

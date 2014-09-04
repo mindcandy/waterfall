@@ -5,8 +5,8 @@ import java.util.UUID
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ StartAndFinishDropLog, FinishDropLog, StartDropLog }
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, JobID, RunUID }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartAndFinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormat

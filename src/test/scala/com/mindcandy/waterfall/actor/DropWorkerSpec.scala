@@ -7,6 +7,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.mindcandy.waterfall.TestWaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
+import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
@@ -14,7 +15,7 @@ import org.specs2.time.NoTimeConversions
 import scala.concurrent.duration._
 
 class DropWorkerSpec
-    extends TestKit(ActorSystem("DropWorkerSpec"))
+    extends TestKit(ActorSystem("DropWorkerSpec", ConfigFactory.load()))
     with SpecificationLike
     with NoTimeConversions {
   def is = s2"""
