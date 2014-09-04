@@ -1,0 +1,36 @@
+.app-navbar {
+    background-color: #333333;
+    border-radius: 3px 3px 3px 3px;
+}
+
+.running {
+    color: #449d44;
+}
+
+.disabled {
+    color: #888888;
+}
+
+.error {
+    color: #BB2020;
+}
+
+.dateWidth {
+    width: 10%;
+}
+
+.idWidth {
+    width: 20%;
+}
+
+.statusWidth {
+    width: 5%;
+}
+
+.statusButtonWidth {
+    width: 95px;
+}
+
+.lastFetch {
+    float:right!important;
+}

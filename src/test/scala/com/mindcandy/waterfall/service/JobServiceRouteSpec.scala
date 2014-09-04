@@ -1,9 +1,11 @@
 package com.mindcandy.waterfall.service
 
 import com.github.nscala_time.time.Imports._
+import akka.actor.ActorRef
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
 import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
+import org.specs2.ScalaCheck
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
 import org.specs2.time.NoTimeConversions
@@ -11,9 +13,18 @@ import spray.http.StatusCode.int2StatusCode
 import spray.routing.{ MalformedQueryParamRejection, MalformedRequestContentRejection }
 import spray.testkit.Specs2RouteTest
 
-class JobServiceSpec extends Specification with Grouped with Specs2RouteTest with JobService with TestDatabase with NoTimeConversions {
+class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped with Specs2RouteTest with TestDatabase with ArgonautMarshallers with NoTimeConversions {
+
+  def route = {
+    val jobDatabaseManager: ActorRef = {
+      val db = testDatabaseWithJobsAndLogs
+      system.actorOf(JobDatabaseManager.props(db))
+    }
+    JobServiceRoute(jobDatabaseManager).route
+  }
+
   def is = s2"""
-  JobService test
+  JobServiceRoute test
   ==============================================================================
     get /jobs ${getJobs}
     post /jobs with no header nor body ${postJobs}
@@ -39,12 +50,6 @@ class JobServiceSpec extends Specification with Grouped with Specs2RouteTest wit
     GET /logs?dropUID=EXRATE1 ${getLogsWithDropUID}
     GET /logs?dropuid=EXRATE1 ${getLogsWithUnknownParameter}
   """
-  def actorRefFactory = system
-
-  def jobDatabaseManager = {
-    val db = testDatabaseWithJobsAndLogs
-    system.actorOf(JobDatabaseManager.props(db))
-  }
 
   def getJobs = Get("/jobs") ~> route ~> check {
     responseAs[DropJobList] === DropJobList(

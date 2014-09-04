@@ -1,0 +1,59 @@
+<div class='row'>
+    <div class="col-md-10 col-lg-offset-1">
+        <table class="table table-condensed table-hover">
+            <thead>
+                <tr>
+                    <th><a href="" ng-click="predicate = 'jobID'; reverse=!reverse">Job Id</a></th>
+                    <th><a href="" ng-click="predicate = 'name'; reverse=!reverse">Name</a></th>
+                    <th><a href="" ng-click="predicate = 'dropUID'; reverse=!reverse">Drop Id</a></th>
+                    <th><a href="" ng-click="predicate = 'description'; reverse=!reverse">Description</a></th>
+                    <th><a href="" ng-click="predicate = 'enabled'; reverse=!reverse">Enabled</a></th>
+                    <th><a href="" ng-click="predicate = 'cron'; reverse=!reverse">Cron</a></th>
+                    <th><a href="" ng-click="predicate = 'timeFrame'; reverse=!reverse">Time frame</a></th>
+                    <th><a href="" ng-click="predicate = 'status'; reverse=!reverse">Status</a></th>
+                </tr>
+            </thead>
+            <tbody ng-repeat="job in jobs | orderBy:predicate:reverse">
+                <tr>
+                    <td>{{job.jobID}}</td>
+                    <td>{{job.name}}</td>
+                    <td>{{job.dropUID}}</td>
+                    <td>{{job.description}}</td>
+                    <td>{{job.enabled}}</td>
+                    <td>{{job.cron}}</td>
+                    <td>{{job.timeFrame}}</td>
+                    <td class="statusWidth">
+                        <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)" ng-click="show = !show">{{job.status}}</a>
+                    </td>
+                </tr>
+                <tr ng-show="show && job.logData.count != 0">
+                    <td colspan="8">
+                        <table class="table table-condensed table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Log Id</th>
+                                    <th>Start time</th>
+                                    <th>End time</th>
+                                    <th>Output</th>
+                                    <th>Exception</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="log in job.logData.logs">
+                                    <td class="idWidth">{{log.runID}}</td>
+                                    <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                                    <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                                    <td>{{log.logOutput}}</td>
+                                    <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+            <tr>
+                <td colspan="8">Job total: {{jobCount}} <i class="lastFetch">refreshed: {{lastFetch | date:'yyyy-MM-dd HH:mm:ss'}}</i></td>
+            </tr>
+        </table>
+    </div>
+</div>

@@ -1,26 +1,16 @@
 package com.mindcandy.waterfall.service
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{ ActorRef, ActorRefFactory }
 import argonaut.Argonaut._
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
-import spray.routing.HttpService
+import spray.routing.Route
 
-object JobServiceActor {
-  def props(jobDatabaseManager: ActorRef): Props = Props(new JobServiceActor(jobDatabaseManager))
-}
+case class JobServiceRoute(jobDatabaseManager: ActorRef)(implicit val actorRefFactory: ActorRefFactory) extends ServiceRoute with ArgonautMarshallers {
 
-class JobServiceActor(val jobDatabaseManager: ActorRef) extends Actor with JobService {
-  def actorRefFactory = context
-  def receive = runRoute(route)
-}
-
-trait JobService extends HttpService with ArgonautMarshallers {
-  def jobDatabaseManager: ActorRef
-
-  val route = {
+  val route: Route = {
     // format: OFF
     pathPrefix("jobs") {
       pathEndOrSingleSlash {
@@ -60,7 +50,7 @@ trait JobService extends HttpService with ArgonautMarshallers {
         }
       }
     } ~
-    path("logs") {
+    pathPrefix("logs") {
       anyParams('status.as[LogStatus].?, 'period.as(String2PositiveInt).?, 'jobid.as(String2PositiveInt).?, 'dropuid.as[String].?) { (status, period, jobID, dropUID) =>
         get {
           produce(instanceOf[DropHistory]) { completionFunction =>
