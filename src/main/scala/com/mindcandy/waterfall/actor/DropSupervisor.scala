@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartAndFinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
@@ -17,6 +17,8 @@ import scala.util.{ Failure, Success, Try }
 object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
   case class JobResult(runUID: RunUID, result: Try[Unit])
+  case class StartJobImmediately(job: DropJob)
+  case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
     case DAY_TODAY => Some(DateTime.now)
@@ -37,6 +39,16 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   def receive = {
     case StartJob(jobID, job) => runJob(jobID, job)
     case JobResult(runUID, result) => processResult(runUID, result)
+    case RunJobImmediately(jobID, f) => {
+      log.debug(s"Got Run job:$jobID immediately request")
+      jobDatabaseManager ! GetJobToRun(jobID, f)
+    }
+    case GetJobToRunResult(maybeJob, f) => {
+      maybeJob.map { job =>
+        self ! StartJob(job.jobID.getOrElse(-1), job)
+      }
+      f(maybeJob)
+    }
   }
 
   def processResult(runUID: RunUID, result: Try[Unit]) = {

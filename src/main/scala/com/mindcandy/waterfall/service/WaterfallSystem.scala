@@ -43,7 +43,7 @@ case class WaterfallSystem() extends ApplicationLifecycle with ConfigReader with
       val scheduleManager = system.actorOf(ScheduleManager.props(jobDatabaseManager, dropSupervisor, dropFactory, maxScheduleTime(config), checkJobsPeriod(config)), "schedule-manager")
 
       // create the routes and start the service handler
-      val routes: Seq[ServiceRoute] = Seq(JobServiceRoute(jobDatabaseManager), UserInterfaceRoute())
+      val routes: Seq[ServiceRoute] = Seq(JobServiceRoute(jobDatabaseManager, dropSupervisor), UserInterfaceRoute())
       val service = system.actorOf(HandlerServiceActor.props(routes), "handler-service")
 
       implicit val timeout = Timeout(5.seconds)
