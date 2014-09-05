@@ -104,6 +104,9 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
   }
 
+  val defaultSelectDropLogLimit = 100
+  val defaultSelectDropLogOffset = 0
+
   def selectDropLog(jobID: Option[JobID], period: Option[Int], status: Option[LogStatus.LogStatus], dropUID: Option[DropUID], limit: Option[Int], offset: Option[Int]): List[DropLog] = {
     type LogQuery = Query[(DropLogs, DropJobs), (DropLog, DropJob), Seq]
     val logJoin = for {
@@ -131,18 +134,17 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
         case LogStatus.RUNNING => q.filter { case (log, job) => log.endTime.isEmpty }
       }
     })
-    val filterByOffset: Option[LogQuery => LogQuery] = offset.map(o => { q: LogQuery =>
-      q.drop(o)
-    })
-    val filterByLimit: Option[LogQuery => LogQuery] = limit.map(l => { q: LogQuery =>
-      q.take(l)
-    })
 
     val allFilters: List[LogQuery => LogQuery] = List(
-      filterByTime, filterByJobID, filterByDropUID, filterByStatus, filterByOffset, filterByLimit
+      filterByTime, filterByJobID, filterByDropUID, filterByStatus
     ).flatten
 
     // Apply the functions, if any, to the query object
-    allFilters.foldLeft(logJoin)((logs, func) => func(logs)).list.map(_._1)
+    allFilters
+      .foldLeft(logJoin)((logs, func) => func(logs))
+      .drop(offset.getOrElse(defaultSelectDropLogOffset))
+      .take(limit.getOrElse(defaultSelectDropLogLimit))
+      .list
+      .map(_._1)
   }
 }
