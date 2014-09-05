@@ -51,11 +51,17 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef)(implicit val actorRefFa
       }
     } ~
     pathPrefix("logs") {
-      anyParams('status.as[LogStatus].?, 'period.as(String2PositiveInt).?, 'jobid.as(String2PositiveInt).?, 'dropuid.as[String].?) { (status, period, jobID, dropUID) =>
+      anyParams(
+          'status.as[LogStatus].?,
+          'period.as(String2PositiveInt).?,
+          'jobid.as(String2PositiveInt).?,
+          'dropuid.as[String].?,
+          'limit.as(String2NonNegativeInt).?,
+          'offset.as(String2NonNegativeInt).?) { (status, period, jobID, dropUID, limit, offset) =>
         get {
           produce(instanceOf[DropHistory]) { completionFunction =>
             context =>
-              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, dropUID, completionFunction)
+              jobDatabaseManager ! GetLogsForCompletion(jobID, period, status, dropUID, limit, offset, completionFunction)
           }
         }
       }

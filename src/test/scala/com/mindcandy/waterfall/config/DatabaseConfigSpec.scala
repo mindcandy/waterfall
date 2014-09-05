@@ -189,28 +189,28 @@ class DatabaseContainerSpec
 
   def selectDropLog = new group {
     val db = testDatabaseWithJobsAndLogs
-    e1 := db.executeInSession(db.selectDropLog(None, None, None, None)).size must_== 16
+    e1 := db.executeInSession(db.selectDropLog(None, None, None, None, None, None)).size must_== 16
     e2 := {
-      val result = db.executeInSession(db.selectDropLog(Some(1), None, None, None))
+      val result = db.executeInSession(db.selectDropLog(Some(1), None, None, None, None, None))
       (result.size must_== 8) and (result.count(_.jobID == 1) must_== 8)
     }
-    e3 := db.executeInSession(db.selectDropLog(None, Some(1), None, None)).size must_== 8
-    e4 := db.executeInSession(db.selectDropLog(None, Some(10), None, None)).size must_== 16
+    e3 := db.executeInSession(db.selectDropLog(None, Some(1), None, None, None, None)).size must_== 8
+    e4 := db.executeInSession(db.selectDropLog(None, Some(10), None, None, None, None)).size must_== 16
     e5 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.FAILURE), None))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.FAILURE), None, None, None))
       (result.size must_== 8) and (result.count(_.exception.isDefined) must_== 8)
     }
     e6 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.SUCCESS), None))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.SUCCESS), None, None, None))
       (result.size must_== 8) and (result.count(_.exception.isEmpty) must_== 8)
     }
-    e7 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(LogStatus.FAILURE), None)).size must_== 2
+    e7 := db.executeInSession(db.selectDropLog(Some(1), Some(1), Some(LogStatus.FAILURE), None, None, None)).size must_== 2
     e8 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.RUNNING), None))
+      val result = db.executeInSession(db.selectDropLog(None, None, Some(LogStatus.RUNNING), None, None, None))
       (result.size must_== 8) and (result.count(_.endTime.isEmpty) must_== 8)
     }
     e9 := {
-      val result = db.executeInSession(db.selectDropLog(None, None, None, Some("EXRATE1")))
+      val result = db.executeInSession(db.selectDropLog(None, None, None, Some("EXRATE1"), None, None))
       (result.size must_== 8) and (result.count(_.jobID == 1) must_== 8)
     }
   }

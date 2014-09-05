@@ -49,6 +49,8 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     get /logs?status=unknown wrong status ${getLogsWithUnknownStatus}
     GET /logs?dropUID=EXRATE1 ${getLogsWithDropUID}
     GET /logs?dropuid=EXRATE1 ${getLogsWithUnknownParameter}
+    GET /logs?limit=10 ${getLogsWithLimit}
+    GET /logs?offset=3 ${getLogsWithOffset}
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
@@ -225,5 +227,13 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   def getLogsWithUnknownParameter = Get("/logs?dropuid=EXRATE1") ~> route ~> check {
     val dropHistory = responseAs[DropHistory]
     (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
+  }
+
+  def getLogsWithLimit = Get("/logs?limit=10") ~> route ~> check {
+    responseAs[DropHistory].count === 10
+  }
+
+  def getLogsWithOffset = Get("/logs?offset=3") ~> route ~> check {
+    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString)).drop(3)
   }
 }

@@ -114,4 +114,11 @@ object Protocol {
       case _ => Left(MalformedContent(s"'$value' is not a valid positive integer"))
     }
   }
+
+  val String2NonNegativeInt = new Deserializer[String, Int] {
+    def apply(value: String) = Try(value.toInt) match {
+      case Success(integer) if integer >= 0 => Right(integer)
+      case _ => Left(MalformedContent(s"'$value' is not a valid non-negative integer"))
+    }
+  }
 }

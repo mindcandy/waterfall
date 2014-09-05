@@ -18,7 +18,7 @@ object JobDatabaseManager {
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
-  case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], completionFunction: DropHistory => Unit)
+  case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], limit: Option[Int], offset: Option[Int], completionFunction: DropHistory => Unit)
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
   case class FinishDropLog(runUID: UUID, endTime: DateTime, logOutput: Option[String], exception: Option[Throwable])
@@ -75,9 +75,9 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"Insert or update a job $dropJob")
       f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
     }
-    case GetLogsForCompletion(jobID, time, status, dropUID, f) => {
+    case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID")
-      val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID))
+      val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID, limit, offset))
       f(DropHistory(logs))
     }
   }

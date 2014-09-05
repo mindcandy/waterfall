@@ -104,7 +104,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     }
   }
 
-  def selectDropLog(jobID: Option[JobID], period: Option[Int], status: Option[LogStatus.LogStatus], dropUID: Option[DropUID]): List[DropLog] = {
+  def selectDropLog(jobID: Option[JobID], period: Option[Int], status: Option[LogStatus.LogStatus], dropUID: Option[DropUID], limit: Option[Int], offset: Option[Int]): List[DropLog] = {
     type LogQuery = Query[(DropLogs, DropJobs), (DropLog, DropJob), Seq]
     val logJoin = for {
       job <- dropJobs
@@ -131,9 +131,15 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
         case LogStatus.RUNNING => q.filter { case (log, job) => log.endTime.isEmpty }
       }
     })
+    val filterByOffset: Option[LogQuery => LogQuery] = offset.map(o => { q: LogQuery =>
+      q.drop(o)
+    })
+    val filterByLimit: Option[LogQuery => LogQuery] = limit.map(l => { q: LogQuery =>
+      q.take(l)
+    })
 
     val allFilters: List[LogQuery => LogQuery] = List(
-      filterByTime, filterByJobID, filterByDropUID, filterByStatus
+      filterByTime, filterByJobID, filterByDropUID, filterByStatus, filterByOffset, filterByLimit
     ).flatten
 
     // Apply the functions, if any, to the query object
