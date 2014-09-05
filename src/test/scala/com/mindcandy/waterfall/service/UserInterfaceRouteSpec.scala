@@ -16,8 +16,8 @@ class UserInterfaceRouteSpec extends Specification with ScalaCheck with Grouped 
   ==============================================================================
     get / returns the index page ${getUIByRootPath}
     get /ui returns the index page ${getUIByUiPath}
-    get /assets/*.css returns css assets ${getUIAssests}
-    get /assets/*.map returns json assets ${getJsonMapAssests}
+    get /assets/*.css returns css assets ${getUIAssets}
+    get /assets/*.map returns json assets ${getJsonMapAssets}
   """
 
   def getUIByRootPath = Get("/") ~> route ~> check {
@@ -32,12 +32,12 @@ class UserInterfaceRouteSpec extends Specification with ScalaCheck with Grouped 
       (mediaType must be_==(MediaTypes.`text/html`))
   }
 
-  def getUIAssests = Get("/assets/css/main.css") ~> route ~> check {
+  def getUIAssets = Get("/assets/css/main.css") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
       (mediaType must be_==(MediaTypes.`text/css`))
   }
 
-  def getJsonMapAssests = Get("/assets/bootstrap/css/bootstrap.css.map") ~> route ~> check {
+  def getJsonMapAssets = Get("/assets/bootstrap/css/bootstrap.css.map") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
       (mediaType must be_==(MediaTypes.`application/json`))
   }
