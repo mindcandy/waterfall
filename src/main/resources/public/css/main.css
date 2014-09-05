@@ -25,6 +25,7 @@
 
 .statusWidth {
     width: 5%;
+    height: 40px!important;
 }
 
 .statusButtonWidth {
@@ -32,5 +33,15 @@
 }
 
 .lastFetch {
-    float:right!important;
+    float: right!important;
+}
+
+.selected {
+    background-color: #E0F2F7;
+}
+
+.caret.caret-reversed {
+    border-top-width: 0;
+    border-bottom: 4px solid #2a6496;
+    color: #2a6496;
 }

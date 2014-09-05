@@ -1,6 +1,10 @@
 define(['app'], function (app) {
     app.controller('JobCtrl', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
 
+        $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
+        $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
+
+        /** fetch all jobs and it's logs */
         $scope.fetchJobs = function() {
             $scope.lastFetch = new Date();
             console.log($scope.lastFetch + ": fetching jobs...");
@@ -18,20 +22,13 @@ define(['app'], function (app) {
                     $scope.jobs = data.jobs || "Request failed";
                     console.error("failed to get jobs!");
                 });
-
-            $timeout(function() { $scope.fetchJobs(); }, $scope.refreshInterval * 5000);
+            // perform refresh after interval
+            $timeout(function() { $scope.fetchJobs(); }, $scope.refreshInterval);
         };
 
-        $scope.jobStateButtonClass = function(job) {
-            if(jobIsRunning(job)) return "btn-info";
-            else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "btn-default";
-            else if(jobIsDisabled(job)) return "btn-default";
-            else if(jobHasErrorLogs(job)) return "btn-danger";
-            else return "btn-success";
-        };
-
+        /* fetch the logs for the given job */
         function fetchLogs(jsonJob) {
-            $http.get('/logs?jobID=' + jsonJob.jobID + "&period=168")
+            $http.get('/logs?jobid=' + jsonJob.jobID + "&period=168&limit=5")
                 .success(function (data) {
                     jsonJob['logData'] = data;
                     jsonJob['status'] = jobStatus(jsonJob);
@@ -41,6 +38,27 @@ define(['app'], function (app) {
                 });
             return jsonJob;
         }
+
+        /** job status button display */
+        $scope.jobStateButtonClass = function(job) {
+            if(jobIsRunning(job)) return "btn-info";
+            else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "btn-default";
+            else if(jobIsDisabled(job)) return "btn-default";
+            else if(jobHasErrorLogs(job)) return "btn-danger";
+            else return "btn-success";
+        };
+
+        /* trackes jobs who's logs are being viewed so that those logs are again viewed after refresh */
+        $scope.jobLogClicked = function(job) {
+            var index = $scope.jobLogsBeingViewed.indexOf(job.jobID);
+            if (index == -1) $scope.jobLogsBeingViewed.push(job.jobID);
+            else $scope.jobLogsBeingViewed.splice(index, 1);
+        };
+
+        /* determines whether or not the given job logs are viewable */
+        $scope.jobLogViewable = function(job) {
+             return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData != null && job.logData.count != 0;
+        };
 
         function jobStatus(job) {
             if(jobIsRunning(job)) return "Running";
@@ -62,7 +80,7 @@ define(['app'], function (app) {
             return job.logData != null && job.logData.logs[0] != null && job.logData.logs[0].exception != null;
         }
 
-        $scope.refreshInterval = 60;
+        /* run initial lookup */
         $scope.fetchJobs();
     }]);
 });
