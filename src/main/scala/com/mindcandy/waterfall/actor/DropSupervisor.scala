@@ -27,11 +27,11 @@ object DropSupervisor {
     case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
   }
 
-  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
-    Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
+  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker, allowJobsRunInParallel: Boolean = false): Props =
+    Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory, allowJobsRunInParallel))
 }
 
-class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
+class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory, val allowJobsRunInParallel: Boolean) extends Actor with ActorLogging {
   import com.mindcandy.waterfall.actor.DropSupervisor._
 
   private[this] var runningJobs = Map[RunUID, (ActorRef, DateTime, JobID)]()
@@ -79,15 +79,13 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   def runJob(jobID: JobID, job: DropJob) = {
     val runUID = UUID.randomUUID()
     val startTime = DateTime.now
-    val runningJobID = runningJobs.values.map(_._3).toSet
-    runningJobID.contains(jobID) match {
-      case true => {
-        // TODO(deo.liang): flag this to allow paralleled running
+    allowJobsRunInParallel match {
+      case false if runningJobs.values.map(_._3).toSet.contains(jobID) => {
         val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running, run $runUID cancelled"
         log.error(error)
         jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
-      case false => {
+      case _ => {
         dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor

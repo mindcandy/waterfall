@@ -16,6 +16,7 @@ class ConfigReaderSpec extends Specification with Grouped with ConfigReader {
     read databaseURL ${databaseURLReader}
     read databaseUsername ${databaseUsernameReader}
     read databasePassword ${databasePasswordReader}
+    read allowJobsRunInParallel ${allowJobsRunInParallelReader}
   """
 
   val config = ConfigFactory.parseString(
@@ -29,6 +30,7 @@ class ConfigReaderSpec extends Specification with Grouped with ConfigReader {
       |  maxScheduleTimeInMinutes: 60
       |  checkJobsPeriodInMinutes: 1
       |  dropFactoryClass: com.mindcandy.waterfall.TestWaterfallDropFactory
+      |  allowJobsRunInParallel: false
       |}
     """.stripMargin
   )
@@ -44,4 +46,6 @@ class ConfigReaderSpec extends Specification with Grouped with ConfigReader {
   def databaseUsernameReader = databaseUsername(config) must_== "user"
 
   def databasePasswordReader = databasePassword(config) must_== "pw"
+
+  def allowJobsRunInParallelReader = allowJobsRunInParallel(config) must beFalse
 }

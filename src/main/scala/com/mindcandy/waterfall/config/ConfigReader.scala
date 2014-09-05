@@ -23,4 +23,8 @@ trait ConfigReader {
   def databasePassword: Reader[Config, String] = Reader(
     config => config.getString("waterfall.database.password")
   )
+
+  def allowJobsRunInParallel: Reader[Config, Boolean] = Reader(
+    config => config.getBoolean("waterfall.allowJobsRunInParallel")
+  )
 }
