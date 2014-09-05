@@ -137,7 +137,7 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobsAndLogs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, GetLogsForCompletion(None, None, None, None, testFunction))
+    probe.send(actor, GetLogsForCompletion(None, None, None, None, None, None, testFunction))
     probe.expectMsgClass(classOf[DropHistory]).logs must_== testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString))
   }
 
