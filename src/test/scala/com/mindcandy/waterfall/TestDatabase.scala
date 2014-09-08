@@ -14,8 +14,8 @@ trait TestDatabase {
   def newDB = new DB(DatabaseConfig(s"jdbc:h2:mem:test${UUID.randomUUID()};DB_CLOSE_DELAY=-1"))
 
   def testDropJobs = List(
-    DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
-    DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false),
+    DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), true)
   )
 
   // As the actual reference time in the method may be just a few seconds

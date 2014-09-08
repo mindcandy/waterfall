@@ -68,8 +68,9 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     def timeFrame = column[TimeFrame.TimeFrame]("time_frame", O.NotNull)
     // configuration stored as a json string
     def configuration = column[Map[String, String]]("configuration", O.NotNull)
+    def parallel = column[Boolean]("parallel", O.NotNull)
     def * =
-      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration) <>
+      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel) <>
         (DropJob.tupled, DropJob.unapply)
   }
 

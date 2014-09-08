@@ -27,11 +27,11 @@ object DropSupervisor {
     case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
   }
 
-  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker, allowJobsRunInParallel: Boolean = false): Props =
-    Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory, allowJobsRunInParallel))
+  def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
+    Props(new DropSupervisor(jobDatabaseManager, dropFactory, dropWorkerFactory))
 }
 
-class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory, val allowJobsRunInParallel: Boolean) extends Actor with ActorLogging {
+class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory) extends Actor with ActorLogging {
   import com.mindcandy.waterfall.actor.DropSupervisor._
 
   private[this] var runningJobs = Map[RunUID, (ActorRef, DateTime, JobID)]()
@@ -79,7 +79,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   def runJob(jobID: JobID, job: DropJob) = {
     val runUID = UUID.randomUUID()
     val startTime = DateTime.now
-    allowJobsRunInParallel match {
+    job.parallel match {
       case false if runningJobs.values.map(_._3).toSet.contains(jobID) => {
         val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running, run $runUID cancelled"
         log.error(error)

@@ -43,7 +43,7 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
           }
         } ~
         path("run") {
-          get {
+          post {
             // force a job to run
             produce(instanceOf[Option[DropJob]]) { completionFunction =>
               context =>

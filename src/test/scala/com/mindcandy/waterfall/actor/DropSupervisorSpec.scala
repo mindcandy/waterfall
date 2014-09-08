@@ -120,8 +120,9 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
-    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref), true))
-    val request = createStartJob(TimeFrame.DAY_YESTERDAY)
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val startJob = createStartJob(TimeFrame.DAY_YESTERDAY)
+    val request = startJob.copy(job = startJob.job.copy(parallel = true))
 
     probe.send(actor, request)
     worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
