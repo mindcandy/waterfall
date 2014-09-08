@@ -17,7 +17,6 @@ import scala.util.{ Failure, Success, Try }
 object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
   case class JobResult(runUID: RunUID, result: Try[Unit])
-  case class StartJobImmediately(job: DropJob)
   case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
@@ -81,13 +80,13 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   def runJob(jobID: JobID, job: DropJob) = {
     val runUID = UUID.randomUUID()
     val startTime = DateTime.now
-    job.parallel match {
-      case false if runningJobs.values.map(_._3).toSet.contains(jobID) => {
+    (job.parallel, runningJobs.values.map(_._3).toSet.contains(jobID)) match {
+      case (false, true) => {
         val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running, run $runUID cancelled"
         log.error(error)
         jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
-      case _ => {
+      case (_, _) => {
         dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor
