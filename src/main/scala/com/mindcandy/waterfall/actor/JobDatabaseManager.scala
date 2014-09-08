@@ -35,9 +35,9 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
   import scala.slick.driver.JdbcDriver.simple._
 
   def receive = {
-    case GetJobForCompletion(jobId, f) => {
-      log.debug(s"job lookup for id $jobId")
-      f(db.executeInSession(db.dropJobs.filter(_.jobID === jobId).firstOption))
+    case GetJobForCompletion(jobID, f) => {
+      log.debug(s"job lookup for jobID:$jobID with completion")
+      f(db.executeInSession(db.dropJobs.filter(_.jobID === jobID).firstOption))
     }
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
@@ -76,7 +76,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
-      log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID")
+      log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")
       val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID, limit, offset))
       f(DropHistory(logs))
     }

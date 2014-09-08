@@ -1,10 +1,10 @@
 package com.mindcandy.waterfall.service
 
-import com.github.nscala_time.time.Imports._
 import akka.actor.ActorRef
-import com.mindcandy.waterfall.TestDatabase
+import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
-import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
+import com.mindcandy.waterfall.actor.{ DropSupervisor, JobDatabaseManager, TimeFrame }
+import com.mindcandy.waterfall.{ TestDatabase, TestWaterfallDropFactory }
 import org.specs2.ScalaCheck
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
@@ -20,7 +20,8 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
       val db = testDatabaseWithJobsAndLogs
       system.actorOf(JobDatabaseManager.props(db))
     }
-    JobServiceRoute(jobDatabaseManager).route
+    val dropSupervisor: ActorRef = system.actorOf(DropSupervisor.props(jobDatabaseManager, new TestWaterfallDropFactory))
+    JobServiceRoute(jobDatabaseManager, dropSupervisor).route
   }
 
   def is = s2"""
@@ -47,19 +48,16 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     get /logs?status=running ${getLogsWithStatusRunning}
     get /logs?status=ruNNing ${getLogsWithStatusRunningCaseInsensitive}
     get /logs?status=unknown wrong status ${getLogsWithUnknownStatus}
-    GET /logs?dropUID=EXRATE1 ${getLogsWithDropUID}
-    GET /logs?dropuid=EXRATE1 ${getLogsWithUnknownParameter}
     GET /logs?limit=10 ${getLogsWithLimit}
     GET /logs?offset=3 ${getLogsWithOffset}
+    GET /logs?dropUID=EXRATE1 ${getLogsWithUnknownParameter}
+    GET /logs?dropuid=EXRATE1 ${getLogsWithDropUID}
+    POST /jobs/1/run ${postRunJob}
+    POST /jobs/100/run with unknown jobID ${postRunJobWithUnknownJobID}
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(
-      List(
-        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map()),
-        DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
-      )
-    )
+    responseAs[DropJobList] === DropJobList(testDropJobs)
   }
 
   def postJobs = Post("/jobs") ~> route ~> check {
@@ -76,11 +74,12 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |     "enabled":true,
         |     "cron":"0 1 * * * ?",
         |     "timeFrame":"DAY_YESTERDAY",
-        |     "configuration":{}
+        |     "configuration":{},
+        |     "parallel": false
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -95,11 +94,12 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |     "enabled":true,
         |     "cron":"0 1 * * * ?",
         |     "timeFrame":"DAY_YESTERDAY",
-        |     "configuration":{}
+        |     "configuration":{},
+        |     "parallel": true
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), true)
     }
   }
 
@@ -114,11 +114,12 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |     "enabled":true,
         |     "cron":"0 1 * * * ?",
         |     "timeFrame":"DAY_YESTERDAY",
-        |     "configuration":{}
+        |     "configuration":{},
+        |     "parallel": false
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -133,7 +134,8 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |     "enabled":true,
         |     "cron":"malformed cron",
         |     "timeFrame":"DAY_YESTERDAY",
-        |     "configuration":{}
+        |     "configuration":{},
+        |     "parallel": true
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
@@ -143,7 +145,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   }
 
   def getJobsWithJobID = Get("/jobs/1") ~> route ~> check {
-    responseAs[DropJob] === DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    responseAs[DropJob] === testDropJobs(0)
   }
 
   def getJobsWithUnknownJobID = Get("/jobs/3") ~> route ~> check {
@@ -151,11 +153,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   }
 
   def getJobsWithDropUID = Get("/drops/EXRATE1/jobs") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(
-      List(
-        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
-      )
-    )
+    responseAs[DropJobList] === DropJobList(testDropJobs.take(1))
   }
 
   def getJobsWithUnknownDropUID = Get("/drops/UNKNOWN/jobs") ~> route ~> check {
@@ -163,11 +161,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   }
 
   def getSchedule = Get("/schedule") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(
-      List(
-        DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
-      )
-    )
+    responseAs[DropJobList] === DropJobList(testDropJobs.filter(_.enabled))
   }
 
   def getStatusInfo = Get("/status/info") ~> route ~> check {
@@ -219,12 +213,12 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     rejection === MalformedQueryParamRejection("status", "'unknown' is not a valid log status value", None)
   }
 
-  def getLogsWithDropUID = Get("/logs?dropUID=EXRATE1") ~> route ~> check {
+  def getLogsWithUnknownParameter = Get("/logs?dropUID=EXRATE1") ~> route ~> check {
     // TODO(deo.liang): support case insensitive params.
     pending
   }
 
-  def getLogsWithUnknownParameter = Get("/logs?dropuid=EXRATE1") ~> route ~> check {
+  def getLogsWithDropUID = Get("/logs?dropuid=EXRATE1") ~> route ~> check {
     val dropHistory = responseAs[DropHistory]
     (dropHistory.count === 8) and (dropHistory.logs.count(_.jobID == 1) === 8)
   }
@@ -235,5 +229,13 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
 
   def getLogsWithOffset = Get("/logs?offset=3") ~> route ~> check {
     responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString)).drop(3)
+  }
+
+  def postRunJob = Post("/jobs/1/run") ~> route ~> check {
+    responseAs[Option[DropJob]] === Option(testDropJobs(0))
+  }
+
+  def postRunJobWithUnknownJobID = Post("/jobs/100/run") ~> route ~> check {
+    status === int2StatusCode(404)
   }
 }

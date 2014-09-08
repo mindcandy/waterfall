@@ -27,6 +27,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       log a success result when a job is completed successfully $logSuccess
       log a failure result when a job is completed unsuccessfully $logFailure
       do not run a job that is still running $doNotStartIfRunning
+      run job with identical jobID if parallel allowed $runJobsWithIdenticalJobIDIfParallelAllowed
       rerun a job if previous run finished $reRunAfterFinished
       log to database if the drop not in factory $logToErrorIfNoFactoryDrop
       log to database if result not in running list $logToErrorIfResultNotInList
@@ -113,6 +114,22 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       }
       case s: StartAndFinishDropLog => failure
     }
+  }
+
+  def runJobsWithIdenticalJobIDIfParallelAllowed = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val startJob = createStartJob(TimeFrame.DAY_YESTERDAY)
+    val request = startJob.copy(job = startJob.job.copy(parallel = true))
+
+    probe.send(actor, request)
+    worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
+    jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
+    probe.send(actor, request)
+    worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
+    jobDatabaseManager.expectMsgClass(classOf[StartDropLog]) must not(throwA[AssertionError])
   }
 
   def reRunAfterFinished = {

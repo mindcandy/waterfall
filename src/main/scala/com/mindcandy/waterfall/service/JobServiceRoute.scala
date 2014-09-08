@@ -2,13 +2,14 @@ package com.mindcandy.waterfall.service
 
 import akka.actor.{ ActorRef, ActorRefFactory }
 import argonaut.Argonaut._
+import com.mindcandy.waterfall.actor.DropSupervisor.RunJobImmediately
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.LogStatus.LogStatus
 import com.mindcandy.waterfall.actor.Protocol._
 import com.mindcandy.waterfall.info.BuildInfo
 import spray.routing.Route
 
-case class JobServiceRoute(jobDatabaseManager: ActorRef)(implicit val actorRefFactory: ActorRefFactory) extends ServiceRoute with ArgonautMarshallers {
+case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef)(implicit val actorRefFactory: ActorRefFactory) extends ServiceRoute with ArgonautMarshallers {
 
   val route: Route = {
     // format: OFF
@@ -31,12 +32,23 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef)(implicit val actorRefFa
           }
         }
       } ~
-      path(IntNumber) { id =>
-        get {
-          // get information of a certain job
-          produce(instanceOf[Option[DropJob]]) { completionFunction =>
-            context =>
-              jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+      pathPrefix(IntNumber) { id =>
+        pathEndOrSingleSlash {
+          get {
+            // get information of a certain job
+            produce(instanceOf[Option[DropJob]]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! GetJobForCompletion(id, completionFunction)
+            }
+          }
+        } ~
+        path("run") {
+          post {
+            // force a job to run
+            produce(instanceOf[Option[DropJob]]) { completionFunction =>
+              context =>
+                dropSupervisor ! RunJobImmediately(id, completionFunction)
+            }
           }
         }
       }

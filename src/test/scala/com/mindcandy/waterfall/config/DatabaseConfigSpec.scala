@@ -5,6 +5,7 @@ import java.util.UUID
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
 import com.mindcandy.waterfall.actor.{ LogStatus, TimeFrame }
+import com.mindcandy.waterfall.service.DB
 import org.joda.time.DateTime
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
@@ -54,8 +55,9 @@ class DatabaseContainerSpec
       table 1 is empty ${createTablesOverwrite.e2}
       table 2 is empty ${createTablesOverwrite.e3}
 
-    successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
-    inserted DropLog is correct ${insertDropLog.e2}
+    insert DropLog into database
+      successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
+      inserted DropLog is correct ${insertDropLog.e2}
     
     select DropLog
       select all have correct record size ${selectDropLog.e1}
@@ -72,6 +74,9 @@ class DatabaseContainerSpec
       insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
       update a job ${insertOrUpdateDropJob.e2}
       insert a new job ${insertOrUpdateDropJob.e3}
+
+    Postgre SQL specific
+      droplog table statement is correct ${exceptionAsTextInPostgre}
   """
 
   def createNewDatabase = new group {
@@ -185,6 +190,21 @@ class DatabaseContainerSpec
 
     e1 := numOfInsert must_== 1
     e2 := insertedData must_== List(oneDropLog)
+  }
+
+  def exceptionAsTextInPostgre = {
+    val db = new DB(DatabaseConfig("jdbc:postgresql:test.db"))
+    import db.driver.simple._
+    db.dropLogs.ddl.createStatements.toList(0) must_==
+      """
+        |create table "drop_log" (
+        |"run_id" UUID NOT NULL PRIMARY KEY,
+        |"job_id" INTEGER NOT NULL,
+        |"start_time" TIMESTAMP NOT NULL,
+        |"end_time" TIMESTAMP,
+        |"content" TEXT,
+        |"exception" TEXT)
+        |""".stripMargin.replaceAll("\n", "")
   }
 
   def selectDropLog = new group {

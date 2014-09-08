@@ -32,8 +32,8 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     def jobID = column[JobID]("job_id", O.NotNull)
     def startTime = column[DateTime]("start_time", O.NotNull)
     def endTime = column[Option[DateTime]]("end_time")
-    def content = column[Option[String]]("content")
-    def exception = column[Option[String]]("exception")
+    def content = column[Option[String]]("content", O.DBType("TEXT"))
+    def exception = column[Option[String]]("exception", O.DBType("TEXT"))
     def * =
       (runUID, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
@@ -68,8 +68,9 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     def timeFrame = column[TimeFrame.TimeFrame]("time_frame", O.NotNull)
     // configuration stored as a json string
     def configuration = column[Map[String, String]]("configuration", O.NotNull)
+    def parallel = column[Boolean]("parallel", O.NotNull)
     def * =
-      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration) <>
+      (jobID.?, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel) <>
         (DropJob.tupled, DropJob.unapply)
   }
 

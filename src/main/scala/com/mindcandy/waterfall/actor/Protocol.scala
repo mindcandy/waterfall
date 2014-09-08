@@ -50,7 +50,7 @@ object LogStatus extends Enumeration {
 object Protocol {
   type JobID = Int
   type RunUID = UUID
-  case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String])
+  case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String], parallel: Boolean = false)
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
@@ -73,8 +73,8 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit def DropJobCodecJson = casecodec8(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration")
+  implicit def DropJobCodecJson = casecodec9(DropJob.apply, DropJob.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
