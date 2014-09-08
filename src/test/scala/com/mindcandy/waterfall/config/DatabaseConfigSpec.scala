@@ -202,7 +202,7 @@ class DatabaseContainerSpec
         |"job_id" INTEGER NOT NULL,
         |"start_time" TIMESTAMP NOT NULL,
         |"end_time" TIMESTAMP,
-        |"content" VARCHAR(254),
+        |"content" TEXT,
         |"exception" TEXT)
         |""".stripMargin.replaceAll("\n", "")
   }

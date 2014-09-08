@@ -32,7 +32,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     def jobID = column[JobID]("job_id", O.NotNull)
     def startTime = column[DateTime]("start_time", O.NotNull)
     def endTime = column[Option[DateTime]]("end_time")
-    def content = column[Option[String]]("content")
+    def content = column[Option[String]]("content", O.DBType("TEXT"))
     def exception = column[Option[String]]("exception", O.DBType("TEXT"))
     def * =
       (runUID, jobID, startTime, endTime, content, exception) <>
