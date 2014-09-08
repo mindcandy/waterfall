@@ -33,7 +33,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     def startTime = column[DateTime]("start_time", O.NotNull)
     def endTime = column[Option[DateTime]]("end_time")
     def content = column[Option[String]]("content")
-    def exception = column[Option[String]]("exception")
+    def exception = column[Option[String]]("exception", O.DBType("TEXT"))
     def * =
       (runUID, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
