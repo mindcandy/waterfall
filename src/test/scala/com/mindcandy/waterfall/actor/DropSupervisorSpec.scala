@@ -66,7 +66,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     probe.send(actor, request)
     val runUID = jobDatabaseManager.expectMsgClass(classOf[StartDropLog]).runUID
 
-    val result = JobResult(runUID, Success(()))
+    val result = JobResult(1, runUID, Success(()))
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
       case FinishDropLog(`runUID`, _, None, None) => success
@@ -85,7 +85,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     probe.send(actor, request)
     val runUID = jobDatabaseManager.expectMsgClass(classOf[StartDropLog]).runUID
 
-    val result = JobResult(runUID, Failure(exception))
+    val result = JobResult(1, runUID, Failure(exception))
     probe.send(actor, result)
     jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
       case FinishDropLog(`runUID`, _, None, Some(msg)) => success
@@ -142,7 +142,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     probe.send(actor, request)
     val runUID = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).runUID
 
-    probe.send(actor, JobResult(runUID, Success(Unit)))
+    probe.send(actor, JobResult(1, runUID, Success(Unit)))
     probe.send(actor, request)
 
     val newRunUID = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).runUID
@@ -157,7 +157,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     val dropUID = "drop not in factory"
     val request = StartJob(
       1,
-      DropJob(Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
+      DropJob(Some(1), dropUID, "", "", true, Option(""), TimeFrame.DAY_TODAY, Map()))
 
     probe.send(actor, request)
     val expectedMsg = s"factory has no drop for job ${request.jobID} with drop uid ${request.job.dropUID} and name ${request.job.name}"
@@ -180,7 +180,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     jobDatabaseManager.expectMsgClass(classOf[StartDropLog])
 
     val runUID = UUID.randomUUID()
-    probe.send(actor, JobResult(runUID, Success(())))
+    probe.send(actor, JobResult(1, runUID, Success(())))
 
     val expectedMsg = s"job result from runUID ${runUID} but not present in running jobs list"
     jobDatabaseManager.expectMsgClass(classOf[FinishDropLog]) match {
@@ -194,6 +194,6 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
     val now = DateTime.now + Period.seconds(3)
-    StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
+    StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, Option(s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?"), frame, Map()))
   }
 }

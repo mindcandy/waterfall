@@ -50,6 +50,15 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
                 dropSupervisor ! RunJobImmediately(id, completionFunction)
             }
           }
+        } ~
+        path("dependencies") {
+          get {
+            // list all dependencies for a job
+            produce(instanceOf[DropJobList]) { completionFunction =>
+              context =>
+                jobDatabaseManager ! GetDependenciesforCompletion(id, completionFunction)
+            }
+          }
         }
       }
     } ~

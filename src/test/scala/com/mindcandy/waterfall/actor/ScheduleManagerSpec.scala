@@ -158,6 +158,22 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
+  def scheduleOnlyWithCron = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+    val currentTime = DateTime.now + Period.seconds(3)
+
+    val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
+    val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime, isCron = false)
+    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
+
+    probe.send(actor, request)
+    dropSupervisor.expectMsg(StartJob(1, dropJob1))
+    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
+  }
+
   def scheduleJobsWithIdenticalDropUID = {
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
@@ -216,7 +232,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, Option(s"malformed cron string"), TimeFrame.DAY_YESTERDAY, Map())
     val request = DropJobMap(Map(1 -> dropJob))
 
     probe.send(actor, request)
@@ -228,6 +244,13 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
                           checkJobsPeriod: FiniteDuration = FiniteDuration(1, HOURS)): ActorRef =
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
-  private def createDropJob(dropUid: String, name: String, currentTime: DateTime): DropJob =
-    DropJob(Some(1), dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
+  private def createDropJob(dropUid: String, name: String, currentTime: DateTime, isCron: Boolean = true): DropJob =
+    DropJob(
+      Option(1),
+      dropUid,
+      name,
+      "desc",
+      true, if (isCron) Option(s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?") else None,
+      TimeFrame.DAY_YESTERDAY,
+      Map())
 }

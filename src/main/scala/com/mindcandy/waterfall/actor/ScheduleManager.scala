@@ -14,11 +14,13 @@ import scala.util.{ Failure, Success, Try }
 object ScheduleManager {
   case class CheckJobs()
 
-  def calculateNextFireTime(cronString: String): Try[FiniteDuration] = Try {
-    val cronExpression = new CronExpression(cronString)
-    val now = DateTime.now
-    val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
-    (now to next).millis millis
+  def calculateNextFireTime(cron: Option[String]): Try[Option[FiniteDuration]] = Try {
+    cron.map { cronString =>
+      val cronExpression = new CronExpression(cronString)
+      val now = DateTime.now
+      val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
+      (now to next).millis millis
+    }
   }
 
   def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration): Props =
@@ -71,11 +73,14 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
   def scheduleJob(jobID: JobID, job: DropJob): Option[Cancellable] = {
     calculateNextFireTime(job.cron) match {
-      case Success(duration) if maxScheduleTime > duration =>
+      case Success(Some(duration)) if maxScheduleTime > duration =>
         log.debug(s"scheduled new job $job with duration $duration")
         Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(jobID, job))(context.dispatcher))
-      case Success(duration) =>
+      case Success(Some(duration)) =>
         log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
+        None
+      case Success(None) =>
+        log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it is a dependant")
         None
       case Failure(exception) => {
         log.error(s"could not resolve cron expression for ${job.jobID} with drop uid ${job.dropUID}", exception)

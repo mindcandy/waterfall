@@ -5,9 +5,13 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
+/*
+   T
+ */
+
 @RunWith(classOf[JUnitRunner])
 class RunSpec extends Specification {
-  val shouldRun = false
+  val shouldRun = true
 
   "Run" should {
     "run the app" in {

@@ -35,6 +35,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     post /jobs with json with malformed cron ${postJobsWithMalformedCron}
     get /jobs/:id ${getJobsWithJobID}
     get /jobs/:id with unknown id ${getJobsWithUnknownJobID}
+    get /jobs/:id/dependencies ${getDependenciesWithJobID}
     get /drops/:dropuid/jobs ${getJobsWithDropUID}
     get /drops/:dropuid/jobs with unknown dropUID ${getJobsWithUnknownDropUID}
     get /schedule ${getSchedule}
@@ -79,7 +80,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -99,7 +100,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), true)
+      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
     }
   }
 
@@ -119,7 +120,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -146,6 +147,10 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
 
   def getJobsWithJobID = Get("/jobs/1") ~> route ~> check {
     responseAs[DropJob] === testDropJobs(0)
+  }
+
+  def getDependenciesWithJobID = Get("/jobs/1/dependencies") ~> route ~> check {
+    responseAs[DropJobList] === DropJobList(List())
   }
 
   def getJobsWithUnknownJobID = Get("/jobs/3") ~> route ~> check {

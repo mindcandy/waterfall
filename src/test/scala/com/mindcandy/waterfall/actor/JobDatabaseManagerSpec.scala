@@ -31,6 +31,7 @@ class JobDatabaseManagerSpec
       send GetJobForCompletion $getJobCompletion
       send GetJobsForCompletion $getJobsCompletion
       send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
+      send GetParentsWithJobIDForCompletion $getChildrenForCompletion
       send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
       send GetScheduleForCompletion $getScheduleCompletion
       send GetLogsForCompletion $getLogsForCompletion
@@ -145,7 +146,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     def testFunction(dropJob: Option[DropJob]) = probe.ref ! dropJob
     val db = testDatabaseWithJobsAndLogs
-    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map())
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, PostJobForCompletion(dropJob, testFunction))
@@ -191,6 +192,18 @@ class JobDatabaseManagerSpec
     ))
 
     probe.send(actor, GetJobsWithDropUIDForCompletion("EXRATE2", testFunc))
+    probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
+  }
+
+  def getChildrenForCompletion = {
+    val probe = TestProbe()
+    def testFunc(dropJobList: DropJobList) = probe.ref ! dropJobList.toString
+    val db = testDatabaseWithJobs
+    db.insert(db.dropJobs, testDropJobs(1))
+    val actor = system.actorOf(JobDatabaseManager.props(db))
+    val expectedDropJob = DropJobList(List(testDropJobs(1), testDropJobs(1).copy(jobID = Some(3))))
+
+    probe.send(actor, GetChildrenWithJobIDForCompletion(1, testFunc))
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
   }
 
