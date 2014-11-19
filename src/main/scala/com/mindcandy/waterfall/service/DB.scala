@@ -141,7 +141,11 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   }
 
   def insertAndReturnDependency(dependency: DropJobDependency): Option[DropJobDependency] = {
-    if ((dropJobDependencies += dependency) > 0) Option(dependency) else None
+    if ((dropJobDependencies += dependency) > 0) {
+      Option(dependency)
+    } else {
+      None
+    }
   }
 
   def updateAndReturnDropJob(dropJob: DropJob): Option[DropJob] = {
@@ -174,16 +178,20 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
           case true => internalInsertOrUpdateDropJob(dropJob)
         }
       case (None, Some(parents)) => {
-        val maybeJob = internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
-          val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
-          if (results.contains(None)) {
+        internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
+          if (parents.contains(job.jobID.get)) {
             dynamicSession.rollback()
             Option.empty[DropJob]
           } else {
-            Option(job)
+            val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
+            if (results.contains(None)) {
+              dynamicSession.rollback()
+              Option.empty[DropJob]
+            } else {
+              Option(job)
+            }
           }
         }
-        maybeJob
       }
       case _ =>
         None

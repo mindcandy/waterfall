@@ -14,13 +14,11 @@ import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 object JobDatabaseManager {
   case class GetJobForCompletion(jobId: JobID, completionFunction: Option[DropJob] => Unit)
   case class GetJobsForCompletion(completionFunction: DropJobList => Unit)
-  case class GetDependenciesforCompletion(parentJobID: JobID, completionFunction: DropJobList => Unit)
   case class GetJobsWithDropUIDForCompletion(dropUID: DropUID, completionFunction: DropJobList => Unit)
   case class GetChildrenWithJobIDForCompletion(parentJobId: JobID, completionFunction: DropJobList => Unit)
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, parents: Option[List[JobID]], completionFunction: Option[DropJob] => Unit)
-  case class PostDependencyforCompletion(parentJobID: JobID, dependencyDropJob: DropJob, completionFunction: Option[DropJob] => Unit)
   case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], limit: Option[Int], offset: Option[Int], completionFunction: DropHistory => Unit)
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
@@ -45,11 +43,6 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
       val jobs = db.executeInSession(db.dropJobsSorted.list)
-      f(DropJobList(jobs))
-    }
-    case GetDependenciesforCompletion(parentJobID, f) => {
-      log.debug(s"Get all dependencies for job $parentJobID")
-      val jobs = db.executeInSession(db.selectDropJobChildren(parentJobID))
       f(DropJobList(jobs))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {

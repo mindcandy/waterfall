@@ -56,7 +56,7 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
             // list all dependencies for a job
             produce(instanceOf[DropJobList]) { completionFunction =>
               context =>
-                jobDatabaseManager ! GetDependenciesforCompletion(id, completionFunction)
+                jobDatabaseManager ! GetChildrenWithJobIDForCompletion(id, completionFunction)
             }
           }
         }

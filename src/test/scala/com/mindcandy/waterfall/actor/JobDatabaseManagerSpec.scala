@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor.ActorSystem
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{TestKit, TestProbe}
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
@@ -9,19 +9,19 @@ import com.mindcandy.waterfall.actor.Protocol._
 import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
-import org.specs2.specification.{ Grouped, Step }
+import org.specs2.specification.{Grouped, Step}
 import org.specs2.time.NoTimeConversions
 
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
-    extends TestKit(ActorSystem("JobDatabaseManagerSpec", ConfigFactory.load()))
-    with SpecificationLike
-    with NoTimeConversions
-    with Mockito
-    with Grouped
-    with TestDatabase {
+  extends TestKit(ActorSystem("JobDatabaseManagerSpec", ConfigFactory.load()))
+  with SpecificationLike
+  with NoTimeConversions
+  with Mockito
+  with Grouped
+  with TestDatabase {
   def is = s2"""
     JobDatabaseManager should
 
@@ -46,13 +46,17 @@ class JobDatabaseManagerSpec
     insert new DropJob inserts new entry into database ${insertDropJob.e1}
     insert DropJob with unknown JobID inserts new entry into database ${insertDropJob.e2}
     insert DropJob with existing JobID updates existing entry in database ${insertDropJob.e3}
-    
+
     insert new DropJob with cron and parents fails ${insertDropJob.e4}
     insert new DropJob without cron or parents fails ${insertDropJob.e5}
     insert new DropJob existing parents succeeds ${insertDropJob.e6}
+
     insert new DropJob missing parents fails ${insertDropJob.e7}
 
   """ ^ Step(afterAll)
+
+  // TODO: New to capture exception
+  //  insert new DropJob missing parents fails(2) ${insertDropJob.e8}
 
   def afterAll = TestKit.shutdownActorSystem(system)
 
@@ -239,6 +243,7 @@ class JobDatabaseManagerSpec
 
   def insertDropJob = new group {
     val probe = TestProbe()
+
     def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob
 
     val db = newDB
@@ -294,6 +299,8 @@ class JobDatabaseManagerSpec
     }
 
     e6 := {
+      def testListFunc(dropJobList: DropJobList) = probe.ref ! dropJobList
+
       // input with cron
       probe.send(actor, PostJobForCompletion(testDropJobs(0), Option.empty, testFunc))
       probe.expectMsg(Some(testDropJobs(0)))
@@ -301,13 +308,36 @@ class JobDatabaseManagerSpec
       // input with parent of above
       probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
       probe.expectMsg(Some(testDropJobs(2).copy(jobID = Option(2))))
+
+      probe.send(actor, GetChildrenWithJobIDForCompletion(testDropJobs(0).jobID.get, testListFunc))
+      probe.expectMsg(DropJobList(List(testDropJobs(2).copy(jobID = Option(2)))))
+
+      db.executeInSession(db.dropJobDependencies) must_== List(DropJobDependency(1, 2))
       db.executeInSession(db.dropJobs.list) must_== List(testDropJobs(0), testDropJobs(2).copy(jobID = Option(2)))
     }
 
     e7 := {
+      db.executeInSession(db.dropJobs.list) must_== List()
+      db.executeInSession(db.dropJobDependencies) must_== List()
+
       // input with parent of above
       probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
       probe.expectMsg(None)
+
+      db.executeInSession(db.dropJobDependencies) must_== List()
+      db.executeInSession(db.dropJobs.list) must_== List()
+    }
+
+    e8 := {
+      db.executeInSession(db.dropJobs.list) must_== List()
+      db.executeInSession(db.dropJobDependencies) must_== List()
+
+      // input with parent of above
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(8)), testFunc))
+      // TODO: How to capture exception
+      probe.expectTerminated(actor)
+
+      db.executeInSession(db.dropJobDependencies) must_== List()
       db.executeInSession(db.dropJobs.list) must_== List()
     }
   }
