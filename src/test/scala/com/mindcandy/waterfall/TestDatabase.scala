@@ -3,7 +3,7 @@ package com.mindcandy.waterfall
 import java.util.UUID
 
 import com.github.nscala_time.time.Imports._
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropLog, DropJobDependency }
 import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import com.mindcandy.waterfall.config.DatabaseConfig
 import com.mindcandy.waterfall.service.DB
@@ -15,9 +15,12 @@ trait TestDatabase {
 
   def testDropJob1 = DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
   def testDropJob2 = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
+  def testDropJob3 = DropJob(Some(3), "EXRATE3", "Exchange Rate", "desc", false, Option.empty, TimeFrame.DAY_YESTERDAY, Map(), true)
+
+  def testDependency = DropJobDependency(1, 3)
 
   def testDropJobs = List(
-    testDropJob1, testDropJob2
+    testDropJob1, testDropJob2, testDropJob3
   )
 
   // As the actual reference time in the method may be just a few seconds
@@ -53,6 +56,7 @@ trait TestDatabase {
     db.create(db.allTables)
     db.insert(db.dropJobs, testDropJobs)
     db.insert(db.dropLogs, testDropLogs)
+    db.insert(db.dropJobDependencies, testDependency)
     db
   }
 
@@ -60,6 +64,7 @@ trait TestDatabase {
     val db = newDB
     db.create(db.allTables)
     db.insert(db.dropJobs, testDropJobs)
+    db.insert(db.dropJobDependencies, testDependency)
     db
   }
 }

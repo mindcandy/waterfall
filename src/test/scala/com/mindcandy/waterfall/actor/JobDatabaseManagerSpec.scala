@@ -24,25 +24,34 @@ class JobDatabaseManagerSpec
     with TestDatabase {
   def is = s2"""
     JobDatabaseManager should
-      send GetSchedule $getSchedule
-      send StartAndFinishDropLog ${startAndFinishDropLog.e1}
-      send StartAndFinishDropLog multiple times ${startAndFinishDropLog.e2}
-      send StartAndFinishDropLog with unknown jobID $startAndFinishDropLogWithUnknownJobID
-      send GetJobForCompletion $getJobCompletion
-      send GetJobsForCompletion $getJobsCompletion
-      send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
-      send GetParentsWithJobIDForCompletion $getChildrenForCompletion
-      send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
-      send GetScheduleForCompletion $getScheduleCompletion
-      send GetLogsForCompletion $getLogsForCompletion
-      send PostJobForCompletion $postJobForCompletion
-      send StartDropLog $startDropLog
-      send FinishDropLog with log ${finishDropLog.e1}
-      send FinishDropLog with exception ${finishDropLog.e2}
-      send FinishDropLog with no message ${finishDropLog.e3}
-      insert new DropJob into database ${insertDropJob.e1}
-      insert DropJob with unknown JobID into database ${insertDropJob.e2}
-      insert DropJob with existing JobID into database ${insertDropJob.e3}
+
+    send GetSchedule $getSchedule
+    send StartAndFinishDropLog ${startAndFinishDropLog.e1}
+    send StartAndFinishDropLog multiple times ${startAndFinishDropLog.e2}
+    send StartAndFinishDropLog with unknown jobID $startAndFinishDropLogWithUnknownJobID
+    send GetJobForCompletion $getJobCompletion
+    send GetJobsForCompletion $getJobsCompletion
+    send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
+    send GetChildrenWithJobIDForCompletion $getChildrenForCompletion
+    send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
+    send GetScheduleForCompletion $getScheduleCompletion
+    send GetLogsForCompletion $getLogsForCompletion
+    send PostJobForCompletion $postJobForCompletion
+
+    send StartDropLog $startDropLog
+    send FinishDropLog with log ${finishDropLog.e1}
+    send FinishDropLog with exception ${finishDropLog.e2}
+    send FinishDropLog with no message ${finishDropLog.e3}
+
+    insert new DropJob inserts new entry into database ${insertDropJob.e1}
+    insert DropJob with unknown JobID inserts new entry into database ${insertDropJob.e2}
+    insert DropJob with existing JobID updates existing entry in database ${insertDropJob.e3}
+    
+    insert new DropJob with cron and parents fails ${insertDropJob.e4}
+    insert new DropJob without cron or parents fails ${insertDropJob.e5}
+    insert new DropJob existing parents succeeds ${insertDropJob.e6}
+    insert new DropJob missing parents fails ${insertDropJob.e7}
+
   """ ^ Step(afterAll)
 
   def afterAll = TestKit.shutdownActorSystem(system)
@@ -188,7 +197,7 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
     val expectedDropJob = DropJobList(List(
       testDropJobs(1),
-      testDropJobs(1).copy(jobID = Some(3))
+      testDropJobs(1).copy(jobID = Some(4))
     ))
 
     probe.send(actor, GetJobsWithDropUIDForCompletion("EXRATE2", testFunc))
@@ -199,9 +208,8 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     def testFunc(dropJobList: DropJobList) = probe.ref ! dropJobList.toString
     val db = testDatabaseWithJobs
-    db.insert(db.dropJobs, testDropJobs(1))
     val actor = system.actorOf(JobDatabaseManager.props(db))
-    val expectedDropJob = DropJobList(List(testDropJobs(1), testDropJobs(1).copy(jobID = Some(3))))
+    val expectedDropJob = DropJobList(List(testDropJobs(2)))
 
     probe.send(actor, GetChildrenWithJobIDForCompletion(1, testFunc))
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
@@ -214,7 +222,7 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, GetJobForCompletion(3, testFunc))
+    probe.send(actor, GetJobForCompletion(300, testFunc))
     probe.expectMsg("None") must not(throwA[AssertionError])
   }
 
@@ -231,35 +239,76 @@ class JobDatabaseManagerSpec
 
   def insertDropJob = new group {
     val probe = TestProbe()
-
-    def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob.toString
+    def testFunc(dropJob: Option[DropJob]) = probe.ref ! dropJob
 
     val db = newDB
     db.create(db.allTables)
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    // input with no jobID
-    probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
-    probe.expectMsg(Some(testDropJobs(0)).toString)
+    e1 := {
+      // input with no jobID
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
+      probe.expectMsg(Some(testDropJobs(0)))
 
-    e1 := db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1)
+      db.executeInSession(db.dropJobs.list) must_== testDropJobs(0) :: Nil
+    }
+
     e2 := {
+      // input with no jobID
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
+      probe.expectMsg(Some(testDropJobs(0)))
+
       // input with arbitrary jobID
       probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), Option.empty, testFunc))
-      probe.expectMsg(Some(testDropJobs(1)).toString)
+      probe.expectMsg(Some(testDropJobs(1)))
 
-      db.executeInSession(db.dropJobs.list) must_== testDropJobs
+      db.executeInSession(db.dropJobs.list) must_== testDropJobs(0) :: testDropJobs(1) :: Nil
     }
+
     e3 := {
       // input with arbitrary jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), Option.empty, testFunc))
-      probe.expectMsg(Some(testDropJobs(1)).toString)
+      probe.send(actor, PostJobForCompletion(testDropJobs(0), Option.empty, testFunc))
+      probe.expectMsg(Some(testDropJobs(0)))
 
-      val expectDropJob = testDropJobs(1).copy(name = "test")
       // input with existing jobID
-      probe.send(actor, PostJobForCompletion(expectDropJob, Option.empty, testFunc))
-      probe.expectMsg(Some(expectDropJob).toString)
-      db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1) :+ expectDropJob
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(name = "test"), Option.empty, testFunc))
+      val expectedDropJob = testDropJobs(0).copy(name = "test")
+      probe.expectMsg(Some(expectedDropJob))
+      db.executeInSession(db.dropJobs.list) must_== expectedDropJob :: Nil
+    }
+
+    e4 := {
+      // input with cron and parents
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option(List(1)), testFunc))
+      probe.expectMsg(None)
+
+      db.executeInSession(db.dropJobs.list) must_== List()
+    }
+
+    e5 := {
+      // input with no cron or parents
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None, cron = None), None, testFunc))
+      probe.expectMsg(None)
+
+      db.executeInSession(db.dropJobs.list) must_== List()
+    }
+
+    e6 := {
+      // input with cron
+      probe.send(actor, PostJobForCompletion(testDropJobs(0), Option.empty, testFunc))
+      probe.expectMsg(Some(testDropJobs(0)))
+
+      // input with parent of above
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
+      probe.expectMsg(Some(testDropJobs(2).copy(jobID = Option(2))))
+      db.executeInSession(db.dropJobs.list) must_== List(testDropJobs(0), testDropJobs(2).copy(jobID = Option(2)))
+    }
+
+    e7 := {
+      // input with parent of above
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
+      probe.expectMsg(None)
+      db.executeInSession(db.dropJobs.list) must_== List()
     }
   }
 }

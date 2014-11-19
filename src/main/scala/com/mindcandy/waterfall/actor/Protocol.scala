@@ -85,7 +85,7 @@ object Protocol {
   case class DropHistory(logs: List[DropLog]) {
     val count = logs.size
   }
-  case class DropJobDependency(initiatorJobID: JobID, dependantJobID: JobID)
+  case class DropJobDependency(parentJobID: JobID, childJobID: JobID)
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)

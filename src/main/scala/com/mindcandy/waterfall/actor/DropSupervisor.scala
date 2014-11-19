@@ -63,7 +63,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
-            runDependants(jobID)
+            runchilds(jobID)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -108,7 +108,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     }
   }
 
-  def runDependants(jobID: JobID) = {
+  def runchilds(jobID: JobID) = {
     jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
       jobID,
       jobList => {

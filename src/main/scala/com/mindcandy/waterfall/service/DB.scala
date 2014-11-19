@@ -13,6 +13,7 @@ import org.quartz.CronExpression
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val driver = config.driver
+
   import com.mindcandy.waterfall.actor.Protocol._
   import driver.simple._
 
@@ -23,20 +24,26 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   )
 
   implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
-    { dt => new Timestamp(dt.getMillis) },
-    { ts => new DateTime(ts) }
+    { dt => new Timestamp(dt.getMillis) }, { ts => new DateTime(ts) }
   )
 
   class DropLogs(tag: Tag) extends Table[DropLog](tag, "drop_log") {
     def runUID = column[RunUID]("run_id", O.PrimaryKey)
+
     def jobID = column[JobID]("job_id", O.NotNull)
+
     def startTime = column[DateTime]("start_time", O.NotNull)
+
     def endTime = column[Option[DateTime]]("end_time")
+
     def content = column[Option[String]]("content", O.DBType("TEXT"))
+
     def exception = column[Option[String]]("exception", O.DBType("TEXT"))
+
     def * =
       (runUID, jobID, startTime, endTime, content, exception) <>
         (DropLog.tupled, DropLog.unapply)
+
     def job_fk = foreignKey("drop_log_job_id_fk", jobID, dropJobs)(_.jobID)
   }
 
@@ -45,13 +52,11 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val dropLogsSorted = dropLogs.sortBy(log => (log.startTime.desc, log.jobID, log.runUID))
 
   implicit val timeFrameColumnType = MappedColumnType.base[TimeFrame.TimeFrame, String](
-    { tf => tf.toString },
-    { ts => TimeFrame.withName(ts) }
+    { tf => tf.toString }, { ts => TimeFrame.withName(ts) }
   )
 
   implicit val MapStringStringColumnType = MappedColumnType.base[Map[String, String], String](
-    { m => m.asJson.nospaces },
-    { ts =>
+    { m => m.asJson.nospaces }, { ts =>
       val opt = Parse.decodeOption[Map[String, String]](ts)
       // TODO(deo.liang): the stored value should be a valid json string, probably we can just do Parse.decode
       opt.getOrElse(Map[String, String]())
@@ -60,27 +65,41 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
 
   class DropJobs(tag: Tag) extends Table[DropJob](tag, "drop_job") {
     def jobID = column[JobID]("job_id", O.PrimaryKey, O.AutoInc)
+
     def dropUID = column[String]("drop_uid", O.NotNull)
+
     def name = column[String]("name", O.NotNull)
+
     def description = column[String]("description", O.NotNull)
+
     def enabled = column[Boolean]("enabled", O.NotNull)
+
     def cron = column[String]("cron", O.Nullable)
+
     def timeFrame = column[TimeFrame.TimeFrame]("time_frame", O.NotNull)
+
     // configuration stored as a json string
     def configuration = column[Map[String, String]]("configuration", O.NotNull)
+
     def parallel = column[Boolean]("parallel", O.NotNull)
+
     def * =
       (jobID.?, dropUID, name, description, enabled, cron.?, timeFrame, configuration, parallel) <>
         (DropJob.tupled, DropJob.unapply)
   }
 
   class DropJobDependencies(tag: Tag) extends Table[DropJobDependency](tag, "drop_job_dependency") {
-    def initiatorJobID = column[JobID]("initiator_job_id")
-    def dependantJobID = column[JobID]("dependant_job_id")
-    def pk = primaryKey("pk_drop_job_dependency", (initiatorJobID, dependantJobID))
-    def dependantFk = foreignKey("DROP_JOB_DEPENDANT_FK", dependantJobID, dropJobs)(_.jobID)
-    def initiatorFk = foreignKey("DROP_JOB_initiator_FK", initiatorJobID, dropJobs)(_.jobID)
-    def * = (initiatorJobID, dependantJobID) <> (DropJobDependency.tupled, DropJobDependency.unapply)
+    def parentJobID = column[JobID]("parent_job_id")
+
+    def childJobID = column[JobID]("child_job_id")
+
+    def pk = primaryKey("pk_drop_job_dependency", (parentJobID, childJobID))
+
+    def childFk = foreignKey("fk_drop_job_child", childJobID, dropJobs)(_.jobID)
+
+    def parentFk = foreignKey("fk_drop_job_parent", parentJobID, dropJobs)(_.jobID)
+
+    def * = (parentJobID, childJobID) <> (DropJobDependency.tupled, DropJobDependency.unapply)
   }
 
   val dropJobs = TableQuery[DropJobs]
@@ -88,16 +107,16 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val dropJobDependencies = TableQuery[DropJobDependencies]
   val allTables = Seq(dropJobs, dropLogs, dropJobDependencies)
 
-  def selectDropDependants(jobID: JobID): List[DropJob] = {
+  def selectDropJobChildren(jobID: JobID): List[DropJob] = {
     (for {
-      dependency <- dropJobDependencies if dependency.initiatorJobID === jobID
-      dependant <- dropJobs if dependant.jobID === dependency.dependantJobID
-    } yield (dependant)).list
+      parent <- dropJobDependencies if parent.parentJobID === jobID
+      child <- dropJobs if child.jobID === parent.childJobID
+    } yield (child)).list
   }
 
   //  def selectDropLog(jobID: JobID): Option[DropJob] = {
   //    val test = (for {
-  //      jobWithInits <- dropJobs leftJoin dropJobDependencies on (_.jobID === _.dependantJobID)
+  //      jobWithInits <- dropJobs leftJoin dropJobDependencies on (_.jobID === _.childJobID)
   //    } yield jobWithInits)
   //      .groupBy(_._1)
   //      .map { case (job, results) => (results.map(_._1), results.length) }
@@ -106,12 +125,12 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   //
   //    None
   //  }
-  //  def selectDropDependantss(jobID: JobID): List[DropJob] = {
+  //  def selectDropchildss(jobID: JobID): List[DropJob] = {
   //    (for {
   //      dropJob <- dropJobs if dropJob.jobID === jobID
-  //      dependancy <- dropJobDependencies if dependancy.initiatorJobID === dropJob.jobID
-  //      dependant <- dropJobs if dependant.jobID === dependancy.dependantJobID
-  //    } yield (dropJob, dependant)).list.groupBy(_._1)
+  //      dependancy <- dropJobDependencies if dependancy.parentJobID === dropJob.jobID
+  //      child <- dropJobs if child.jobID === dependancy.childJobID
+  //    } yield (dropJob, child)).list.groupBy(_._1)
   //  }
 
   def maybeExists(dropJob: DropJob): Option[DropJob] =
@@ -138,27 +157,41 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       .update((Some(endTime), logOutput, exception))
   }
 
-  def insertOrUpdateDropJob(dropJob: DropJob, parents: Option[List[JobID]]): Option[DropJob] = {
-    dropJob.cron match {
-      case Some(cron) =>
-        CronExpression.isValidExpression(cron) match {
-          case false => None
-          case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
-        }
-      case None =>
-        maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
-    }
-    //    (dropJob.cron, dropJob.parent) match {
-    //      case (Some(cron), None) =>
+  def insertOrUpdateDropJob(dropJob: DropJob, maybeParents: Option[List[JobID]]): Option[DropJob] = {
+    //    dropJob.cron match {
+    //      case Some(cron) =>
     //        CronExpression.isValidExpression(cron) match {
     //          case false => None
     //          case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
     //        }
-    //      case (None, Some(initiator)) =>
+    //      case None =>
     //        maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
-    //      case _ =>
-    //        None
     //    }
+    (dropJob.cron, maybeParents) match {
+      case (Some(cron), None) =>
+        CronExpression.isValidExpression(cron) match {
+          case false => None
+          case true => internalInsertOrUpdateDropJob(dropJob)
+        }
+      case (None, Some(parents)) => {
+        val maybeJob = internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
+          val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
+          if (results.contains(None)) {
+            dynamicSession.rollback()
+            Option.empty[DropJob]
+          } else {
+            Option(job)
+          }
+        }
+        maybeJob
+      }
+      case _ =>
+        None
+    }
+  }
+
+  def internalInsertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
+    maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
   }
 
   //  def insertOrUpdateDependencyDropJob(parentJobID: JobID, dependencyDropJob: DropJob): Option[DropJob] = {

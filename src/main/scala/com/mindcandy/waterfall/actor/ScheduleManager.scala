@@ -80,7 +80,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
         log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
         None
       case Success(None) =>
-        log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it is a dependant")
+        log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it is a child")
         None
       case Failure(exception) => {
         log.error(s"could not resolve cron expression for ${job.jobID} with drop uid ${job.dropUID}", exception)

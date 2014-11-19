@@ -74,12 +74,12 @@ class DatabaseContainerSpec
       insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
       update a job ${insertOrUpdateDropJob.e2}
       insert a new job ${insertOrUpdateDropJob.e3}
-      insert job with both cron and initiator ${insertOrUpdateDropJob.e4}
+      insert job with both cron and parent ${insertOrUpdateDropJob.e4}
 
     Postgre SQL specific
       droplog table statement is correct ${exceptionAsTextInPostgre}
   """
-  //       insert job with neither cron and initiator ${insertOrUpdateDropJob.e5}
+  //       insert job with neither cron and parent ${insertOrUpdateDropJob.e5}
 
   def createNewDatabase = new group {
     val db = newDB
