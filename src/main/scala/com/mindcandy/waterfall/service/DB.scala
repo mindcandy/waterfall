@@ -95,17 +95,17 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     } yield (dependant)).list
   }
 
-//  def selectDropLog(jobID: JobID): Option[DropJob] = {
-//    val test = (for {
-//      jobWithInits <- dropJobs leftJoin dropJobDependencies on (_.jobID === _.dependantJobID)
-//    } yield jobWithInits)
-//      .groupBy(_._1)
-//      .map { case (job, results) => (results.map(_._1), results.length) }
-//
-//    //      .groupBy(_._1.jobID)
-//
-//    None
-//  }
+  //  def selectDropLog(jobID: JobID): Option[DropJob] = {
+  //    val test = (for {
+  //      jobWithInits <- dropJobs leftJoin dropJobDependencies on (_.jobID === _.dependantJobID)
+  //    } yield jobWithInits)
+  //      .groupBy(_._1)
+  //      .map { case (job, results) => (results.map(_._1), results.length) }
+  //
+  //    //      .groupBy(_._1.jobID)
+  //
+  //    None
+  //  }
   //  def selectDropDependantss(jobID: JobID): List[DropJob] = {
   //    (for {
   //      dropJob <- dropJobs if dropJob.jobID === jobID
@@ -138,7 +138,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       .update((Some(endTime), logOutput, exception))
   }
 
-  def insertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
+  def insertOrUpdateDropJob(dropJob: DropJob, parents: Option[List[JobID]]): Option[DropJob] = {
     dropJob.cron match {
       case Some(cron) =>
         CronExpression.isValidExpression(cron) match {
@@ -161,11 +161,11 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     //    }
   }
 
-  def insertOrUpdateDependencyDropJob(initiatorJobID: JobID, dependencyDropJob: DropJob): Option[DropJob] = {
-    insertOrUpdateDropJob(dependencyDropJob).flatMap { job =>
-      insertAndReturnDependency(DropJobDependency(initiatorJobID, job.jobID.get)).map(dependency => job)
-    }
-  }
+  //  def insertOrUpdateDependencyDropJob(parentJobID: JobID, dependencyDropJob: DropJob): Option[DropJob] = {
+  //    insertOrUpdateDropJob(dependencyDropJob).flatMap { job =>
+  //      insertAndReturnDependency(DropJobDependency(parentJobID, job.jobID.get)).map(dependency => job)
+  //    }
+  //  }
 
   val defaultSelectDropLogLimit = 100
   val defaultSelectDropLogOffset = 0

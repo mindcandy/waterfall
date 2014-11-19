@@ -19,7 +19,7 @@ object JobDatabaseManager {
   case class GetChildrenWithJobIDForCompletion(jobId: JobID, completionFunction: DropJobList => Unit)
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
-  case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
+  case class PostJobForCompletion(dropJob: DropJob, parents: Option[List[JobID]], completionFunction: Option[DropJob] => Unit)
   case class PostDependencyforCompletion(initiatorJobID: JobID, dependencyDropJob: DropJob, completionFunction: Option[DropJob] => Unit)
   case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], limit: Option[Int], offset: Option[Int], completionFunction: DropHistory => Unit)
 
@@ -84,13 +84,9 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"received StartAndFinishDropLog")
       db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, Option(endTime), logOutput, convertException(exception)))
     }
-    case PostJobForCompletion(dropJob, f) => {
+    case PostJobForCompletion(dropJob, parents, f) => {
       log.debug(s"Insert or update a job $dropJob")
-      f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
-    }
-    case PostDependencyforCompletion(initiatorJobID, dependencyDropJob, f) => {
-      log.debug(s"Insert or update dependency $dependencyDropJob for job $initiatorJobID")
-      f(db.executeInSession(db.insertOrUpdateDependencyDropJob(initiatorJobID, dependencyDropJob)))
+      f(db.executeInSession(db.insertOrUpdateDropJob(dropJob, parents)))
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")

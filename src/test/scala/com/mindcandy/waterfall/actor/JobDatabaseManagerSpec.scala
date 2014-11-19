@@ -149,7 +149,7 @@ class JobDatabaseManagerSpec
     val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map())
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, PostJobForCompletion(dropJob, testFunction))
+    probe.send(actor, PostJobForCompletion(dropJob, Option.empty, testFunction))
     probe.expectMsgClass(classOf[Option[DropJob]]).isDefined must beTrue
   }
 
@@ -239,25 +239,25 @@ class JobDatabaseManagerSpec
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     // input with no jobID
-    probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
+    probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
     probe.expectMsg(Some(testDropJobs(0)).toString)
 
     e1 := db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1)
     e2 := {
       // input with arbitrary jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), Option.empty, testFunc))
       probe.expectMsg(Some(testDropJobs(1)).toString)
 
       db.executeInSession(db.dropJobs.list) must_== testDropJobs
     }
     e3 := {
       // input with arbitrary jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), Option.empty, testFunc))
       probe.expectMsg(Some(testDropJobs(1)).toString)
 
       val expectDropJob = testDropJobs(1).copy(name = "test")
       // input with existing jobID
-      probe.send(actor, PostJobForCompletion(expectDropJob, testFunc))
+      probe.send(actor, PostJobForCompletion(expectDropJob, Option.empty, testFunc))
       probe.expectMsg(Some(expectDropJob).toString)
       db.executeInSession(db.dropJobs.list) must_== testDropJobs.take(1) :+ expectDropJob
     }

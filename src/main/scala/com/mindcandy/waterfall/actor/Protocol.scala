@@ -50,6 +50,18 @@ object LogStatus extends Enumeration {
 object Protocol {
   type JobID = Int
   type RunUID = UUID
+
+  case class DropJobModel(jobID: Option[JobID],
+                          dropUID: DropUID,
+                          name: String,
+                          description: String,
+                          enabled: Boolean,
+                          cron: Option[String],
+                          timeFrame: TimeFrame.TimeFrame,
+                          configuration: Map[String, String],
+                          parallel: Boolean = false,
+                          parents: Option[List[JobID]])
+
   case class DropJob(jobID: Option[JobID],
                      dropUID: DropUID,
                      name: String,
@@ -59,7 +71,7 @@ object Protocol {
                      timeFrame: TimeFrame.TimeFrame,
                      configuration: Map[String, String],
                      parallel: Boolean = false) {
-    lazy val children: List[DropJob] = db.
+    lazy val children: List[DropJob] = ???
     lazy val parents: List[DropJob] = ???
   }
   //                     parents: List[JobID])
@@ -86,8 +98,10 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
+  implicit def DropJobModelCodecJson = casecodec10(DropJobModel.apply, DropJobModel.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents")
   implicit def DropJobCodecJson = casecodec9(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel" /*, "parents"*/ )
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
@@ -133,5 +147,19 @@ object Protocol {
       case Success(integer) if integer >= 0 => Right(integer)
       case _ => Left(MalformedContent(s"'$value' is not a valid non-negative integer"))
     }
+  }
+
+  implicit def dropJobModel2DropJob(model: DropJobModel): DropJob = {
+    DropJob(
+      jobID = model.jobID,
+      dropUID = model.dropUID,
+      name = model.name,
+      description = model.description,
+      enabled = model.enabled,
+      cron = model.cron,
+      timeFrame = model.timeFrame,
+      configuration = model.configuration,
+      parallel = model.parallel
+    )
   }
 }

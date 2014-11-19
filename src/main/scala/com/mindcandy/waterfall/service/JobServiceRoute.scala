@@ -24,10 +24,10 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
         } ~
         post {
           // create or update a job
-          entity(as[DropJob]) { dropJob =>
+          entity(as[DropJobModel]) { dropJob =>
             produce(instanceOf[Option[DropJob]]) { completionFunction =>
               context =>
-                jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
+                jobDatabaseManager ! PostJobForCompletion(dropJob, dropJob.parents, completionFunction)
             }
           }
         }
