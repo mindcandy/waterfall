@@ -37,9 +37,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def receive = {
     case StartJob(jobID, job) => runJob(jobID, job)
-    case JobResult(jobID: JobID, runUID, result) => {
-      processResult(runUID, result)
-    }
+    case JobResult(jobID: JobID, runUID, result) => processResult(runUID, result)
     case RunJobImmediately(jobID, f) => {
       log.debug(s"Got Run job:$jobID immediately request")
       jobDatabaseManager ! GetJobForCompletion(
@@ -63,7 +61,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
-            runchilds(jobID)
+            runChildren(jobID)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -108,7 +106,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     }
   }
 
-  def runchilds(jobID: JobID) = {
+  def runChildren(jobID: JobID) = {
     jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
       jobID,
       jobList => {

@@ -10,7 +10,7 @@ import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
 import org.specs2.time.NoTimeConversions
 import spray.http.StatusCode.int2StatusCode
-import spray.routing.{ MalformedQueryParamRejection, MalformedRequestContentRejection }
+import spray.routing.{ ValidationRejection, MalformedQueryParamRejection, MalformedRequestContentRejection }
 import spray.testkit.Specs2RouteTest
 
 class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped with Specs2RouteTest with TestDatabase with ArgonautMarshallers with NoTimeConversions {
@@ -27,6 +27,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   def is = s2"""
   JobServiceRoute test
   ==============================================================================
+
     get /jobs ${getJobs}
     post /jobs with no header nor body ${postJobs}
     post /jobs with json without jobID ${postJobsWithoutJobID}
@@ -55,6 +56,10 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     GET /logs?dropuid=EXRATE1 ${getLogsWithDropUID}
     POST /jobs/1/run ${postRunJob}
     POST /jobs/100/run with unknown jobID ${postRunJobWithUnknownJobID}
+
+    POST /jobs/1 with cron and parents ${postJobWithCronAndParents}
+    POST /jobs/1 with no cron or parents ${postJobWithNoCronOrParents}
+    POST /jobs/1 with parents ${postJobsWithParents}
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
@@ -242,5 +247,62 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
 
   def postRunJobWithUnknownJobID = Post("/jobs/100/run") ~> route ~> check {
     status === int2StatusCode(404)
+  }
+
+  def postJobWithCronAndParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "cron":"0 1 * * * ?",
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or parents", None)
+    }
+  }
+
+  def postJobWithNoCronOrParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or parents", None)
+    }
+  }
+
+  def postJobsWithParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option.empty[String], TimeFrame.DAY_YESTERDAY, Map(), false)
+    }
   }
 }

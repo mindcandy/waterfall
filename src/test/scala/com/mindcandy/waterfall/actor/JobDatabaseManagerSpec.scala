@@ -1,7 +1,7 @@
 package com.mindcandy.waterfall.actor
 
 import akka.actor.ActorSystem
-import akka.testkit.{TestKit, TestProbe}
+import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestDatabase
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
@@ -9,19 +9,19 @@ import com.mindcandy.waterfall.actor.Protocol._
 import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
-import org.specs2.specification.{Grouped, Step}
+import org.specs2.specification.{ Grouped, Step }
 import org.specs2.time.NoTimeConversions
 
 import scala.slick.driver.JdbcDriver.simple._
 import scala.slick.jdbc.JdbcBackend.Database.dynamicSession
 
 class JobDatabaseManagerSpec
-  extends TestKit(ActorSystem("JobDatabaseManagerSpec", ConfigFactory.load()))
-  with SpecificationLike
-  with NoTimeConversions
-  with Mockito
-  with Grouped
-  with TestDatabase {
+    extends TestKit(ActorSystem("JobDatabaseManagerSpec", ConfigFactory.load()))
+    with SpecificationLike
+    with NoTimeConversions
+    with Mockito
+    with Grouped
+    with TestDatabase {
   def is = s2"""
     JobDatabaseManager should
 
