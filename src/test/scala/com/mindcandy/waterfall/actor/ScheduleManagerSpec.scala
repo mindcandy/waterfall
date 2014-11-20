@@ -25,6 +25,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     ScheduleManager should
       automatically schedule a CheckJobs message to itself $autoCheckJobs
       contact job database on check jobs message $checkJobs
+      not schedule when attempting with a cronless job $scheduleJobWithoutCron
       schedule one job if one is sent from the databaseManager $scheduleOneJob
       schedule two jobs if two are sent from the databaseManager $scheduleTwoJobsAtDifferentTimes
       not schedule a job if it is cancelled $cancelOneJob
@@ -56,6 +57,20 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
 
     probe.send(actor, request)
     databaseManager.expectMsg(GetSchedule()) must not(throwA[AssertionError])
+  }
+
+  def scheduleJobWithoutCron = {
+    val probe: TestProbe = TestProbe()
+    val databaseManager: TestProbe = TestProbe()
+    val dropSupervisor: TestProbe = TestProbe()
+    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
+    val currentTime = DateTime.now + Period.seconds(5)
+
+    val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime, isCron = false)
+    val request = DropJobMap(Map(1 -> dropJob))
+
+    probe.send(actor, request)
+    dropSupervisor.expectNoMsg must not(throwA[AssertionError])
   }
 
   def scheduleOneJob = {
@@ -250,7 +265,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
       dropUid,
       name,
       "desc",
-      true, if (isCron) Option(s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?") else None,
+      true,
+      if (isCron) Option(s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?") else None,
       TimeFrame.DAY_YESTERDAY,
       Map())
 }

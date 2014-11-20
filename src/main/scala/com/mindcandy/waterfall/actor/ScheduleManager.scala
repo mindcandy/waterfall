@@ -44,6 +44,9 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
     case DropJobMap(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
+      // TODO: This is a bit clumsy now. Firstly map is unnecessary. And then
+      // TODO: all these checks for cron.isDefined when it should be done once here
+      // TODO: and then just pass the cron along.
       val newJobIDs = manageScheduledJobs(jobs)
       for {
         jobID <- newJobIDs
@@ -59,7 +62,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
   }
 
   def manageScheduledJobs(jobs: Map[JobID, DropJob]): Set[JobID] = {
-    val jobIDs = jobs.keySet
+    val jobIDs = jobs.filter(_._2.cron.isDefined).keySet
     val scheduledIDs = scheduledJobs.keySet & jobIDs
     for {
       removableJobID <- scheduledJobs.keySet &~ scheduledIDs
