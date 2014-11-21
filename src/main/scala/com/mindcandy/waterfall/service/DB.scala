@@ -143,32 +143,30 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   }
 
   def insertOrUpdateDropJob(dropJob: DropJob, maybeParents: Option[List[JobID]])(implicit session: Session): Option[DropJob] = {
-    db.withTransaction { implicit session =>
-      (dropJob.cron, maybeParents) match {
-        case (Some(cron), None) =>
-          CronExpression.isValidExpression(cron) match {
-            case false => None
-            case true => internalInsertOrUpdateDropJob(dropJob)
-          }
-        case (None, Some(parents)) => {
-          internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
-            if (parents.contains(job.jobID.get)) {
+    (dropJob.cron, maybeParents) match {
+      case (Some(cron), None) =>
+        CronExpression.isValidExpression(cron) match {
+          case false => None
+          case true => internalInsertOrUpdateDropJob(dropJob)
+        }
+      case (None, Some(parents)) => {
+        internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
+          if (parents.contains(job.jobID.get)) {
+            session.rollback()
+            Option.empty[DropJob]
+          } else {
+            val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
+            if (results.contains(None)) {
               session.rollback()
               Option.empty[DropJob]
             } else {
-              val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
-              if (results.contains(None)) {
-                session.rollback()
-                Option.empty[DropJob]
-              } else {
-                Option(job)
-              }
+              Option(job)
             }
           }
         }
-        case _ =>
-          None
       }
+      case _ =>
+        None
     }
   }
 

@@ -83,7 +83,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case PostJobForCompletion(dropJob, parents, f) => {
       log.debug(s"Insert or update a job $dropJob")
-      f(db.executeInSession(db.insertOrUpdateDropJob(dropJob, parents)))
+      f(db.db.withDynSession(db.insertOrUpdateDropJob(dropJob, parents)))
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")
