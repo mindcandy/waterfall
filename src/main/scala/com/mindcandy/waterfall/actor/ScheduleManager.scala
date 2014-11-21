@@ -12,15 +12,14 @@ import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
 object ScheduleManager {
+
   case class CheckJobs()
 
-  def calculateNextFireTime(cron: Option[String]): Try[Option[FiniteDuration]] = Try {
-    cron.map { cronString =>
-      val cronExpression = new CronExpression(cronString)
-      val now = DateTime.now
-      val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
-      (now to next).millis millis
-    }
+  def calculateNextFireTime(cron: String): Try[FiniteDuration] = Try {
+    val cronExpression = new CronExpression(cron)
+    val now = DateTime.now
+    val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
+    (now to next).millis millis
   }
 
   def props(jobDatabaseManager: ActorRef, dropSupervisor: ActorRef, dropFactory: WaterfallDropFactory, maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration): Props =
@@ -29,6 +28,7 @@ object ScheduleManager {
 
 class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: ActorRef, val dropFactory: WaterfallDropFactory,
                       maxScheduleTime: FiniteDuration, checkJobsPeriod: FiniteDuration) extends Actor with ActorLogging {
+
   import com.mindcandy.waterfall.actor.Protocol._
   import com.mindcandy.waterfall.actor.ScheduleManager._
 
@@ -44,10 +44,17 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
     case DropJobMap(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
-      val newJobIDs = manageScheduledJobs(jobs)
+
+      val jobsWithCron: Map[JobID, (DropJob, String)] = (for {
+        job <- jobs.values
+        jobID <- job.jobID
+        cron <- job.cron
+      } yield (jobID, (job, cron))).toMap
+
       for {
-        jobID <- newJobIDs
-        cancellable <- scheduleJob(jobID, jobs(jobID))
+        jobID <- manageScheduledJobs(jobsWithCron.keySet)
+        jobWithCron = jobsWithCron(jobID)
+        cancellable <- scheduleJob(jobID, jobWithCron._1, jobWithCron._2)
       } yield {
         scheduledJobs += (jobID -> (jobs(jobID), cancellable))
       }
@@ -58,8 +65,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     }
   }
 
-  def manageScheduledJobs(jobs: Map[JobID, DropJob]): Set[JobID] = {
-    val jobIDs = jobs.keySet
+  def manageScheduledJobs(jobIDs: Set[JobID]): Set[JobID] = {
     val scheduledIDs = scheduledJobs.keySet & jobIDs
     for {
       removableJobID <- scheduledJobs.keySet &~ scheduledIDs
@@ -71,16 +77,13 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     jobIDs &~ scheduledIDs
   }
 
-  def scheduleJob(jobID: JobID, job: DropJob): Option[Cancellable] = {
-    calculateNextFireTime(job.cron) match {
-      case Success(Some(duration)) if maxScheduleTime > duration =>
+  def scheduleJob(jobID: JobID, job: DropJob, cron: String): Option[Cancellable] = {
+    calculateNextFireTime(cron) match {
+      case Success(duration) if maxScheduleTime > duration =>
         log.debug(s"scheduled new job $job with duration $duration")
         Some(context.system.scheduler.scheduleOnce(duration, self, StartJob(jobID, job))(context.dispatcher))
-      case Success(Some(duration)) =>
+      case Success(duration) =>
         log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it's scheduled to run after $duration and the current max schedule time is $maxScheduleTime")
-        None
-      case Success(None) =>
-        log.debug(s"Job ${job.jobID} with drop uid ${job.dropUID} ignored, as it is a child")
         None
       case Failure(exception) => {
         log.error(s"could not resolve cron expression for ${job.jobID} with drop uid ${job.dropUID}", exception)

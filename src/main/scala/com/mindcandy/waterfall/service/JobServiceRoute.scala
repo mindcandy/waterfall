@@ -24,15 +24,14 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
         } ~
         post {
           // create or update a job
-          entity(as[DropJobModel]) { dropJob =>
-            validate((dropJob.cron, dropJob.parents) match {
-              case (Some(_), None) => true
-              case (None, Some(_)) => true
+          entity(as[DropJobModel]) { dropJobModel =>
+            validate((dropJobModel.cron, dropJobModel.parents) match {
+              case (Some(_), None) | (None, Some(_)) => true
               case _ => false
             }, "A job can only have a cron or parents") {
               produce(instanceOf[Option[DropJob]]) { completionFunction =>
                 context =>
-                  jobDatabaseManager ! PostJobForCompletion(dropJob, dropJob.parents, completionFunction)
+                  jobDatabaseManager ! PostJobForCompletion(dropJobModel.asJob, dropJobModel.parents, completionFunction)
               }
             }
           }
@@ -57,7 +56,7 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
             }
           }
         } ~
-        path("dependencies") {
+        path("children") {
           get {
             // list all dependencies for a job
             produce(instanceOf[DropJobList]) { completionFunction =>

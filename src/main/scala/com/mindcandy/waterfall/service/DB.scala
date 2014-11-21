@@ -114,25 +114,6 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     } yield (child)).list
   }
 
-  //  def selectDropLog(jobID: JobID): Option[DropJob] = {
-  //    val test = (for {
-  //      jobWithInits <- dropJobs leftJoin dropJobDependencies on (_.jobID === _.childJobID)
-  //    } yield jobWithInits)
-  //      .groupBy(_._1)
-  //      .map { case (job, results) => (results.map(_._1), results.length) }
-  //
-  //    //      .groupBy(_._1.jobID)
-  //
-  //    None
-  //  }
-  //  def selectDropchildss(jobID: JobID): List[DropJob] = {
-  //    (for {
-  //      dropJob <- dropJobs if dropJob.jobID === jobID
-  //      dependancy <- dropJobDependencies if dependancy.parentJobID === dropJob.jobID
-  //      child <- dropJobs if child.jobID === dependancy.childJobID
-  //    } yield (dropJob, child)).list.groupBy(_._1)
-  //  }
-
   def maybeExists(dropJob: DropJob): Option[DropJob] =
     dropJob.jobID.flatMap(jid => dropJobs.filter(_.jobID === jid).firstOption)
 
@@ -161,52 +142,39 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       .update((Some(endTime), logOutput, exception))
   }
 
-  def insertOrUpdateDropJob(dropJob: DropJob, maybeParents: Option[List[JobID]]): Option[DropJob] = {
-    //    dropJob.cron match {
-    //      case Some(cron) =>
-    //        CronExpression.isValidExpression(cron) match {
-    //          case false => None
-    //          case true => maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
-    //        }
-    //      case None =>
-    //        maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
-    //    }
-    (dropJob.cron, maybeParents) match {
-      case (Some(cron), None) =>
-        CronExpression.isValidExpression(cron) match {
-          case false => None
-          case true => internalInsertOrUpdateDropJob(dropJob)
-        }
-      case (None, Some(parents)) => {
-        internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
-          if (parents.contains(job.jobID.get)) {
-            dynamicSession.rollback()
-            Option.empty[DropJob]
-          } else {
-            val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
-            if (results.contains(None)) {
-              dynamicSession.rollback()
+  def insertOrUpdateDropJob(dropJob: DropJob, maybeParents: Option[List[JobID]])(implicit session: Session): Option[DropJob] = {
+    db.withTransaction { implicit session =>
+      (dropJob.cron, maybeParents) match {
+        case (Some(cron), None) =>
+          CronExpression.isValidExpression(cron) match {
+            case false => None
+            case true => internalInsertOrUpdateDropJob(dropJob)
+          }
+        case (None, Some(parents)) => {
+          internalInsertOrUpdateDropJob(dropJob).flatMap { job =>
+            if (parents.contains(job.jobID.get)) {
+              session.rollback()
               Option.empty[DropJob]
             } else {
-              Option(job)
+              val results = parents.map(parent => insertAndReturnDependency(DropJobDependency(parent, job.jobID.get)))
+              if (results.contains(None)) {
+                session.rollback()
+                Option.empty[DropJob]
+              } else {
+                Option(job)
+              }
             }
           }
         }
+        case _ =>
+          None
       }
-      case _ =>
-        None
     }
   }
 
   def internalInsertOrUpdateDropJob(dropJob: DropJob): Option[DropJob] = {
     maybeExists(dropJob).fold(insertAndReturnDropJob(dropJob))(_ => updateAndReturnDropJob(dropJob))
   }
-
-  //  def insertOrUpdateDependencyDropJob(parentJobID: JobID, dependencyDropJob: DropJob): Option[DropJob] = {
-  //    insertOrUpdateDropJob(dependencyDropJob).flatMap { job =>
-  //      insertAndReturnDependency(DropJobDependency(parentJobID, job.jobID.get)).map(dependency => job)
-  //    }
-  //  }
 
   val defaultSelectDropLogLimit = 100
   val defaultSelectDropLogOffset = 0

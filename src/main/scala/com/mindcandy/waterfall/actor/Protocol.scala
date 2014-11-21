@@ -5,6 +5,7 @@ import java.util.UUID
 import argonaut.Argonaut._
 import argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
+import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobModel }
 import org.joda.time.DateTime
 import spray.httpx.unmarshalling.{ Deserializer, MalformedContent }
 
@@ -70,11 +71,8 @@ object Protocol {
                      cron: Option[String],
                      timeFrame: TimeFrame.TimeFrame,
                      configuration: Map[String, String],
-                     parallel: Boolean = false) {
-    lazy val children: List[DropJob] = ???
-    lazy val parents: List[DropJob] = ???
-  }
-  //                     parents: List[JobID])
+                     parallel: Boolean = false)
+
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
@@ -149,8 +147,8 @@ object Protocol {
     }
   }
 
-  implicit def dropJobModel2DropJob(model: DropJobModel): DropJob = {
-    DropJob(
+  implicit class DropJobModelExt(val model: DropJobModel) extends AnyVal {
+    def asJob: DropJob = DropJob(
       jobID = model.jobID,
       dropUID = model.dropUID,
       name = model.name,
@@ -163,3 +161,4 @@ object Protocol {
     )
   }
 }
+

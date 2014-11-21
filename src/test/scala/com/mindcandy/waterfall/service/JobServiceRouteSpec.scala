@@ -36,7 +36,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     post /jobs with json with malformed cron ${postJobsWithMalformedCron}
     get /jobs/:id ${getJobsWithJobID}
     get /jobs/:id with unknown id ${getJobsWithUnknownJobID}
-    get /jobs/:id/dependencies ${getDependenciesWithJobID}
+    get /jobs/:id/children ${getChildrenWithJobID}
     get /drops/:dropuid/jobs ${getJobsWithDropUID}
     get /drops/:dropuid/jobs with unknown dropUID ${getJobsWithUnknownDropUID}
     get /schedule ${getSchedule}
@@ -60,6 +60,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     POST /jobs/1 with cron and parents ${postJobWithCronAndParents}
     POST /jobs/1 with no cron or parents ${postJobWithNoCronOrParents}
     POST /jobs/1 with parents ${postJobsWithParents}
+
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
@@ -85,7 +86,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -105,7 +106,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
     }
   }
 
@@ -154,11 +155,11 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     responseAs[DropJob] === testDropJobs(0)
   }
 
-  def getDependenciesWithJobID = Get("/jobs/1/dependencies") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(List())
+  def getChildrenWithJobID = Get("/jobs/1/children") ~> route ~> check {
+    status === int2StatusCode(200)
   }
 
-  def getJobsWithUnknownJobID = Get("/jobs/3") ~> route ~> check {
+  def getJobsWithUnknownJobID = Get("/jobs/4") ~> route ~> check {
     status === int2StatusCode(404)
   }
 

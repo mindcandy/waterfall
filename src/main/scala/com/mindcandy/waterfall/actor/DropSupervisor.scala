@@ -37,7 +37,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def receive = {
     case StartJob(jobID, job) => runJob(jobID, job)
-    case JobResult(jobID: JobID, runUID, result) => processResult(runUID, result)
+    case JobResult(jobID, runUID, result) => processResult(runUID, result)
     case RunJobImmediately(jobID, f) => {
       log.debug(s"Got Run job:$jobID immediately request")
       jobDatabaseManager ! GetJobForCompletion(

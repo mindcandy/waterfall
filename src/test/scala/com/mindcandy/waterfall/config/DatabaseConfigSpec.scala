@@ -58,7 +58,7 @@ class DatabaseContainerSpec
     insert DropLog into database
       successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
       inserted DropLog is correct ${insertDropLog.e2}
-    
+
     select DropLog
       select all have correct record size ${selectDropLog.e1}
       select jobID=1 have correct record size and correct jobID ${selectDropLog.e2}
@@ -75,11 +75,11 @@ class DatabaseContainerSpec
       update a job ${insertOrUpdateDropJob.e2}
       insert a new job ${insertOrUpdateDropJob.e3}
       insert job with both cron and parent ${insertOrUpdateDropJob.e4}
+      insert job with neither cron and parent ${insertOrUpdateDropJob.e5}
 
     Postgre SQL specific
       droplog table statement is correct ${exceptionAsTextInPostgre}
   """
-  //       insert job with neither cron and parent ${insertOrUpdateDropJob.e5}
 
   def createNewDatabase = new group {
     val db = newDB
@@ -251,7 +251,7 @@ class DatabaseContainerSpec
 
     e3 := {
       val dropJob = DropJob(None, "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
-      val expect = DropJob(Some(3), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
+      val expect = DropJob(Some(4), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must_== Some(expect)
     }
 
@@ -260,10 +260,10 @@ class DatabaseContainerSpec
       db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must beNone
     }
 
-    //    e5 := {
-    //      val dropJob = DropJob(None, "", "", "", true, Option.empty, TimeFrame.DAY_TODAY, Map())
-    //      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
-    //    }
+    e5 := {
+      val dropJob = DropJob(None, "", "", "", true, Option.empty, TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must beNone
+    }
 
   }
 }
