@@ -62,7 +62,11 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
-      val dropJobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
+      val dropJobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
+      // TODO: Converting to run seems erroneous. The existence of jobID is implied and think it should just
+      // TODO: be a get. Also mapping to -1 is erroneous because if it was possible this would lead to overwriting
+      // TODO: in the map.
+      // TODO: Don't even need map here
       sender ! DropJobMap(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
     }
     case StartDropLog(runUID, jobID, startTime) => {

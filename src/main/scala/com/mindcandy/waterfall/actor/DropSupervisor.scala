@@ -18,6 +18,7 @@ object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
   case class JobResult(jobID: JobID, runUID: RunUID, result: Try[Unit])
   case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
+  case class RunChildren(jobId: JobID)
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
     case DAY_TODAY => Some(DateTime.now)
@@ -50,6 +51,18 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         }
       )
     }
+    case RunChildren(jobID) => {
+      jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
+        jobID,
+        jobList => {
+          jobList.jobs.map { job =>
+            // TODO: Mapping to -1 is not great. Already seen elsewhere in the code creating maps with jobID
+            // TODO: and this could result in jobs overwriting if it were possible to not have a jobID at this point
+            self ! StartJob(job.jobID.getOrElse(-1), job)
+          }
+        }
+      )
+    }
   }
 
   def processResult(runUID: RunUID, result: Try[Unit]) = {
@@ -61,7 +74,8 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
-            runChildren(jobID)
+
+            self ! RunChildren(jobID)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -104,19 +118,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         }
       }
     }
-  }
-
-  def runChildren(jobID: JobID) = {
-    jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
-      jobID,
-      jobList => {
-        jobList.jobs.map { job =>
-          //          job.cron
-          // TODO: Need to check the dependencies for this
-          self ! StartJob(job.jobID.getOrElse(-1), job)
-        }
-      }
-    )
   }
 
   override def preStart() = {

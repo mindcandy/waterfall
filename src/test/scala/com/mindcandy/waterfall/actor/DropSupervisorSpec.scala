@@ -7,7 +7,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartAndFinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetChildrenWithJobIDForCompletion, FinishDropLog, StartAndFinishDropLog, StartDropLog }
 import com.mindcandy.waterfall.actor.Protocol.DropJob
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import com.typesafe.config.ConfigFactory
@@ -22,16 +22,20 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     with NoTimeConversions {
   def is = s2"""
     DropSupervisor should
-      run the job when it receives a start job message $runJobOnStartJob
-      log the job when it receives a start job message $logJobOnStartJob
+
       log a success result when a job is completed successfully $logSuccess
-      log a failure result when a job is completed unsuccessfully $logFailure
-      do not run a job that is still running $doNotStartIfRunning
-      run job with identical jobID if parallel allowed $runJobsWithIdenticalJobIDIfParallelAllowed
-      rerun a job if previous run finished $reRunAfterFinished
-      log to database if the drop not in factory $logToErrorIfNoFactoryDrop
-      log to database if result not in running list $logToErrorIfResultNotInList
+
   """ ^ Step(afterAll)
+
+  //  run the job when it receives a start job message $runJobOnStartJob
+  //  log the job when it receives a start job message $logJobOnStartJob
+  //  log a success result when a job is completed successfully $logSuccess
+  //  log a failure result when a job is completed unsuccessfully $logFailure
+  //  do not run a job that is still running $doNotStartIfRunning
+  //  run job with identical jobID if parallel allowed $runJobsWithIdenticalJobIDIfParallelAllowed
+  //  rerun a job if previous run finished $reRunAfterFinished
+  //    log to database if the drop not in factory $logToErrorIfNoFactoryDrop
+  //    log to database if result not in running list $logToErrorIfResultNotInList
 
   def afterAll: Any = TestKit.shutdownActorSystem(system)
 
@@ -72,6 +76,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       case FinishDropLog(`runUID`, _, None, None) => success
       case _ => failure
     }
+    jobDatabaseManager.expectMsgClass(classOf[GetChildrenWithJobIDForCompletion]).parentJobId must_== 1
   }
 
   def logFailure = {
