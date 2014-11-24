@@ -65,8 +65,8 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
-    val expectedMessage = DropJobMap(
-      testDropJobs.filter(_.enabled).map(job => job.jobID.get -> job).toMap
+    val expectedMessage = DropJobSchedule(
+      testDropJobs.filter(job => job.enabled && job.cron.isDefined).map(job => job.jobID.get -> (job, job.cron.get)).toMap
     )
 
     probe.send(actor, GetSchedule())

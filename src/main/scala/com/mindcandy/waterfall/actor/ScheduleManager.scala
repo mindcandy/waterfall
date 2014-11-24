@@ -42,21 +42,15 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
       log.debug("Received CheckJobs message")
       jobDatabaseManager ! GetSchedule()
     }
-    case DropJobMap(jobs) => {
+    case DropJobSchedule(jobs) => {
       log.debug(s"Received DropJobList($jobs)")
 
-      val jobsWithCron: Map[JobID, (DropJob, String)] = (for {
-        job <- jobs.values
-        jobID <- job.jobID
-        cron <- job.cron
-      } yield (jobID, (job, cron))).toMap
-
       for {
-        jobID <- manageScheduledJobs(jobsWithCron.keySet)
-        jobWithCron = jobsWithCron(jobID)
-        cancellable <- scheduleJob(jobID, jobWithCron._1, jobWithCron._2)
+        jobID <- manageScheduledJobs(jobs.keySet)
+        jobAndCron = jobs(jobID)
+        cancellable <- scheduleJob(jobID, jobAndCron._1, jobAndCron._2)
       } yield {
-        scheduledJobs += (jobID -> (jobs(jobID), cancellable))
+        scheduledJobs += (jobID -> (jobs(jobID)._1, cancellable))
       }
     }
     case startJob: StartJob => {

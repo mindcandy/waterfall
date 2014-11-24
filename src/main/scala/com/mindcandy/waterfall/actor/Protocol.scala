@@ -76,7 +76,7 @@ object Protocol {
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
-  case class DropJobMap(jobs: Map[JobID, DropJob]) {
+  case class DropJobSchedule(jobs: Map[JobID, (DropJob, String)]) {
     val count = jobs.size
   }
   case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
