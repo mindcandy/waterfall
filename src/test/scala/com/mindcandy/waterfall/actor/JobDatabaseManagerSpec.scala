@@ -25,39 +25,39 @@ class JobDatabaseManagerSpec
   def is = s2"""
     JobDatabaseManager should
 
-  insert new DropJob missing parents fails ${insertDropJob.e7}
-  insert new DropJob missing parents fails(2) ${insertDropJob.e8}
+    send GetSchedule $getSchedule
+    send StartAndFinishDropLog ${startAndFinishDropLog.e1}
+    send StartAndFinishDropLog multiple times ${startAndFinishDropLog.e2}
+    send StartAndFinishDropLog with unknown jobID $startAndFinishDropLogWithUnknownJobID
+    send GetJobForCompletion $getJobCompletion
+    send GetJobsForCompletion $getJobsCompletion
+    send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
+    send GetChildrenWithJobIDForCompletion $getChildrenForCompletion
+    send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
+    send GetScheduleForCompletion $getScheduleCompletion
+    send GetLogsForCompletion $getLogsForCompletion
+    send PostJobForCompletion $postJobForCompletion
+
+    send StartDropLog $startDropLog
+    send FinishDropLog with log ${finishDropLog.e1}
+    send FinishDropLog with exception ${finishDropLog.e2}
+    send FinishDropLog with no message ${finishDropLog.e3}
+
+    insert new DropJob inserts new entry into database ${insertDropJob.e1}
+    insert DropJob with unknown JobID inserts new entry into database ${insertDropJob.e2}
+    insert DropJob with existing JobID updates existing entry in database ${insertDropJob.e3}
+
+    insert new DropJob with cron and parents fails ${insertDropJob.e4}
+    insert new DropJob without cron or parents fails ${insertDropJob.e5}
+    insert new DropJob existing parents succeeds ${insertDropJob.e6}
+
+    insert new DropJob missing parents fails ${insertDropJob.e7}
+    insert new DropJob missing parents fails(2) ${insertDropJob.e8}
+
+    insert new DropJob missing parents fails ${insertDropJob.e7}
+    insert new DropJob missing parents fails(2) ${insertDropJob.e8}
 
   """ ^ Step(afterAll)
-
-  //  send GetSchedule $getSchedule
-  //  send StartAndFinishDropLog ${startAndFinishDropLog.e1}
-  //  send StartAndFinishDropLog multiple times ${startAndFinishDropLog.e2}
-  //  send StartAndFinishDropLog with unknown jobID $startAndFinishDropLogWithUnknownJobID
-  //  send GetJobForCompletion $getJobCompletion
-  //  send GetJobsForCompletion $getJobsCompletion
-  //  send GetJobsWithDropUIDForCompletion $getJobsWithDropUIDCompletion
-  //  send GetChildrenWithJobIDForCompletion $getChildrenForCompletion
-  //  send GetJobForCompletion with unknown jobID $getJobCompletionWithWrongJobID
-  //  send GetScheduleForCompletion $getScheduleCompletion
-  //  send GetLogsForCompletion $getLogsForCompletion
-  //  send PostJobForCompletion $postJobForCompletion
-  //
-  //  send StartDropLog $startDropLog
-  //  send FinishDropLog with log ${finishDropLog.e1}
-  //  send FinishDropLog with exception ${finishDropLog.e2}
-  //  send FinishDropLog with no message ${finishDropLog.e3}
-  //
-  //  insert new DropJob inserts new entry into database ${insertDropJob.e1}
-  //  insert DropJob with unknown JobID inserts new entry into database ${insertDropJob.e2}
-  //  insert DropJob with existing JobID updates existing entry in database ${insertDropJob.e3}
-  //
-  //  insert new DropJob with cron and parents fails ${insertDropJob.e4}
-  //  insert new DropJob without cron or parents fails ${insertDropJob.e5}
-  //  insert new DropJob existing parents succeeds ${insertDropJob.e6}
-  //
-  //  insert new DropJob missing parents fails ${insertDropJob.e7}
-  //  insert new DropJob missing parents fails(2) ${insertDropJob.e8}
 
   def afterAll = TestKit.shutdownActorSystem(system)
 

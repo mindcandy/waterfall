@@ -23,20 +23,31 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     with Mockito {
   def is = s2"""
     ScheduleManager should
-      automatically schedule a CheckJobs message to itself $autoCheckJobs
-      contact job database on check jobs message $checkJobs
-      not schedule when attempting with a cronless job $scheduleJobWithoutCron
-      schedule one job if one is sent from the databaseManager $scheduleOneJob
+
       schedule two jobs if two are sent from the databaseManager $scheduleTwoJobsAtDifferentTimes
-      not schedule a job if it is cancelled $cancelOneJob
-      schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
-      schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
-      only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
-      reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
-      schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
-      do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
-      do not schedule a job if it's cron is malformed $malformedCron
+
+
   """ ^ Step(afterAll)
+
+//  schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
+//  schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
+//    only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
+//    reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
+//  schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
+
+  //  automatically schedule a CheckJobs message to itself $autoCheckJobs
+  //    contact job database on check jobs message $checkJobs
+  //    not schedule when attempting with a cronless job $scheduleJobWithoutCron
+  //    schedule one job if one is sent from the databaseManager $scheduleOneJob
+  //  schedule two jobs if two are sent from the databaseManager $scheduleTwoJobsAtDifferentTimes
+  //  not schedule a job if it is cancelled $cancelOneJob
+  //    schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
+  //  schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
+  //    only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
+  //    reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
+  //  schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
+  //  do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
+  //  do not schedule a job if it's cron is malformed $malformedCron
 
   def afterAll = TestKit.shutdownActorSystem(system)
 
