@@ -85,7 +85,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
 
     def * =
       (jobID.?, dropUID, name, description, enabled, cron.?, timeFrame, configuration, parallel) <>
-        (DropJob.tupled, DropJob.unapply)
+        ((DropJob.applyWithoutParents _).tupled, DropJob.unapplyWithoutParents)
   }
 
   class DropJobDependencies(tag: Tag) extends Table[DropJobDependency](tag, "drop_job_dependency") {
@@ -107,7 +107,37 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   val dropJobDependencies = TableQuery[DropJobDependencies]
   val allTables = Seq(dropJobs, dropLogs, dropJobDependencies)
 
-  def selectDropJobChildren(jobID: JobID): List[DropJob] = {
+  def getJobsSorted(): List[DropJob] = {
+    executeInSession {
+      val jobs: List[DropJob] = dropJobsSorted.list
+      jobs.map(dropJobWithParents _)
+    }
+  }
+
+  def dropJobWithParents(job: DropJob): DropJob = {
+    job.copy(parents = getDropJobParents(job.jobID.get).map(_.jobID.get) match {
+      case Nil => None
+      case xs => Option(xs)
+    })
+  }
+
+  def getDropJobChildren(jobID: JobID): List[DropJob] = {
+    executeInSession(
+      (for {
+        parent <- dropJobDependencies if parent.parentJobID === jobID
+        child <- dropJobs if child.jobID === parent.childJobID
+      } yield (child)).list.map(dropJobWithParents _)
+    )
+  }
+
+  def getDropJobParents(jobID: JobID): List[DropJob] = {
+    (for {
+      child <- dropJobDependencies if child.childJobID === jobID
+      parent <- dropJobs if parent.jobID === child.parentJobID
+    } yield (parent)).list
+  }
+
+  def selectDropJobParents(jobID: JobID): List[DropJob] = {
     (for {
       parent <- dropJobDependencies if parent.parentJobID === jobID
       child <- dropJobs if child.jobID === parent.childJobID

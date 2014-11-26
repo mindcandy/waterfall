@@ -71,7 +71,7 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
     jobIDs &~ scheduledIDs
   }
 
-  def scheduleJob(jobID: JobID, job: DropJob, cron: String): Option[Cancellable] = {
+  def scheduleJob(jobID: JobID, job: DropJob, cron: Cron): Option[Cancellable] = {
     calculateNextFireTime(cron) match {
       case Success(duration) if maxScheduleTime > duration =>
         log.debug(s"scheduled new job $job with duration $duration")

@@ -13,9 +13,9 @@ trait TestDatabase {
 
   def newDB = new DB(DatabaseConfig(s"jdbc:h2:mem:test${UUID.randomUUID()};DB_CLOSE_DELAY=-1"))
 
-  def testDropJob1 = DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
-  def testDropJob2 = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
-  def testDropJob3 = DropJob(Some(3), "EXRATE3", "Exchange Rate", "desc", false, Option.empty, TimeFrame.DAY_YESTERDAY, Map(), true)
+  def testDropJob1 = DropJob(Some(1), "EXRATE1", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false, Option.empty)
+  def testDropJob2 = DropJob(Some(2), "EXRATE2", "Exchange Rate", "desc", false, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true, Option.empty)
+  def testDropJob3 = DropJob(Some(3), "EXRATE3", "Exchange Rate", "desc", false, Option.empty, TimeFrame.DAY_YESTERDAY, Map(), true, Option(List(1)))
 
   def testDependency = DropJobDependency(1, 3)
 

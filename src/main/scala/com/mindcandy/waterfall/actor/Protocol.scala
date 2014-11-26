@@ -5,7 +5,6 @@ import java.util.UUID
 import argonaut.Argonaut._
 import argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobModel }
 import org.joda.time.DateTime
 import spray.httpx.unmarshalling.{ Deserializer, MalformedContent }
 
@@ -51,17 +50,7 @@ object LogStatus extends Enumeration {
 object Protocol {
   type JobID = Int
   type RunUID = UUID
-
-  case class DropJobModel(jobID: Option[JobID],
-                          dropUID: DropUID,
-                          name: String,
-                          description: String,
-                          enabled: Boolean,
-                          cron: Option[String],
-                          timeFrame: TimeFrame.TimeFrame,
-                          configuration: Map[String, String],
-                          parallel: Boolean = false,
-                          parents: Option[List[JobID]])
+  type Cron = String
 
   case class DropJob(jobID: Option[JobID],
                      dropUID: DropUID,
@@ -71,12 +60,33 @@ object Protocol {
                      cron: Option[String],
                      timeFrame: TimeFrame.TimeFrame,
                      configuration: Map[String, String],
-                     parallel: Boolean = false)
+                     parallel: Boolean = false,
+                     parents: Option[List[JobID]] = Option.empty) {
+    lazy val parentList: List[JobID] = List(1)
+  }
+
+  object DropJob {
+    def applyWithoutParents(jobID: Option[JobID],
+                            dropUID: DropUID,
+                            name: String,
+                            description: String,
+                            enabled: Boolean,
+                            cron: Option[String],
+                            timeFrame: TimeFrame.TimeFrame,
+                            configuration: Map[String, String],
+                            parallel: Boolean = false) = {
+      DropJob(jobID, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel, None)
+    }
+
+    def unapplyWithoutParents(job: DropJob) = {
+      Some((job.jobID, job.dropUID, job.name, job.description, job.enabled, job.cron, job.timeFrame, job.configuration, job.parallel))
+    }
+  }
 
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
-  case class DropJobSchedule(jobs: Map[JobID, (DropJob, String)]) {
+  case class DropJobSchedule(jobs: Map[JobID, (DropJob, Cron)]) {
     val count = jobs.size
   }
   case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
@@ -96,10 +106,8 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit def DropJobModelCodecJson = casecodec10(DropJobModel.apply, DropJobModel.unapply)(
+  implicit def DropJobCodecJson = casecodec10(DropJob.apply, DropJob.unapply)(
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents")
-  implicit def DropJobCodecJson = casecodec9(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
@@ -145,20 +153,6 @@ object Protocol {
       case Success(integer) if integer >= 0 => Right(integer)
       case _ => Left(MalformedContent(s"'$value' is not a valid non-negative integer"))
     }
-  }
-
-  implicit class DropJobModelExt(val model: DropJobModel) extends AnyVal {
-    def asJob: DropJob = DropJob(
-      jobID = model.jobID,
-      dropUID = model.dropUID,
-      name = model.name,
-      description = model.description,
-      enabled = model.enabled,
-      cron = model.cron,
-      timeFrame = model.timeFrame,
-      configuration = model.configuration,
-      parallel = model.parallel
-    )
   }
 }
 

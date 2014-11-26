@@ -160,7 +160,7 @@ class JobDatabaseManagerSpec
     val probe = TestProbe()
     def testFunction(dropJob: Option[DropJob]) = probe.ref ! dropJob
     val db = testDatabaseWithJobsAndLogs
-    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false, Option.empty)
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
     probe.send(actor, PostJobForCompletion(dropJob, Option.empty, testFunction))
@@ -314,7 +314,7 @@ class JobDatabaseManagerSpec
       probe.expectMsg(DropJobList(List(testDropJobs(2).copy(jobID = Option(2)))))
 
       db.executeInSession(db.dropJobDependencies) must_== List(DropJobDependency(1, 2))
-      db.executeInSession(db.dropJobs.list) must_== List(testDropJobs(0), testDropJobs(2).copy(jobID = Option(2)))
+      db.executeInSession(db.dropJobs.list) must_== List(testDropJobs(0), testDropJobs(2).copy(jobID = Option(2), parents = None))
     }
 
     e7 := {

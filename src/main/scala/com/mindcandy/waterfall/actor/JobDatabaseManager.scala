@@ -42,7 +42,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
-      val jobs = db.executeInSession(db.dropJobsSorted.list)
+      val jobs = db.getJobsSorted()
       f(DropJobList(jobs))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
@@ -52,19 +52,20 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetChildrenWithJobIDForCompletion(parentJobID, f) => {
       log.debug(s"Get all child jobs for jobID:$parentJobID with completion")
-      val jobs = db.executeInSession(db.selectDropJobChildren(parentJobID))
+      val jobs = db.getDropJobChildren(parentJobID)
       f(DropJobList(jobs))
     }
+    // TODO: Is this cron only? Should it be called schedule
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
-      val jobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
+      val jobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
       f(DropJobList(jobs))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
       val dropJobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
 
-      val jobsWithCron: Map[JobID, (DropJob, String)] = (for {
+      val jobsWithCron: Map[JobID, (DropJob, Cron)] = (for {
         job <- dropJobs
         jobID <- job.jobID
         cron <- job.cron

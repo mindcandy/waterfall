@@ -303,7 +303,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option.empty[String], TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option.empty[String], TimeFrame.DAY_YESTERDAY, Map(), false, Option(List(1)))
     }
   }
 }

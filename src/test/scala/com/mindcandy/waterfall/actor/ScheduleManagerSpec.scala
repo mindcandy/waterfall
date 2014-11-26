@@ -24,30 +24,20 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
   def is = s2"""
     ScheduleManager should
 
+      automatically schedule a CheckJobs message to itself $autoCheckJobs
+      contact job database on check jobs message $checkJobs
+      schedule one job if one is sent from the databaseManager $scheduleOneJob
       schedule two jobs if two are sent from the databaseManager $scheduleTwoJobsAtDifferentTimes
-
+      not schedule a job if it is cancelled $cancelOneJob
+      schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
+      schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
+      only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
+      reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
+      schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
+      do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
+      do not schedule a job if it's cron is malformed $malformedCron
 
   """ ^ Step(afterAll)
-
-  //  schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
-  //  schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
-  //    only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
-  //    reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
-  //  schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
-
-  //  automatically schedule a CheckJobs message to itself $autoCheckJobs
-  //    contact job database on check jobs message $checkJobs
-  //    not schedule when attempting with a cronless job $scheduleJobWithoutCron
-  //    schedule one job if one is sent from the databaseManager $scheduleOneJob
-  //  schedule two jobs if two are sent from the databaseManager $scheduleTwoJobsAtDifferentTimes
-  //  not schedule a job if it is cancelled $cancelOneJob
-  //    schedule jobs that are not cancelled even when others are $cancelOneJobAndKeepAnother
-  //  schedule new jobs that are posted together with a cancellation request $scheduleNewJobAndCancelOther
-  //    only schedule jobs that are supposed to be run within the next X time units $scheduleOnlyWithinTimeFrame
-  //    reschedule jobs if they arrive after the previous one has ran $rescheduleJobs
-  //  schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
-  //  do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
-  //  do not schedule a job if it's cron is malformed $malformedCron
 
   def afterAll = TestKit.shutdownActorSystem(system)
 
@@ -170,22 +160,6 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
   }
 
-  def scheduleOnlyWithCron = {
-    val probe: TestProbe = TestProbe()
-    val databaseManager: TestProbe = TestProbe()
-    val dropSupervisor: TestProbe = TestProbe()
-    val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(3)
-
-    val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
-    val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime, isCron = false)
-    val request = DropJobSchedule(Map(1 -> (dropJob1, dropJob1.cron.get), 2 -> (dropJob2, dropJob2.cron.get)))
-
-    probe.send(actor, request)
-    dropSupervisor.expectMsg(StartJob(1, dropJob1))
-    dropSupervisor.expectNoMsg() must not(throwA[AssertionError])
-  }
-
   def scheduleJobsWithIdenticalDropUID = {
     val probe: TestProbe = TestProbe()
     val databaseManager: TestProbe = TestProbe()
@@ -244,7 +218,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, Option(s"malformed cron string"), TimeFrame.DAY_YESTERDAY, Map())
+    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, Option(s"malformed cron string"), TimeFrame.DAY_YESTERDAY, Map(), false)
     val request = DropJobSchedule(Map(1 -> (dropJob, dropJob.cron.get)))
 
     probe.send(actor, request)
