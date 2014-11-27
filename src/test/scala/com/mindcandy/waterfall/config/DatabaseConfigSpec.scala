@@ -241,28 +241,28 @@ class DatabaseContainerSpec
     val db = testDatabaseWithJobsAndLogs
     e1 := {
       val dropJob = DropJob(None, "", "", "", true, Option("malformed cron"), TimeFrame.DAY_TODAY, Map())
-      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must beNone
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
     }
 
     e2 := {
       val dropJob = DropJob(Some(1), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
-      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must_== Some(dropJob)
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(dropJob)
     }
 
     e3 := {
       val dropJob = DropJob(None, "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
       val expect = DropJob(Some(4), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
-      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must_== Some(expect)
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(expect)
     }
 
     e4 := {
       val dropJob = DropJob(None, "", "", "", true, Option("malformed cron"), TimeFrame.DAY_TODAY, Map())
-      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must beNone
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
     }
 
     e5 := {
       val dropJob = DropJob(None, "", "", "", true, Option.empty, TimeFrame.DAY_TODAY, Map())
-      db.executeInSession(db.insertOrUpdateDropJob(dropJob, Option.empty)) must beNone
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
     }
 
   }

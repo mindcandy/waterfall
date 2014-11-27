@@ -172,9 +172,9 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       .update((Some(endTime), logOutput, exception))
   }
 
-  def insertOrUpdateDropJob(dropJob: DropJob, maybeParents: Option[List[JobID]])(implicit session: Session): Option[DropJob] = {
+  def insertOrUpdateDropJob(dropJob: DropJob)(implicit session: Session): Option[DropJob] = {
     session.withTransaction {
-      (dropJob.cron, maybeParents) match {
+      (dropJob.cron, dropJob.parents) match {
         case (Some(cron), None) =>
           CronExpression.isValidExpression(cron) match {
             case false => None

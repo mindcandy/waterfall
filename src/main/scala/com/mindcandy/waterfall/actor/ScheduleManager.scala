@@ -5,6 +5,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
+import com.mindcandy.waterfall.actor.Protocol.Cron
 import org.quartz.CronExpression
 
 import scala.concurrent.duration._
@@ -15,7 +16,7 @@ object ScheduleManager {
 
   case class CheckJobs()
 
-  def calculateNextFireTime(cron: String): Try[FiniteDuration] = Try {
+  def calculateNextFireTime(cron: Cron): Try[FiniteDuration] = Try {
     val cronExpression = new CronExpression(cron)
     val now = DateTime.now
     val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
@@ -47,10 +48,11 @@ class ScheduleManager(val jobDatabaseManager: ActorRef, val dropSupervisor: Acto
 
       for {
         jobID <- manageScheduledJobs(jobs.keySet)
-        jobAndCron = jobs(jobID)
-        cancellable <- scheduleJob(jobID, jobAndCron._1, jobAndCron._2)
+        job = jobs(jobID)
+        cron <- job.cron
+        cancellable <- scheduleJob(jobID, job, cron)
       } yield {
-        scheduledJobs += (jobID -> (jobs(jobID)._1, cancellable))
+        scheduledJobs += (jobID -> (job, cancellable))
       }
     }
     case startJob: StartJob => {

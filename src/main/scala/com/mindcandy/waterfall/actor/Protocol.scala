@@ -61,9 +61,7 @@ object Protocol {
                      timeFrame: TimeFrame.TimeFrame,
                      configuration: Map[String, String],
                      parallel: Boolean = false,
-                     parents: Option[List[JobID]] = Option.empty) {
-    lazy val parentList: List[JobID] = List(1)
-  }
+                     parents: Option[List[JobID]] = Option.empty)
 
   object DropJob {
     def applyWithoutParents(jobID: Option[JobID],
@@ -86,7 +84,7 @@ object Protocol {
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
-  case class DropJobSchedule(jobs: Map[JobID, (DropJob, Cron)]) {
+  case class DropJobSchedule(jobs: Map[JobID, DropJob]) {
     val count = jobs.size
   }
   case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])

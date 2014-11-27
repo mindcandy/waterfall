@@ -31,7 +31,7 @@ class DropWorkerSpec
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(1, runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
+    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must beSuccessfulTry
@@ -41,7 +41,7 @@ class DropWorkerSpec
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(1, runUID, new TestWaterfallDropFactory().getDropByUID("test2").get)
+    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test2").get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must beFailedTry
@@ -51,7 +51,7 @@ class DropWorkerSpec
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(1, runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
+    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
     probe.watch(actor)
 
     probe.send(actor, request)

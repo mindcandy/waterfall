@@ -66,7 +66,7 @@ class JobDatabaseManagerSpec
     val db = testDatabaseWithJobs
     val actor = system.actorOf(JobDatabaseManager.props(db))
     val expectedMessage = DropJobSchedule(
-      testDropJobs.filter(job => job.enabled && job.cron.isDefined).map(job => job.jobID.get -> (job, job.cron.get)).toMap
+      testDropJobs.filter(job => job.enabled && job.cron.isDefined).map(job => job.jobID.get -> job).toMap
     )
 
     probe.send(actor, GetSchedule())
@@ -163,7 +163,7 @@ class JobDatabaseManagerSpec
     val dropJob = DropJob(None, "EXRATE", "Exchange Rate", "desc", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false, Option.empty)
     val actor = system.actorOf(JobDatabaseManager.props(db))
 
-    probe.send(actor, PostJobForCompletion(dropJob, Option.empty, testFunction))
+    probe.send(actor, PostJobForCompletion(dropJob, testFunction))
     probe.expectMsgClass(classOf[Option[DropJob]]).isDefined must beTrue
   }
 
@@ -253,7 +253,7 @@ class JobDatabaseManagerSpec
 
     e1 := {
       // input with no jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
       probe.expectMsg(Some(testDropJobs(0)))
 
       db.executeInSession(db.dropJobs.list) must_== testDropJobs(0) :: Nil
@@ -261,11 +261,11 @@ class JobDatabaseManagerSpec
 
     e2 := {
       // input with no jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
       probe.expectMsg(Some(testDropJobs(0)))
 
       // input with arbitrary jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(1).copy(jobID = Some(10)), testFunc))
       probe.expectMsg(Some(testDropJobs(1)))
 
       db.executeInSession(db.dropJobs.list) must_== testDropJobs(0) :: testDropJobs(1) :: Nil
@@ -273,11 +273,11 @@ class JobDatabaseManagerSpec
 
     e3 := {
       // input with arbitrary jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(0), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0), testFunc))
       probe.expectMsg(Some(testDropJobs(0)))
 
       // input with existing jobID
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(name = "test"), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(name = "test"), testFunc))
       val expectedDropJob = testDropJobs(0).copy(name = "test")
       probe.expectMsg(Some(expectedDropJob))
       db.executeInSession(db.dropJobs.list) must_== expectedDropJob :: Nil
@@ -285,7 +285,7 @@ class JobDatabaseManagerSpec
 
     e4 := {
       // input with cron and parents
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), Option(List(1)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
       probe.expectMsg(None)
 
       db.executeInSession(db.dropJobs.list) must_== List()
@@ -293,7 +293,7 @@ class JobDatabaseManagerSpec
 
     e5 := {
       // input with no cron or parents
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None, cron = None), None, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None, cron = None), testFunc))
       probe.expectMsg(None)
 
       db.executeInSession(db.dropJobs.list) must_== List()
@@ -303,11 +303,11 @@ class JobDatabaseManagerSpec
       def testListFunc(dropJobList: DropJobList) = probe.ref ! dropJobList
 
       // input with cron
-      probe.send(actor, PostJobForCompletion(testDropJobs(0), Option.empty, testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0), testFunc))
       probe.expectMsg(Some(testDropJobs(0)))
 
       // input with parent of above
-      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), testFunc))
       probe.expectMsg(Some(testDropJobs(2).copy(jobID = Option(2))))
 
       probe.send(actor, GetChildrenWithJobIDForCompletion(testDropJobs(0).jobID.get, testListFunc))
@@ -322,7 +322,7 @@ class JobDatabaseManagerSpec
       db.executeInSession(db.dropJobDependencies) must_== List()
 
       // input with parent of above
-      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(1)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), testFunc))
       probe.expectMsg(None) must not(throwA[AssertionError])
 
       db.executeInSession(db.dropJobDependencies) must_== List()
@@ -334,7 +334,7 @@ class JobDatabaseManagerSpec
       db.executeInSession(db.dropJobDependencies) must_== List()
 
       // input with parent of above
-      probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(8)), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(2), testFunc))
       probe.expectTerminated(actor) must not(throwA[AssertionError])
 
       db.executeInSession(db.dropJobDependencies) must_== List()

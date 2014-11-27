@@ -31,7 +31,7 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
               }, "A job can only have a cron or parents") {
                 produce(instanceOf[Option[DropJob]]) { completionFunction =>
                   context =>
-                    jobDatabaseManager ! PostJobForCompletion(dropJob, dropJob.parents, completionFunction)
+                    jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)
                 }
               }
             }

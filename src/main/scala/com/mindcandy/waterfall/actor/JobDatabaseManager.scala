@@ -18,7 +18,7 @@ object JobDatabaseManager {
   case class GetChildrenWithJobIDForCompletion(parentJobId: JobID, completionFunction: DropJobList => Unit)
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
-  case class PostJobForCompletion(dropJob: DropJob, parents: Option[List[JobID]], completionFunction: Option[DropJob] => Unit)
+  case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
   case class GetLogsForCompletion(jobID: Option[JobID], time: Option[Int], status: Option[LogStatus], dropUID: Option[String], limit: Option[Int], offset: Option[Int], completionFunction: DropHistory => Unit)
 
   case class StartDropLog(runUID: UUID, jobID: Int, startTime: DateTime)
@@ -64,13 +64,12 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"schedule lookup")
       val dropJobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
 
-      val jobsWithCron: Map[JobID, (DropJob, Cron)] = (for {
+      val jobs = (for {
         job <- dropJobs
         jobID <- job.jobID
-        cron <- job.cron
-      } yield (jobID, (job, cron))).toMap
+      } yield (jobID, job)).toMap
 
-      sender ! DropJobSchedule(jobsWithCron)
+      sender ! DropJobSchedule(jobs)
     }
     case StartDropLog(runUID, jobID, startTime) => {
       log.debug(s"received StartDropLog")
@@ -84,9 +83,9 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"received StartAndFinishDropLog")
       db.insert(db.dropLogs, DropLog(runUID, jobID, startTime, Option(endTime), logOutput, convertException(exception)))
     }
-    case PostJobForCompletion(dropJob, parents, f) => {
+    case PostJobForCompletion(dropJob, f) => {
       log.debug(s"Insert or update a job $dropJob")
-      f(db.db.withDynSession(db.insertOrUpdateDropJob(dropJob, parents)))
+      f(db.db.withDynSession(db.insertOrUpdateDropJob(dropJob)))
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")

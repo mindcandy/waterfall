@@ -92,7 +92,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor
             runningJobs += (runUID -> (worker, startTime, jobID))
-            worker ! DropWorker.RunDrop(jobID, runUID, drop)
+            worker ! DropWorker.RunDrop(runUID, drop)
             jobDatabaseManager ! StartDropLog(runUID, jobID, startTime)
             log.info(s"starting run $runUID with job $jobID for dropUID ${job.dropUID} and name ${job.name}")
           }
