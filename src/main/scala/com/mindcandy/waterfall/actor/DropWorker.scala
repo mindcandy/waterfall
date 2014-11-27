@@ -17,7 +17,7 @@ class DropWorker extends Actor with ActorLogging {
   def receive = {
     case RunDrop(jobID, runUID, dropJob) => {
       val result = dropJob.run
-      sender ! JobResult(jobID, runUID, result)
+      sender ! JobResult(runUID, result)
       context.stop(self)
     }
   }
