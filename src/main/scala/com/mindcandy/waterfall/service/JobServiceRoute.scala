@@ -26,9 +26,10 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
             // create or update a job
             entity(as[DropJob]) { dropJob =>
               validate((dropJob.cron, dropJob.parents) match {
-                case (Some(_), None) | (None, Some(_)) => true
+                case (Some(_), None) => true
+                case (None, Some(xs :: Nil)) => true
                 case _ => false
-              }, "A job can only have a cron or parents") {
+              }, "A job can only have a cron or one parent") {
                 produce(instanceOf[Option[DropJob]]) { completionFunction =>
                   context =>
                     jobDatabaseManager ! PostJobForCompletion(dropJob, completionFunction)

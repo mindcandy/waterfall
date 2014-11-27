@@ -59,7 +59,8 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
 
     POST /jobs/1 with cron and parents ${postJobWithCronAndParents}
     POST /jobs/1 with no cron or parents ${postJobWithNoCronOrParents}
-    POST /jobs/1 with parents ${postJobsWithParents}
+    POST /jobs/1 with one parent ${postJobsWithParents}
+    POST /jobs/1 with two parent ${postJobsWithTwoParents}
 
   """
 
@@ -266,7 +267,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      rejection === ValidationRejection("A job can only have a cron or parents", None)
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
     }
   }
 
@@ -284,7 +285,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      rejection === ValidationRejection("A job can only have a cron or parents", None)
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
     }
   }
 
@@ -304,6 +305,25 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
       responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option.empty[String], TimeFrame.DAY_YESTERDAY, Map(), false, Option(List(1)))
+    }
+  }
+
+  def postJobsWithTwoParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1,5]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
     }
   }
 }
