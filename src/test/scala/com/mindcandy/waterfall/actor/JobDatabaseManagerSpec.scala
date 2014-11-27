@@ -285,7 +285,7 @@ class JobDatabaseManagerSpec
 
     e4 := {
       // input with cron and parents
-      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None), testFunc))
+      probe.send(actor, PostJobForCompletion(testDropJobs(0).copy(jobID = None, parents = Option(List(1))), testFunc))
       probe.expectMsg(None)
 
       db.executeInSession(db.dropJobs.list) must_== List()
