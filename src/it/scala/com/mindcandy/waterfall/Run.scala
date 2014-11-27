@@ -6,9 +6,8 @@ import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
 /*
-   T
+   In order to run this set shouldRun to true. Do not commit this change.
  */
-
 @RunWith(classOf[JUnitRunner])
 class RunSpec extends Specification {
   val shouldRun = false

@@ -16,9 +16,8 @@ import scala.util.{ Failure, Success, Try }
 
 object DropSupervisor {
   case class StartJob(jobID: JobID, job: DropJob)
-  case class JobResult(jobID: JobID, runUID: RunUID, result: Try[Unit])
+  case class JobResult(runUID: RunUID, result: Try[Unit])
   case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
-  case class RunChildren(jobId: JobID)
 
   def calculateDate(timeFrame: TimeFrame) = timeFrame match {
     case DAY_TODAY => Some(DateTime.now)
@@ -38,7 +37,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def receive = {
     case StartJob(jobID, job) => runJob(jobID, job)
-    case JobResult(jobID, runUID, result) => processResult(runUID, result)
+    case JobResult(runUID, result) => processResult(runUID, result)
     case RunJobImmediately(jobID, f) => {
       log.debug(s"Got Run job:$jobID immediately request")
       jobDatabaseManager ! GetJobForCompletion(
@@ -48,16 +47,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
             self ! StartJob(job.jobID.getOrElse(-1), job)
           }
           f(maybeJob)
-        }
-      )
-    }
-    case RunChildren(jobID) => {
-      jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
-        jobID,
-        jobList => {
-          jobList.jobs.map { job =>
-            self ! StartJob(job.jobID.getOrElse(-1), job)
-          }
         }
       )
     }
@@ -72,8 +61,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
-
-            self ! RunChildren(jobID)
+            runChildren(jobID)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -116,6 +104,17 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         }
       }
     }
+  }
+
+  def runChildren(jobID: JobID) = {
+    jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
+      jobID,
+      jobList => {
+        jobList.jobs.map { job =>
+          self ! StartJob(job.jobID.getOrElse(-1), job)
+        }
+      }
+    )
   }
 
   override def preStart() = {
