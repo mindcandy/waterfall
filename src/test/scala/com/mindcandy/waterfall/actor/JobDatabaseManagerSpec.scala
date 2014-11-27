@@ -335,7 +335,6 @@ class JobDatabaseManagerSpec
 
       // input with parent of above
       probe.send(actor, PostJobForCompletion(testDropJobs(2), Option(List(8)), testFunc))
-      // TODO: How to capture exception
       probe.expectTerminated(actor) must not(throwA[AssertionError])
 
       db.executeInSession(db.dropJobDependencies) must_== List()

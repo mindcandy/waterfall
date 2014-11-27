@@ -55,7 +55,6 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       val jobs = db.getDropJobChildren(parentJobID)
       f(DropJobList(jobs))
     }
-    // TODO: Is this cron only? Should it be called schedule
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
       val jobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)

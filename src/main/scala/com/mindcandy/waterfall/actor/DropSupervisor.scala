@@ -56,8 +56,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         jobID,
         jobList => {
           jobList.jobs.map { job =>
-            // TODO: Mapping to -1 is not great. Already seen elsewhere in the code creating maps with jobID
-            // TODO: and this could result in jobs overwriting if it were possible to not have a jobID at this point
             self ! StartJob(job.jobID.getOrElse(-1), job)
           }
         }
