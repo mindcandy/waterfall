@@ -1,7 +1,7 @@
-/*.app-navbar {*/
-    /*background-color: #333333;*/
-    /*border-radius: 3px 3px 3px 3px;*/
-/*}*/
+.app-navbar {
+    background-color: #333333;
+    border-radius: 3px 3px 3px 3px;
+}
 
 .running {
     color: #449d44;

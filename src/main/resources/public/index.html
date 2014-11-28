@@ -2,33 +2,22 @@
 <html lang='en' ng-cloak>
 <head>
     <title>Waterfall</title>
-    <link rel="shortcut icon" type="image/x-icon" href="/assets/images/icon.png"/>
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/images/icon.png" />
 
-    <link href="/assets/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
-    <link href="/assets/css/main.css" rel="stylesheet"/>
+    <link href="/assets/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/assets/css/main.css" rel="stylesheet" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-
-    <nav class="navbar navbar-inverse app-navbar" role="navigation">
+    <nav class="navbar navbar-default app-navbar" role="navigation">
         <div class="container-fluid">
             <div class="navbar-header">
                 <a class="navbar-brand" href="#/jobs">Waterfall</a>
             </div>
-
-            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                <ul class="nav navbar-nav">
-                    <li class="active"><a href="#/jobs">All Jobs</a></li>
-                    <li class="active"><a href="#/jobs">Hierarchies</a></li>
-                </ul>
-            </div>
         </div>
     </nav>
-
     <div ng-view></div>
-
     <script src="/assets/js/lib/require.min.js" data-main="/assets/js/main"></script>
-
 </body>
 </html>
