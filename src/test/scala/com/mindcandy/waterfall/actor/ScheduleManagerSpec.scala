@@ -6,7 +6,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.TestWaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
-import com.mindcandy.waterfall.actor.Protocol.{ DropJob, DropJobMap }
+import com.mindcandy.waterfall.actor.Protocol.{ DropJobSchedule, DropJob }
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.typesafe.config.ConfigFactory
 import org.specs2.SpecificationLike
@@ -23,6 +23,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     with Mockito {
   def is = s2"""
     ScheduleManager should
+
       automatically schedule a CheckJobs message to itself $autoCheckJobs
       contact job database on check jobs message $checkJobs
       schedule one job if one is sent from the databaseManager $scheduleOneJob
@@ -35,6 +36,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
       schedule jobs correctly if they have identical dropUID $scheduleJobsWithIdenticalDropUID
       do not reschedule jobs  if the previous one has not ran yet $doNotRescheduleJobs
       do not schedule a job if it's cron is malformed $malformedCron
+
   """ ^ Step(afterAll)
 
   def afterAll = TestKit.shutdownActorSystem(system)
@@ -66,7 +68,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val currentTime = DateTime.now + Period.seconds(5)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob))
+    val request = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
     dropSupervisor.expectMsg(StartJob(1, dropJob)) must not(throwA[AssertionError])
@@ -82,7 +84,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime1)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime2)
-    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
+    val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
     dropSupervisor.expectMsgAllOf(StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
@@ -96,8 +98,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val currentTime = DateTime.now + Period.seconds(3)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob))
-    val cancelRequest = DropJobMap(Map())
+    val request = DropJobSchedule(Map(1 -> dropJob))
+    val cancelRequest = DropJobSchedule(Map())
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
@@ -113,8 +115,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
-    val cancelRequest = DropJobMap(Map(2 -> dropJob2))
+    val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
+    val cancelRequest = DropJobSchedule(Map(2 -> dropJob2))
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
@@ -132,8 +134,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime)
     val dropJob3 = createDropJob("EXRATE3", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
-    val cancelRequest = DropJobMap(Map(2 -> dropJob2, 3 -> dropJob3))
+    val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
+    val cancelRequest = DropJobSchedule(Map(2 -> dropJob2, 3 -> dropJob3))
 
     probe.send(actor, request)
     probe.send(actor, cancelRequest)
@@ -151,7 +153,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime1)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime2)
-    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
+    val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
     dropSupervisor.expectMsg(StartJob(1, dropJob1))
@@ -168,7 +170,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val currentTime = DateTime.now + Period.seconds(3)
     val dropJob1 = createDropJob(dropUID, "Exchange Rate", currentTime)
     val dropJob2 = createDropJob(dropUID, "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob1, 2 -> dropJob2))
+    val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
     dropSupervisor.expectMsgAllOf(StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
@@ -182,13 +184,13 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
 
     val currentTime = DateTime.now + Period.seconds(3)
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob))
+    val request = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
 
     val newTime = DateTime.now + Period.seconds(3)
     val newDropJob = createDropJob("EXRATE", "Exchange Rate", newTime)
-    val rescheduleRequest = DropJobMap(Map(2 -> newDropJob))
+    val rescheduleRequest = DropJobSchedule(Map(2 -> newDropJob))
 
     probe.send(actor, rescheduleRequest)
     dropSupervisor.expectMsg(StartJob(2, newDropJob)) must not(throwA[AssertionError])
@@ -202,8 +204,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val currentTime = DateTime.now + Period.seconds(3)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
-    val request = DropJobMap(Map(1 -> dropJob))
-    val rescheduleRequest = DropJobMap(Map(1 -> dropJob))
+    val request = DropJobSchedule(Map(1 -> dropJob))
+    val rescheduleRequest = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
     probe.send(actor, rescheduleRequest)
@@ -216,8 +218,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, s"malformed cron string", TimeFrame.DAY_YESTERDAY, Map())
-    val request = DropJobMap(Map(1 -> dropJob))
+    val dropJob = DropJob(Some(1), "EXRATE", "Exchange Rate", "desc", true, Option(s"malformed cron string"), TimeFrame.DAY_YESTERDAY, Map(), false)
+    val request = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
     dropSupervisor.expectNoMsg()
@@ -228,6 +230,14 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
                           checkJobsPeriod: FiniteDuration = FiniteDuration(1, HOURS)): ActorRef =
     system.actorOf(ScheduleManager.props(databaseManager.ref, dropSupervisor.ref, new TestWaterfallDropFactory, maxScheduleTime, checkJobsPeriod))
 
-  private def createDropJob(dropUid: String, name: String, currentTime: DateTime): DropJob =
-    DropJob(Some(1), dropUid, name, "desc", true, s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?", TimeFrame.DAY_YESTERDAY, Map())
+  private def createDropJob(dropUid: String, name: String, currentTime: DateTime, isCron: Boolean = true): DropJob =
+    DropJob(
+      Option(1),
+      dropUid,
+      name,
+      "desc",
+      true,
+      if (isCron) Option(s"${currentTime.secondOfMinute.getAsString} ${currentTime.minuteOfHour.getAsString} ${currentTime.hourOfDay.getAsString} * * ?") else None,
+      TimeFrame.DAY_YESTERDAY,
+      Map())
 }

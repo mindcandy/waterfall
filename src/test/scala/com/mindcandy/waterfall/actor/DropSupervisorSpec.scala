@@ -7,7 +7,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.DropSupervisor.{ JobResult, StartJob }
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
-import com.mindcandy.waterfall.actor.JobDatabaseManager.{ FinishDropLog, StartAndFinishDropLog, StartDropLog }
+import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetChildrenWithJobIDForCompletion, FinishDropLog, StartAndFinishDropLog, StartDropLog }
 import com.mindcandy.waterfall.actor.Protocol.DropJob
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import com.typesafe.config.ConfigFactory
@@ -22,6 +22,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     with NoTimeConversions {
   def is = s2"""
     DropSupervisor should
+
       run the job when it receives a start job message $runJobOnStartJob
       log the job when it receives a start job message $logJobOnStartJob
       log a success result when a job is completed successfully $logSuccess
@@ -31,6 +32,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       rerun a job if previous run finished $reRunAfterFinished
       log to database if the drop not in factory $logToErrorIfNoFactoryDrop
       log to database if result not in running list $logToErrorIfResultNotInList
+
   """ ^ Step(afterAll)
 
   def afterAll: Any = TestKit.shutdownActorSystem(system)
@@ -72,6 +74,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       case FinishDropLog(`runUID`, _, None, None) => success
       case _ => failure
     }
+    jobDatabaseManager.expectMsgClass(classOf[GetChildrenWithJobIDForCompletion]).parentJobId must_== 1
   }
 
   def logFailure = {
@@ -157,7 +160,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     val dropUID = "drop not in factory"
     val request = StartJob(
       1,
-      DropJob(Some(1), dropUID, "", "", true, "", TimeFrame.DAY_TODAY, Map()))
+      DropJob(Some(1), dropUID, "", "", true, Option(""), TimeFrame.DAY_TODAY, Map(), false, Option.empty))
 
     probe.send(actor, request)
     val expectedMsg = s"factory has no drop for job ${request.jobID} with drop uid ${request.job.dropUID} and name ${request.job.name}"
@@ -194,6 +197,6 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
     val now = DateTime.now + Period.seconds(3)
-    StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?", frame, Map()))
+    StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, Option(s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?"), frame, Map()))
   }
 }

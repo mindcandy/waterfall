@@ -50,17 +50,48 @@ object LogStatus extends Enumeration {
 object Protocol {
   type JobID = Int
   type RunUID = UUID
-  case class DropJob(jobID: Option[JobID], dropUID: DropUID, name: String, description: String, enabled: Boolean, cron: String, timeFrame: TimeFrame.TimeFrame, configuration: Map[String, String], parallel: Boolean = false)
+  type Cron = String
+
+  case class DropJob(jobID: Option[JobID],
+                     dropUID: DropUID,
+                     name: String,
+                     description: String,
+                     enabled: Boolean,
+                     cron: Option[String],
+                     timeFrame: TimeFrame.TimeFrame,
+                     configuration: Map[String, String],
+                     parallel: Boolean = false,
+                     parents: Option[List[JobID]] = Option.empty)
+
+  object DropJob {
+    def applyWithoutParents(jobID: Option[JobID],
+                            dropUID: DropUID,
+                            name: String,
+                            description: String,
+                            enabled: Boolean,
+                            cron: Option[String],
+                            timeFrame: TimeFrame.TimeFrame,
+                            configuration: Map[String, String],
+                            parallel: Boolean = false) = {
+      DropJob(jobID, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel, None)
+    }
+
+    def unapplyWithoutParents(job: DropJob) = {
+      Some((job.jobID, job.dropUID, job.name, job.description, job.enabled, job.cron, job.timeFrame, job.configuration, job.parallel))
+    }
+  }
+
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
-  case class DropJobMap(jobs: Map[JobID, DropJob]) {
+  case class DropJobSchedule(jobs: Map[JobID, DropJob]) {
     val count = jobs.size
   }
   case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
   case class DropHistory(logs: List[DropLog]) {
     val count = logs.size
   }
+  case class DropJobDependency(parentJobID: JobID, childJobID: JobID)
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)
@@ -73,8 +104,8 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit def DropJobCodecJson = casecodec9(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel")
+  implicit def DropJobCodecJson = casecodec10(DropJob.apply, DropJob.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
@@ -122,3 +153,4 @@ object Protocol {
     }
   }
 }
+

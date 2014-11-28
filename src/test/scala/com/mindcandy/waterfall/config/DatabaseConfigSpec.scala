@@ -20,7 +20,7 @@ trait TestData {
   val oneDropLog = DropLog(
     UUID.fromString("1762d13c-23b4-40fc-a0d0-2fefa1893c72"), 1, new DateTime(2014, 8, 6, 9, 30), None, Some("a test message"), None)
   val oneDropJob = DropJob(
-    None, "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY,
+    None, "test", "test", "description", true, Option("0 2 * * * ?"), TimeFrame.DAY_YESTERDAY,
     Map[String, String]("configFile" -> "/adx/config.properties"))
 }
 
@@ -58,7 +58,7 @@ class DatabaseContainerSpec
     insert DropLog into database
       successfully insert DropLog into DROP_LOG table ${insertDropLog.e1}
       inserted DropLog is correct ${insertDropLog.e2}
-    
+
     select DropLog
       select all have correct record size ${selectDropLog.e1}
       select jobID=1 have correct record size and correct jobID ${selectDropLog.e2}
@@ -74,6 +74,8 @@ class DatabaseContainerSpec
       insert job with malformed cron expression ${insertOrUpdateDropJob.e1}
       update a job ${insertOrUpdateDropJob.e2}
       insert a new job ${insertOrUpdateDropJob.e3}
+      insert job with both cron and parent ${insertOrUpdateDropJob.e4}
+      insert job with neither cron and parent ${insertOrUpdateDropJob.e5}
 
     Postgre SQL specific
       droplog table statement is correct ${exceptionAsTextInPostgre}
@@ -107,7 +109,7 @@ class DatabaseContainerSpec
 
     e1 := numberOfInsert must_== 1
     e2 := insertedData must_== List(
-      DropJob(Some(1), "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")))
+      DropJob(Some(1), "test", "test", "description", true, Option("0 2 * * * ?"), TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")))
   }
 
   def insertTwoToDatabase = new group {
@@ -115,7 +117,7 @@ class DatabaseContainerSpec
     db.create(db.dropJobs)
     val data = List(
       oneDropJob,
-      DropJob(None, "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+      DropJob(None, "test2", "test", "description", false, Option("0 2 * * * ?"), TimeFrame.DAY_YESTERDAY, Map()))
     val numberOfInsert = db.insert(db.dropJobs, data)
     val insertedData = db.executeInSession {
       db.dropJobs.list
@@ -123,8 +125,8 @@ class DatabaseContainerSpec
 
     e1 := numberOfInsert must_== Some(2)
     e2 := insertedData must_== List(
-      DropJob(Some(1), "test", "test", "description", true, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")),
-      DropJob(Some(2), "test2", "test", "description", false, "0 2 * * * ?", TimeFrame.DAY_YESTERDAY, Map()))
+      DropJob(Some(1), "test", "test", "description", true, Option("0 2 * * * ?"), TimeFrame.DAY_YESTERDAY, Map("configFile" -> "/adx/config.properties")),
+      DropJob(Some(2), "test2", "test", "description", false, Option("0 2 * * * ?"), TimeFrame.DAY_YESTERDAY, Map()))
   }
 
   def overwriteExistDatabase = new group {
@@ -238,20 +240,31 @@ class DatabaseContainerSpec
   def insertOrUpdateDropJob = new group {
     val db = testDatabaseWithJobsAndLogs
     e1 := {
-      val dropJob = DropJob(None, "", "", "", true, "malformed cron", TimeFrame.DAY_TODAY, Map())
+      val dropJob = DropJob(None, "", "", "", true, Option("malformed cron"), TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
     }
 
     e2 := {
-      val dropJob = DropJob(Some(1), "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
+      val dropJob = DropJob(Some(1), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(dropJob)
     }
 
     e3 := {
-      val dropJob = DropJob(None, "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
-      val expect = DropJob(Some(3), "", "", "", true, "0 1 * * * ?", TimeFrame.DAY_TODAY, Map())
+      val dropJob = DropJob(None, "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
+      val expect = DropJob(Some(4), "", "", "", true, Option("0 1 * * * ?"), TimeFrame.DAY_TODAY, Map())
       db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must_== Some(expect)
     }
+
+    e4 := {
+      val dropJob = DropJob(None, "", "", "", true, Option("malformed cron"), TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
+    }
+
+    e5 := {
+      val dropJob = DropJob(None, "", "", "", true, Option.empty, TimeFrame.DAY_TODAY, Map())
+      db.executeInSession(db.insertOrUpdateDropJob(dropJob)) must beNone
+    }
+
   }
 }
 

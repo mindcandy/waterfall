@@ -10,7 +10,7 @@ import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
 import org.specs2.time.NoTimeConversions
 import spray.http.StatusCode.int2StatusCode
-import spray.routing.{ MalformedQueryParamRejection, MalformedRequestContentRejection }
+import spray.routing.{ ValidationRejection, MalformedQueryParamRejection, MalformedRequestContentRejection }
 import spray.testkit.Specs2RouteTest
 
 class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped with Specs2RouteTest with TestDatabase with ArgonautMarshallers with NoTimeConversions {
@@ -27,6 +27,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   def is = s2"""
   JobServiceRoute test
   ==============================================================================
+
     get /jobs ${getJobs}
     post /jobs with no header nor body ${postJobs}
     post /jobs with json without jobID ${postJobsWithoutJobID}
@@ -35,6 +36,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     post /jobs with json with malformed cron ${postJobsWithMalformedCron}
     get /jobs/:id ${getJobsWithJobID}
     get /jobs/:id with unknown id ${getJobsWithUnknownJobID}
+    get /jobs/:id/children ${getChildrenWithJobID}
     get /drops/:dropuid/jobs ${getJobsWithDropUID}
     get /drops/:dropuid/jobs with unknown dropUID ${getJobsWithUnknownDropUID}
     get /schedule ${getSchedule}
@@ -54,6 +56,12 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     GET /logs?dropuid=EXRATE1 ${getLogsWithDropUID}
     POST /jobs/1/run ${postRunJob}
     POST /jobs/100/run with unknown jobID ${postRunJobWithUnknownJobID}
+
+    POST /jobs/1 with cron and parents ${postJobWithCronAndParents}
+    POST /jobs/1 with no cron or parents ${postJobWithNoCronOrParents}
+    POST /jobs/1 with one parent ${postJobsWithParents}
+    POST /jobs/1 with two parent ${postJobsWithTwoParents}
+
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
@@ -79,7 +87,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -99,7 +107,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(3), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), true)
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), true)
     }
   }
 
@@ -119,7 +127,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
         |    }
       """.stripMargin
     Post("/jobs", postJson) ~> route ~> check {
-      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, "0 1 * * * ?", TimeFrame.DAY_YESTERDAY, Map(), false)
+      responseAs[DropJob] === DropJob(Some(2), "EXRATE3", "Exchange Rate", "yes", true, Option("0 1 * * * ?"), TimeFrame.DAY_YESTERDAY, Map(), false)
     }
   }
 
@@ -148,7 +156,11 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     responseAs[DropJob] === testDropJobs(0)
   }
 
-  def getJobsWithUnknownJobID = Get("/jobs/3") ~> route ~> check {
+  def getChildrenWithJobID = Get("/jobs/1/children") ~> route ~> check {
+    status === int2StatusCode(200)
+  }
+
+  def getJobsWithUnknownJobID = Get("/jobs/4") ~> route ~> check {
     status === int2StatusCode(404)
   }
 
@@ -237,5 +249,81 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
 
   def postRunJobWithUnknownJobID = Post("/jobs/100/run") ~> route ~> check {
     status === int2StatusCode(404)
+  }
+
+  def postJobWithCronAndParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "cron":"0 1 * * * ?",
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
+    }
+  }
+
+  def postJobWithNoCronOrParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
+    }
+  }
+
+  def postJobsWithParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      responseAs[DropJob] === DropJob(Some(4), "EXRATE3", "Exchange Rate", "yes", true, Option.empty[String], TimeFrame.DAY_YESTERDAY, Map(), false, Option(List(1)))
+    }
+  }
+
+  def postJobsWithTwoParents = {
+    val postJson =
+      """
+        |{
+        |     "dropUID":"EXRATE3",
+        |     "name":"Exchange Rate",
+        |     "description": "yes",
+        |     "enabled":true,
+        |     "timeFrame":"DAY_YESTERDAY",
+        |     "configuration":{},
+        |     "parallel": false,
+        |     "parents":[1,5]
+        |    }
+      """.stripMargin
+    Post("/jobs", postJson) ~> route ~> check {
+      rejection === ValidationRejection("A job can only have a cron or one parent", None)
+    }
   }
 }

@@ -15,6 +15,7 @@ object JobDatabaseManager {
   case class GetJobForCompletion(jobId: JobID, completionFunction: Option[DropJob] => Unit)
   case class GetJobsForCompletion(completionFunction: DropJobList => Unit)
   case class GetJobsWithDropUIDForCompletion(dropUID: DropUID, completionFunction: DropJobList => Unit)
+  case class GetChildrenWithJobIDForCompletion(parentJobId: JobID, completionFunction: DropJobList => Unit)
   case class GetScheduleForCompletion(completionFunction: DropJobList => Unit)
   case class GetSchedule()
   case class PostJobForCompletion(dropJob: DropJob, completionFunction: Option[DropJob] => Unit)
@@ -41,7 +42,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
-      val jobs = db.executeInSession(db.dropJobsSorted.list)
+      val jobs = db.getJobsSorted()
       f(DropJobList(jobs))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
@@ -49,15 +50,26 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       val jobs = db.executeInSession(db.dropJobsSorted.filter(_.dropUID === dropUID).list)
       f(DropJobList(jobs))
     }
+    case GetChildrenWithJobIDForCompletion(parentJobID, f) => {
+      log.debug(s"Get all child jobs for jobID:$parentJobID with completion")
+      val jobs = db.getDropJobChildren(parentJobID)
+      f(DropJobList(jobs))
+    }
     case GetScheduleForCompletion(f) => {
       log.debug(s"schedule lookup for completion")
-      val jobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
+      val jobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
       f(DropJobList(jobs))
     }
     case GetSchedule() => {
       log.debug(s"schedule lookup")
-      val dropJobs = db.executeInSession(db.dropJobsSorted.filter(_.enabled).list)
-      sender ! DropJobMap(dropJobs.map(job => job.jobID.getOrElse(-1) -> job).toMap)
+      val dropJobs = db.executeInSession(db.dropJobsSorted.filter(job => job.enabled && job.cron.?.isDefined).list)
+
+      val jobs = (for {
+        job <- dropJobs
+        jobID <- job.jobID
+      } yield (jobID, job)).toMap
+
+      sender ! DropJobSchedule(jobs)
     }
     case StartDropLog(runUID, jobID, startTime) => {
       log.debug(s"received StartDropLog")
@@ -73,7 +85,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case PostJobForCompletion(dropJob, f) => {
       log.debug(s"Insert or update a job $dropJob")
-      f(db.executeInSession(db.insertOrUpdateDropJob(dropJob)))
+      f(db.db.withDynSession(db.insertOrUpdateDropJob(dropJob)))
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")

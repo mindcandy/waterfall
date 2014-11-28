@@ -61,6 +61,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
+            runChildren(jobID)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -103,6 +104,17 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         }
       }
     }
+  }
+
+  def runChildren(jobID: JobID) = {
+    jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
+      jobID,
+      jobList => {
+        jobList.jobs.map { job =>
+          self ! StartJob(job.jobID.getOrElse(-1), job)
+        }
+      }
+    )
   }
 
   override def preStart() = {
