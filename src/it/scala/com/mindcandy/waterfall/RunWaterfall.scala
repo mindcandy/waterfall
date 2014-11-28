@@ -1,24 +1,19 @@
 package com.mindcandy.waterfall
 
 import com.mindcandy.waterfall.service.ApplicationDaemon
-import org.junit.runner.RunWith
-import org.specs2.mutable.Specification
-import org.specs2.runner.JUnitRunner
+import com.typesafe.scalalogging.slf4j.Logging
 
 /*
-   In order to run this set shouldRun to true. Do not commit this change.
- */
-@RunWith(classOf[JUnitRunner])
-class RunWaterfall extends Specification {
-  val shouldRun = true
+   Runs the waterfall daemon.
 
-  "Run" should {
-    "run the app" in {
-      if (shouldRun) {
-        ApplicationDaemon().start()
-        Console.readLine()
-      }
-      success
-    }
-  }
+   To get this working in IntelliJ I add the it:resources folder to the waterfall's classpath resources folders under Project Structure
+ */
+object RunWaterfall extends App with Logging {
+
+  logger.error("start")
+
+  ApplicationDaemon().start()
+
+  logger.error("end")
+
 }

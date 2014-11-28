@@ -113,7 +113,7 @@ object WaterfallBuild extends Build {
       javaOptions in run ++= forkedJVMOption,
       javaOptions in Test ++= forkedJVMOption,
       javaOptions in testOnly ++= forkedJVMOption,
-      mainClass in Revolver.reStart := Some("org.vertx.java.platform.impl.cli.Starter")
+      mainClass in Revolver.reStart := Some("com.mindcandy.waterfall.RunWaterfall")
     )
   ).configs( IntegrationTest )
    .settings( ScoverageSbtPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)
