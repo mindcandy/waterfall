@@ -1,103 +1,156 @@
-<div class='row'>
+<div class="row">
+    <div class="col-lg-2 col-lg-offset-1">
+        <p>Filter: <input class="form-control" type="text" ng-model="filter.$" /></p>
+    </div>
+    <div class="col-md-10 col-lg-offset-1">
+        <table ng-table="tableParams" class="table">
+            <tbody ng-repeat="job in $data">
+            <tr>
+                <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>
+                <td data-title="'Name'" sortable="'name'">{{job.name}}</td>
+                <td data-title="'Drop Id'" sortable="'dropUID'">{{job.dropUID}}</td>
+                <td data-title="'Description'" sortable="'description'">{{job.description}}</td>
+                <td data-title="'Enabled'" sortable="'enabled'">{{job.enabled}}</td>
+                <td data-title="'Cron'" sortable="'cron'">{{job.cron}}</td>
+                <td data-title="'Time frame'" sortable="'timeFrame'">{{job.timeFrame}}</td>
+                <td data-title="'Status'" sortable="'status'">
+                    <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)"
+                       ng-click="jobLogClicked(job)">{{job.status}}</a>
+                </td>
+            </tr>
+            <tr ng-show="jobLogViewable(job)">
+                <td colspan="9">
+                    <table class="table table-condensed table-hover">
+                        <tr>
+                            <td>Log Id</td>
+                            <td>Start time</td>
+                            <td>End time</td>
+                            <td>Output</td>
+                            <td>Exception</td>
+                        </tr>
+
+                        <tbody>
+                        <tr ng-repeat="log in job.logData.logs">
+                            <td class="idWidth">{{log.runID}}</td>
+                            <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                            <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                            <td>{{log.logOutput}}</td>
+                            <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!--
+<div class="row">
     <div class="col-lg-offset-1">
         Filter: <input ng-model="searchText">
-        <hr />
+        <hr/>
     </div>
     <div class="col-md-10 col-lg-offset-1">
         <table class="table table-hover">
             <thead>
-                <tr>
-                    <th ng-class="{'selected': predicate == 'jobID'}">
-                        <a href="" ng-click="predicate = 'jobID'; reverse=!reverse">Job Id
-                            <span ng-show="predicate == 'jobID' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'jobID' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'name'}">
-                        <a href="" ng-click="predicate = 'name'; reverse=!reverse">Name
-                            <span ng-show="predicate == 'name' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'name' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'dropUID'}">
-                        <a href="" ng-click="predicate = 'dropUID'; reverse=!reverse">Drop Id
-                            <span ng-show="predicate == 'dropUID' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'dropUID' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'description'}">
-                        <a href="" ng-click="predicate = 'description'; reverse=!reverse">Description
-                            <span ng-show="predicate == 'description' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'description' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'enabled'}">
-                        <a href="" ng-click="predicate = 'enabled'; reverse=!reverse">Enabled
-                            <span ng-show="predicate == 'enabled' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'enabled' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'cron'}">
-                        <a href="" ng-click="predicate = 'cron'; reverse=!reverse">Cron
-                            <span ng-show="predicate == 'cron' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'cron' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'timeFrame'}">
-                        <a href="" ng-click="predicate = 'timeFrame'; reverse=!reverse">Time frame
-                            <span ng-show="predicate == 'timeFrame' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'timeFrame' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                    <th ng-class="{'selected': predicate == 'status'}">
-                        <a href="" ng-click="predicate = 'status'; reverse=!reverse">Status
-                            <span ng-show="predicate == 'status' && reverse==false" class="caret caret-reversed"></span>
-                            <span ng-show="predicate == 'status' && reverse==true" class="caret"></span>
-                        </a>
-                    </th>
-                </tr>
+            <tr>
+                <th ng-class="{'selected': predicate == 'jobID'}">
+                    <a href="" ng-click="predicate = 'jobID'; reverse=!reverse">Job Id
+                        <span ng-show="predicate == 'jobID' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'jobID' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'name'}">
+                    <a href="" ng-click="predicate = 'name'; reverse=!reverse">Name
+                        <span ng-show="predicate == 'name' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'name' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'dropUID'}">
+                    <a href="" ng-click="predicate = 'dropUID'; reverse=!reverse">Drop Id
+                        <span ng-show="predicate == 'dropUID' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'dropUID' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'description'}">
+                    <a href="" ng-click="predicate = 'description'; reverse=!reverse">Description
+                        <span ng-show="predicate == 'description' && reverse==false"
+                              class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'description' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'enabled'}">
+                    <a href="" ng-click="predicate = 'enabled'; reverse=!reverse">Enabled
+                        <span ng-show="predicate == 'enabled' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'enabled' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'cron'}">
+                    <a href="" ng-click="predicate = 'cron'; reverse=!reverse">Cron
+                        <span ng-show="predicate == 'cron' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'cron' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'timeFrame'}">
+                    <a href="" ng-click="predicate = 'timeFrame'; reverse=!reverse">Time frame
+                        <span ng-show="predicate == 'timeFrame' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'timeFrame' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+                <th ng-class="{'selected': predicate == 'status'}">
+                    <a href="" ng-click="predicate = 'status'; reverse=!reverse">Status
+                        <span ng-show="predicate == 'status' && reverse==false" class="caret caret-reversed"></span>
+                        <span ng-show="predicate == 'status' && reverse==true" class="caret"></span>
+                    </a>
+                </th>
+            </tr>
             </thead>
             <tbody ng-repeat="job in jobs | filter:searchText | orderBy:predicate:reverse">
-                <tr>
-                    <td ng-class="{'selected': predicate == 'jobID'}">{{job.jobID}}</td>
-                    <td ng-class="{'selected': predicate == 'name'}">{{job.name}}</td>
-                    <td ng-class="{'selected': predicate == 'dropUID'}">{{job.dropUID}}</td>
-                    <td ng-class="{'selected': predicate == 'description'}">{{job.description}}</td>
-                    <td ng-class="{'selected': predicate == 'enabled'}">{{job.enabled}}</td>
-                    <td ng-class="{'selected': predicate == 'cron'}">{{job.cron}}</td>
-                    <td ng-class="{'selected': predicate == 'timeFrame'}">{{job.timeFrame}}</td>
-                    <td ng-class="{'selected': predicate == 'status'}" class="statusWidth">
-                        <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)" ng-click="jobLogClicked(job)">{{job.status}}</a>
-                    </td>
-                </tr>
-                <tr ng-show="jobLogViewable(job)">
-                    <td colspan="9">
-                        <table class="table table-condensed table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Log Id</th>
-                                    <th>Start time</th>
-                                    <th>End time</th>
-                                    <th>Output</th>
-                                    <th>Exception</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr ng-repeat="log in job.logData.logs">
-                                    <td class="idWidth">{{log.runID}}</td>
-                                    <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                                    <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                                    <td>{{log.logOutput}}</td>
-                                    <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
+            <tr>
+                <td ng-class="{'selected': predicate == 'jobID'}">{{job.jobID}}</td>
+                <td ng-class="{'selected': predicate == 'name'}">{{job.name}}</td>
+                <td ng-class="{'selected': predicate == 'dropUID'}">{{job.dropUID}}</td>
+                <td ng-class="{'selected': predicate == 'description'}">{{job.description}}</td>
+                <td ng-class="{'selected': predicate == 'enabled'}">{{job.enabled}}</td>
+                <td ng-class="{'selected': predicate == 'cron'}">{{job.cron}}</td>
+                <td ng-class="{'selected': predicate == 'timeFrame'}">{{job.timeFrame}}</td>
+                <td ng-class="{'selected': predicate == 'status'}" class="statusWidth">
+                    <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)"
+                       ng-click="jobLogClicked(job)">{{job.status}}</a>
+                </td>
+            </tr>
+            <tr ng-show="jobLogViewable(job)">
+                <td colspan="9">
+                    <table class="table table-condensed table-hover">
+                        <thead>
+                        <tr>
+                            <th>Log Id</th>
+                            <th>Start time</th>
+                            <th>End time</th>
+                            <th>Output</th>
+                            <th>Exception</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="log in job.logData.logs">
+                            <td class="idWidth">{{log.runID}}</td>
+                            <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                            <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                            <td>{{log.logOutput}}</td>
+                            <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
             </tbody>
             <tr>
-                <td colspan="8">Job total: {{jobCount}} <i class="lastFetch">refreshed: {{lastFetch | date:'yyyy-MM-dd HH:mm:ss'}}</i></td>
+                <td colspan="8">Job total: {{jobCount}} <i class="lastFetch">refreshed: {{lastFetch | date:'yyyy-MM-dd
+                    HH:mm:ss'}}</i></td>
             </tr>
         </table>
     </div>
 </div>
+-->

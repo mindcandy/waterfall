@@ -41,3 +41,5 @@
     border-bottom: 4px solid #2a6496;
     color: #2a6496;
 }
+
+.ng-table-pager { display: none; }

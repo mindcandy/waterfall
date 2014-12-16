@@ -3,6 +3,30 @@ define([], function () {
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
+        $scope.$watch("filter.$", function () {
+            $scope.tableParams.reload();
+        });
+
+        $scope.tableParams = new ngTableParams({
+            //page: 1,                     // show first page
+            count: $scope.jobs.length,    // count per page
+            sorting: {
+                name: 'asc'
+            }
+        }, {
+            counts:[],
+            total: $scope.jobs.length,    // length of data
+            getData: function($defer, params) {
+                var filteredData = $filter('filter')($scope.jobs, $scope.filter);
+                //console.log('getting data', $scope.jobs);
+                //console.log(JSON.stringify(params.sorting()) + " " + params.orderBy());
+                var orderedData = params.sorting() ? $filter('orderBy')(filteredData, params.orderBy()) : filteredData;
+                //console.log(orderedData);
+                //var paginatedData = orderedData.slice((params.page() - 1) * params.count(), params.page() * params.count());
+                $defer.resolve(orderedData);
+            }
+        });
+
         /** fetch all jobs and their logs */
         $scope.fetchJobs = function() {
             $scope.lastFetch = new Date();
@@ -15,6 +39,7 @@ define([], function () {
                     }
                     $scope.jobs = data.jobs;
                     $scope.jobCount = data.count;
+                    $scope.tableParams.reload();
                 })
                 .error(function(data, status) {
                     $scope.status = status;

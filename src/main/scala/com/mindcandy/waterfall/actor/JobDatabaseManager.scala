@@ -89,7 +89,8 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")
-      val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID, limit, offset))
+      //      val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID, limit, offset))
+      val logs = List(DropLog(UUID.randomUUID(), jobID.get, new DateTime(), Some(new DateTime()), Some("test"), None))
       f(DropHistory(logs))
     }
   }

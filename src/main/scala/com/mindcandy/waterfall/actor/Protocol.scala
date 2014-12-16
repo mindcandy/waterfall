@@ -61,7 +61,8 @@ object Protocol {
                      timeFrame: TimeFrame.TimeFrame,
                      configuration: Map[String, String],
                      parallel: Boolean = false,
-                     parents: Option[List[JobID]] = Option.empty)
+                     parents: Option[List[JobID]] = Option.empty,
+                     cronParent: Option[JobID] = Option.empty)
 
   object DropJob {
     def applyWithoutParents(jobID: Option[JobID],
@@ -73,7 +74,7 @@ object Protocol {
                             timeFrame: TimeFrame.TimeFrame,
                             configuration: Map[String, String],
                             parallel: Boolean = false) = {
-      DropJob(jobID, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel, None)
+      DropJob(jobID, dropUID, name, description, enabled, cron, timeFrame, configuration, parallel)
     }
 
     def unapplyWithoutParents(job: DropJob) = {
@@ -104,8 +105,8 @@ object Protocol {
   )
   implicit val OptionDateTimeDecodeJson: DecodeJson[Option[DateTime]] = OptionDecodeJson(DateTimeDecodeJson)
 
-  implicit def DropJobCodecJson = casecodec10(DropJob.apply, DropJob.unapply)(
-    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents")
+  implicit def DropJobCodecJson = casecodec11(DropJob.apply, DropJob.unapply)(
+    "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents", "cronParent")
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
