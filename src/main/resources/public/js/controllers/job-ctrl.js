@@ -45,6 +45,7 @@ define(['app'], function (app) {
             else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "btn-default";
             else if(jobIsDisabled(job)) return "btn-default";
             else if(jobHasErrorLogs(job)) return "btn-danger";
+            else if(jobIsNeverRun(job)) return "btn-primary";
             else return "btn-success";
         };
 
@@ -65,7 +66,12 @@ define(['app'], function (app) {
             else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "Disabled";
             else if(jobIsDisabled(job)) return "Disabled";
             else if(jobHasErrorLogs(job)) return "Failure";
+            else if(jobIsNeverRun(job)) return "Never Run";
             else return "Success";
+        }
+
+        function jobIsNeverRun(job) {
+            return job.logData == null || job.logData.logs[0] == null
         }
 
         function jobIsDisabled(job) {
