@@ -5,10 +5,12 @@
 
 define([
     'angular',
-    'JobsPage'
+    'JobsPage',
+    'StatsPage'
 ], function (
     angular,
-    JobsPage
+    JobsPage,
+    StatsPage
 ) {
 
     var DEFAULT_STATE = 'jobs';
@@ -17,7 +19,8 @@ define([
         'UserInterface',
         [
             'ngRoute',
-            JobsPage.name
+            JobsPage.name,
+            StatsPage.name
         ]
     );
 

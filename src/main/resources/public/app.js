@@ -9,10 +9,12 @@ requirejs.config({
 
         // page modules
         'JobsPage': 'modules/JobsPage',
+        'StatsPage': 'modules/StatsPage',
         'UserInterface': 'modules/UserInterface'
     },
     packages: [
         'JobsPage',
+        'StatsPage',
         'UserInterface'
     ],
     shim : {
