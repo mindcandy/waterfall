@@ -1,6 +1,5 @@
-define(['JobsPage'], function (app) {
-    app.controller('JobsCtrl', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
-
+define([], function () {
+    var JobsCtrl = function ($scope, $http, $timeout) {
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
@@ -88,5 +87,7 @@ define(['JobsPage'], function (app) {
 
         /* run initial lookup */
         $scope.fetchJobs();
-    }]);
+    };
+
+    return ['$scope', '$http', '$timeout', JobsCtrl]
 });

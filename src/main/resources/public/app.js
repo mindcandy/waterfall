@@ -2,20 +2,23 @@ requirejs.config({
     paths: {
         // external libraries
         'text': 'lib/text/text',
-        'angular': 'lib/angular.min',
+        'angular': 'lib/angular',
         'angular-route': 'lib/angular-route.min',
-        'angularAMD': 'lib/angularAMD.min',
         'jquery': 'lib/jquery-1.11.1',
         'highcharts': 'lib/highcharts',
 
         // page modules
-        'JobsPage': 'modules/JobsPage'
+        'JobsPage': 'modules/JobsPage',
+        'UserInterface': 'modules/UserInterface'
     },
     packages: [
-        'JobsPage'
+        'JobsPage',
+        'UserInterface'
     ],
     shim : {
-        'angularAMD': ['angular'],
+        'angular': {
+            exports: 'angular'
+        },
         'angular-route' : ['angular'],
         'bootstrap' : [ 'jquery'],
         'highcharts' : {
@@ -26,11 +29,11 @@ requirejs.config({
 });
 
 define([
-    'angularAMD',
+    'angular',
+    'UserInterface',
     'angular-route',
     'jquery',
-    'highcharts',
-    'JobsPage'
+    'highcharts'
 ], function (
     angular,
     UserInterface

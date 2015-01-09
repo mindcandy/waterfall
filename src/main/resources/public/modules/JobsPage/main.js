@@ -1,7 +1,7 @@
 'use strict';
 
 define([
-    'angularAMD',
+    'angular',
     './controllers/JobsCtrl',
     'text!JobsPage/partials/jobs.html'
 ], function (
@@ -9,21 +9,28 @@ define([
     JobsCtrl,
     JobsPartial
 ) {
+    var JobsPage = angular.module('JobsPage', ['ngRoute']);
 
-    var JobsPage = angular.module(
-        'JobsPage',
-        ['ui.router', 'ngTable', 'ngResource', 'ui.bootstrap']
-    );
+    // JobsPage.config(['$stateProvider', function ($stateProvider) {
+    //     $stateProvider.
+    //         state('jobs', {
+    //             url: '/jobs',
+    //             template: JobsPartial,
+    //             controller: 'JobsCtrl',
+    //             strict: false
+    //         });
+    // }]);
 
-    JobsPage.config(['$stateProvider', function ($stateProvider) {
-        $stateProvider.
-            state('jobs', {
-                url: '/jobs',
+    JobsPage.config(function ($routeProvider) {
+        $routeProvider
+            .when("/", {
                 template: JobsPartial,
-                controller: 'JobsCtrl',
-                strict: false
-            });
-    }]);
+                controller: 'JobsCtrl'
+                // controllerUrl: 'controllers/job-ctrl'
+            })
+            .otherwise({redirectTo: "/"});
+    });
+
 
     // services
 
@@ -31,5 +38,4 @@ define([
     JobsPage.controller('JobsCtrl', JobsCtrl);
 
     return JobsPage;
-
 });
