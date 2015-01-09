@@ -1,10 +1,10 @@
-define(['app'], function (app) {
-    app.controller('JobCtrl', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
+define(['JobsPage'], function (app) {
+    app.controller('JobsCtrl', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
 
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
-        /** fetch all jobs and it's logs */
+        /** fetch all jobs and their logs */
         $scope.fetchJobs = function() {
             $scope.lastFetch = new Date();
             console.log($scope.lastFetch + ": fetching jobs...");
@@ -49,7 +49,7 @@ define(['app'], function (app) {
             else return "btn-success";
         };
 
-        /* trackes jobs who's logs are being viewed so that those logs are again viewed after refresh */
+        /* tracks jobs whose logs are being viewed so that those logs are again viewed after refresh */
         $scope.jobLogClicked = function(job) {
             var index = $scope.jobLogsBeingViewed.indexOf(job.jobID);
             if (index == -1) $scope.jobLogsBeingViewed.push(job.jobID);

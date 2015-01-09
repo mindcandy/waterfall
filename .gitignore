@@ -7,6 +7,7 @@ cache/
 results/
 *.pyc
 *.mv.db
+src/it/resources/application.conf
 
 # IntelliJ IDEA #
 ###################

@@ -18,7 +18,7 @@ case class UserInterfaceRoute(implicit val actorRefFactory: ActorRefFactory) ext
       (path("") | pathPrefix("ui")) {
         getFromResource("public/index.html")
       } ~
-      pathPrefix("assets") {
+      pathPrefix("") {
         pathSuffixTest(".+?(css|html|js|gif|png|ttf|woff)$".r) { _ =>
           getFromResourceDirectory("public")
         } ~
