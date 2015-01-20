@@ -16,7 +16,7 @@ define([], function () {
                 name: 'asc'
             }
         }, {
-//            groupBy: 'cronParent',
+            groupBy: 'cronParent',
             counts:[],
             total: $scope.jobs.length,    // length of data
             getData: function($defer, params) {

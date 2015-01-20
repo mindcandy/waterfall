@@ -1,13 +1,13 @@
 <div class="row">
     <div class="col-lg-2 col-lg-offset-1">
-        <p>Filter: <input class="form-control" type="text" ng-model="filter.$" /></p>
+        <p>Filter: <input class="form-control" type="text" ng-model="filter.$"/></p>
     </div>
     <div class="col-md-10 col-lg-offset-1">
         <table ng-table="tableParams" class="table">
-            <!--<tbody ng-repeat="group in $groups">
-            <tr ng-repeat="job in group.data">-->
-            <tbody ng-repeat="job in $data">
-            <tr>
+            <tbody ng-repeat="group in $groups">
+            <tr ng-repeat-start="job in group.data">
+                <!--<tbody ng-repeat="job in $data">
+                <tr>-->
                 <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>
                 <td data-title="'Name'" sortable="'name'">{{job.name}}</td>
                 <td data-title="'Drop Id'" sortable="'dropUID'">{{job.dropUID}}</td>
@@ -20,7 +20,7 @@
                        ng-click="jobLogClicked(job)">{{job.status}}</a>
                 </td>
             </tr>
-            <tr ng-show="jobLogViewable(job)">
+            <tr ng-repeat-end ng-show="jobLogViewable(job)">
                 <td colspan="9">
                     <table class="table table-condensed table-hover">
                         <tr>
