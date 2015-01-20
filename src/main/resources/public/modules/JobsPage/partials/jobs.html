@@ -4,6 +4,8 @@
     </div>
     <div class="col-md-10 col-lg-offset-1">
         <table ng-table="tableParams" class="table">
+            <!--<tbody ng-repeat="group in $groups">
+            <tr ng-repeat="job in group.data">-->
             <tbody ng-repeat="job in $data">
             <tr>
                 <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>

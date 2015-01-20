@@ -4,7 +4,9 @@ define([], function () {
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
         $scope.$watch("filter.$", function () {
-            $scope.tableParams.reload();
+            if ($scope.tableParams.settings().$scope) {
+                $scope.tableParams.reload();
+            }
         });
 
         $scope.tableParams = new ngTableParams({
@@ -14,6 +16,7 @@ define([], function () {
                 name: 'asc'
             }
         }, {
+//            groupBy: 'cronParent',
             counts:[],
             total: $scope.jobs.length,    // length of data
             getData: function($defer, params) {
