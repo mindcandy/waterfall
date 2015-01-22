@@ -9,7 +9,7 @@ define([], function () {
             $scope.lastFetch = new Date();
             $http.get('/jobs')
                 .success(function (data) {
-                    for (i = 0; i < data.jobs.length; i++) {
+                    for (var i = 0, len = data.jobs.length; i < len; i++) {
                         var jsonJob = data.jobs[i];
                         data.jobs[i] = fetchLogs(jsonJob)
                     }
@@ -22,15 +22,20 @@ define([], function () {
                     console.error("failed to get jobs!");
                 });
             // perform refresh after interval
-            $timeout(function() { $scope.fetchJobs(); }, $scope.refreshInterval);
+            $timeout(
+                function() {
+                    $scope.fetchJobs();
+                },
+                $scope.refreshInterval
+            );
         };
 
         /* fetch the logs for the given job */
         function fetchLogs(jsonJob) {
             $http.get('/logs?jobid=' + jsonJob.jobID + "&period=168&limit=5")
                 .success(function (data) {
-                    jsonJob['logData'] = data;
-                    jsonJob['status'] = jobStatus(jsonJob);
+                    jsonJob.logData = data;
+                    jsonJob.status = jobStatus(jsonJob);
                 })
                 .error(function(data, status) {
                     console.error("failed to get logs for job " + jsonJob.jobID + "!");
@@ -40,49 +45,49 @@ define([], function () {
 
         /** job status button display */
         $scope.jobStateButtonClass = function(job) {
-            if(jobIsRunning(job)) return "btn-info";
-            else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "btn-default";
-            else if(jobIsDisabled(job)) return "btn-default";
-            else if(jobHasErrorLogs(job)) return "btn-danger";
-            else if(jobIsNeverRun(job)) return "btn-primary";
-            else return "btn-success";
+            if (jobIsRunning(job)) { return "btn-info" }
+            else if (jobIsDisabled(job) && jobHasErrorLogs(job)) { return "btn-default" }
+            else if (jobIsDisabled(job)) { return "btn-default" }
+            else if (jobHasErrorLogs(job)) { return "btn-danger" }
+            else if (jobIsNeverRun(job)) { return "btn-primary" }
+            else { return "btn-success" };
         };
 
         /* tracks jobs whose logs are being viewed so that those logs are again viewed after refresh */
         $scope.jobLogClicked = function(job) {
             var index = $scope.jobLogsBeingViewed.indexOf(job.jobID);
-            if (index == -1) $scope.jobLogsBeingViewed.push(job.jobID);
-            else $scope.jobLogsBeingViewed.splice(index, 1);
+            if (index === -1) { $scope.jobLogsBeingViewed.push(job.jobID) }
+            else { $scope.jobLogsBeingViewed.splice(index, 1) };
         };
 
         /* determines whether or not the given job logs are viewable */
         $scope.jobLogViewable = function(job) {
-             return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData != null && job.logData.count != 0;
+             return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData !== null && job.logData.count !== 0;
         };
 
         function jobStatus(job) {
-            if(jobIsRunning(job)) return "Running";
-            else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "Disabled";
-            else if(jobIsDisabled(job)) return "Disabled";
-            else if(jobHasErrorLogs(job)) return "Failure";
-            else if(jobIsNeverRun(job)) return "Never Run";
-            else return "Success";
+            if (jobIsRunning(job)) { return "Running" }
+            else if (jobIsDisabled(job) && jobHasErrorLogs(job)) { return "Disabled" }
+            else if (jobIsDisabled(job)) { return "Disabled" }
+            else if (jobHasErrorLogs(job)) { return "Failure" }
+            else if (jobIsNeverRun(job)) { return "Never Run" }
+            else { return "Success" };
         }
 
         function jobIsNeverRun(job) {
-            return job.logData == null || job.logData.logs[0] == null
+            return job.logData === null || job.logData.logs[0] === null;
         }
 
         function jobIsDisabled(job) {
-            return job.enabled == false;
+            return job.enabled === false;
         }
 
         function jobIsRunning(job) {
-            return job.logData != null && job.logData.logs[0] != null && job.logData.logs[0].endTime == null;
+            return job.logData !== null && job.logData.logs[0] !== null && job.logData.logs[0].endTime === null;
         }
 
         function jobHasErrorLogs(job) {
-            return job.logData != null && job.logData.logs[0] != null && job.logData.logs[0].exception != null;
+            return job.logData !== null && job.logData.logs[0] !== null && job.logData.logs[0].exception !== null;
         }
 
         /* Add days to a date */
@@ -145,7 +150,7 @@ define([], function () {
                     },
                     ordinal: false,
                     labels: {
-                        format: '{value:%Y-%m-%d}',
+                        format: '{ value: %Y-%m-%d }',
                         staggerLines: 1,
                         step: xAxisLabelStep,
                         rotation: -40
@@ -191,10 +196,10 @@ define([], function () {
         /* Organise data into chart x axis categories */
         function getDropRuntimeSeriesData(seriesData) {
             var minDate = new Date();
-            for (i = 0; i < seriesData.length; i++) {
-                for (j = 0; j < seriesData[i]['data'].length; j++) {
-                    if (new Date(seriesData[i]['data'][j][0]) < minDate) {
-                        minDate = new Date(seriesData[i]['data'][j][0])
+            for (var i = 0, len = seriesData.length; i < len; i++) {
+                for (var j = 0, len = seriesData[i].data.length; j < len; j++) {
+                    if (new Date(seriesData[i].data[j][0]) < minDate) {
+                        minDate = new Date(seriesData[i].data[j][0])
                     }
                 }
             }
@@ -203,19 +208,19 @@ define([], function () {
             var dateRange = getDateRange(minDate, new Date());
 
             // Assign each series point to a category ID
-            for (i = 0; i < seriesData.length; i++) {
-                for (j = 0; j < seriesData[i]['data'].length; j++) {
+            for (var i = 0, len = seriesData.length; i < len; i++) {
+                for (var j = 0, len = seriesData[i].data.length; j < len; j++) {
                     var index = -1;
-                    for (k = 0; k < dateRange.length; k++) {
-                        if (dateRange[k] == new Date(seriesData[i]['data'][j][0]).getTime()) {
+                    for (var k = 0, len = dateRange.length; k < len; k++) {
+                        if (dateRange[k] === new Date(seriesData[i].data[j][0]).getTime()) {
                             index = k
                         }
                     }
-                    seriesData[i]['data'][j][0] = index
+                    seriesData[i]['data'][j][0] = index;
                 }
             }
 
-            return {seriesData: seriesData, dateRange: dateRange}
+            return { seriesData: seriesData, dateRange: dateRange };
         }
 
         /* Organise data into 1 value for each date */
@@ -223,7 +228,7 @@ define([], function () {
             var minDate = new Date();
             if (seriesData.length > 0) {
                 // seriesData is sorted, so minDate is first in array
-                minDate = seriesData[0]['date'];
+                minDate = seriesData[0].date;
             } else {
                 console.error("No logs present")
             }
@@ -232,44 +237,42 @@ define([], function () {
             var dateRange = getDateRange(new Date(minDate), new Date());
 
             // Add empty entries for non-existant dates
-            for (i = 0; i < dateRange.length; i++) {
-                for (j = 0; j < seriesData.length; j++) {
+            for (var i = 0, len = i < dateRange.length; i < len; i++) {
+                for (j = 0, len = seriesData.length; j < len; j++) {
                     var containsDate = false;
-                    if (new Date(seriesData[j]['date']).getTime() == dateRange[i]) {
+                    if (new Date(seriesData[j].date).getTime() === dateRange[i]) {
                         containsDate = true;
                         break;
                     }
                 }
                 if (!containsDate) {
-                    seriesData.push({date: Highcharts.dateFormat('%Y-%m-%d', dateRange[i]), runtime: 0});
+                    seriesData.push({ date: Highcharts.dateFormat('%Y-%m-%d', dateRange[i]), runtime: 0 });
                 }
             }
 
             // Reformat as a flat array, as there is only 1 series
             seriesData = seriesData.sort(function(a,b) { return a.date.localeCompare(b.date)});
             var outputArray = [];
-            for (i = 0; i < seriesData.length; i++) {
-                outputArray.push(seriesData[i]['runtime'])
+            for (var i = 0, len = seriesData.length; i < len; i++) {
+                outputArray.push(seriesData[i].runtime);
             }
 
-            return {seriesData: outputArray, dateRange: dateRange}
+            return { seriesData: outputArray, dateRange: dateRange };
         }
 
         /* Get jobs data from API */
         function getDropRuntimesChart() {
             // Get all logs for all jobs, formatted to be accepted by Highcharts
             var dataArray = [];
-            for (i = 0; i < $scope.jobCount; i++) {
-                var job = {};
-                job['name'] = $scope.jobs[i]['name'];
-                job['data'] = [];
-                for (j = 0; j < $scope.jobs[i]['logData'].length; j++) {
-                    var logs = $scope.jobs[i]['logData'][j];
-                    var start = new Date(logs['startTime']);
-                    var end = new Date(logs['endTime']);
+            for (var i = 0, len = $scope.jobCount; i < len; i++) {
+                var job = { name: $scope.jobs[i].name, data: [] };
+                for (var j = 0, len = $scope.jobs[i].logData.length; j < len; j++) {
+                    var logs = $scope.jobs[i].logData[j];
+                    var start = new Date(logs.startTime);
+                    var end = new Date(logs.endTime);
                     var x = Highcharts.dateFormat('%Y-%m-%d', start);
                     var y = end.getTime() - start.getTime();
-                    job['data'].push([x, y]);
+                    job.data.push([x, y]);
                 }
                 dataArray.push(job);
             }
@@ -281,25 +284,25 @@ define([], function () {
             var chartData = getDropRuntimeSeriesData(seriesData);
 
             // Create the chart object
-            return columnChartFormatting(chartData['seriesData'], chartData['dateRange'], 1, true, 500, 1500);
+            return columnChartFormatting(chartData.seriesData, chartData.dateRange, 1, true, 500, 1500);
         }
 
         /* Get jobs data from API */
         function getTotalRuntimesChart() {
             // Get all logs for all jobs, formatted to be accepted by Highcharts
             var dataArray = [];
-            for (i = 0; i < $scope.jobCount; i++) {
-                for (j = 0; j < $scope.jobs[i]['logData'].length; j++) {
-                    var jobLogs = $scope.jobs[i]['logData'][j];
-                    var jobDate = Highcharts.dateFormat('%Y-%m-%d', new Date(jobLogs['endTime']));
-                    var jobRuntime = new Date(jobLogs['endTime']).getTime() - new Date(jobLogs['startTime']).getTime();
+            for (var i = 0, len = $scope.jobCount; i < len; i++) {
+                for (var j = 0, len = $scope.jobs[i].logData.length; j < len; j++) {
+                    var jobLogs = $scope.jobs[i].logData[j];
+                    var jobDate = Highcharts.dateFormat('%Y-%m-%d', new Date(jobLogs.endTime));
+                    var jobRuntime = new Date(jobLogs.endTime).getTime() - new Date(jobLogs.startTime).getTime();
                     var newDate = { date : jobDate, runtime : jobRuntime };
 
                     if (dataArray.length > 0) { // Dates have been added to dataArray
                         var containsDate = false;
-                        for (k = 0; k < dataArray.length; k++) {
-                            if (dataArray[k]['date'] === jobDate) { // dataArray already contains an entry for this date
-                                dataArray[k]['runtime'] += jobRuntime;
+                        for (var k = 0, len = dataArray.length; k < len; k++) {
+                            if (dataArray[k].date === jobDate) { // dataArray already contains an entry for this date
+                                dataArray[k].runtime += jobRuntime;
                                 containsDate = true;
                                 break;
                             }
@@ -315,13 +318,13 @@ define([], function () {
             }
 
             // Sort the series data by name (affects its order in the legend)
-            var seriesData = dataArray.sort(function(a,b) { return a.date.localeCompare(b.date)});
+            var seriesData = dataArray.sort(function(a,b) { return a.date.localeCompare(b.date) });
 
             // Get the dates to be used as x axis categories and the series data
             var chartData = getTotalRuntimeSeriesData(seriesData);
 
             // Create the chart object
-            return columnChartFormatting([{data: chartData['seriesData']}], chartData['dateRange'], 3, false, 500, 700);
+            return columnChartFormatting([{ data: chartData.seriesData }], chartData.dateRange, 3, false, 500, 700);
         }
 
         /* Run initial lookup */
