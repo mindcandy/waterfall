@@ -65,7 +65,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   """
 
   def getJobs = Get("/jobs") ~> route ~> check {
-    responseAs[DropJobList] === DropJobList(testDropJobs)
+    responseAs[DropJobList] === DropJobList(testDropJobsWithCronParents)
   }
 
   def postJobs = Post("/jobs") ~> route ~> check {
