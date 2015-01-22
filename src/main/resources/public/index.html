@@ -1,23 +1,35 @@
 <!doctype html>
 <html lang='en' ng-cloak>
-<head>
-    <title>Waterfall</title>
-    <link rel="shortcut icon" type="image/x-icon" href="/assets/images/icon.png" />
+    <head>
+        <title>Waterfall</title>
+        <link rel="shortcut icon" type="image/x-icon" href="./images/icon.png" />
 
-    <link href="/assets/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="/assets/css/main.css" rel="stylesheet" />
+        <link href="./bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="./css/main.css" rel="stylesheet" />
+        <script src="./lib/require.min.js" data-main="./app.js"></script>
+        <script src="./lib/jquery-1.11.1.js"></script>
+        <script src="./lib/highcharts.js"></script>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-    <nav class="navbar navbar-default app-navbar" role="navigation">
-        <div class="container-fluid">
-            <div class="navbar-header">
-                <a class="navbar-brand" href="#/jobs">Waterfall</a>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="/">
+    </head>
+    <body>
+        <nav class="navbar navbar-inverse app-navbar" role="navigation">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="/jobs">Waterfall</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/jobs">Overview</a></li>
+                        <li><a href="/stats">Stats</a></li>
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
-    <div ng-view></div>
-    <script src="/assets/js/lib/require.min.js" data-main="/assets/js/main"></script>
-</body>
+        </nav>
+
+        <div class="container-fluid" ng-view></div>
+    </body>
 </html>
