@@ -5,6 +5,7 @@ import sbtrelease.ReleasePlugin._
 import scalariform.formatter.preferences._
 import com.typesafe.sbt.SbtScalariform._
 import scoverage.ScoverageSbtPlugin
+import spray.revolver.RevolverPlugin._
 
 
 object WaterfallBuild extends Build {
@@ -46,7 +47,7 @@ object WaterfallBuild extends Build {
     libraryDependencies += "junit" % "junit" % "4.11" % "test,it",
     libraryDependencies += "postgresql" % "postgresql" % "9.1-901.jdbc4" % "test,it",
     libraryDependencies += "com.github.simplyscala" %% "simplyscala-server" % "0.5" % "test,it",
-    libraryDependencies += "com.h2database" % "h2" % "1.4.180" % "test,it")
+    libraryDependencies += "com.h2database" % "h2" % "1.4.180")
 
   lazy val formattingSettings = FormattingPreferences()
     .setPreference(AlignParameters, true)
@@ -85,7 +86,7 @@ object WaterfallBuild extends Build {
   lazy val waterfall = Project(
     id = "waterfall",
     base = file("."),
-    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ scalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ buildInfoSettings ++ Seq(
+    settings = Project.defaultSettings ++ basicDependencies ++ releaseSettings ++ scalariformSettingsWithIt ++ itRunSettings ++ testDependencies ++ sprayDependencies ++ buildInfoSettings ++ Revolver.settings ++ Seq(
       name := "waterfall",
       organization := "com.mindcandy.waterfall",
       scalaVersion := "2.10.4",
@@ -111,7 +112,8 @@ object WaterfallBuild extends Build {
       fork in testOnly := true,
       javaOptions in run ++= forkedJVMOption,
       javaOptions in Test ++= forkedJVMOption,
-      javaOptions in testOnly ++= forkedJVMOption
+      javaOptions in testOnly ++= forkedJVMOption,
+      mainClass in Revolver.reStart := Some("com.mindcandy.waterfall.RunWaterfall")
     )
   ).configs( IntegrationTest )
    .settings( ScoverageSbtPlugin.instrumentSettings ++ Defaults.itSettings ++ Seq(unmanagedSourceDirectories in IntegrationTest <++= { baseDirectory { base => { Seq( base / "src/test/scala" )}}}) : _*)

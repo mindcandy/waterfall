@@ -1,7 +1,31 @@
 define([], function () {
-    var JobsCtrl = function ($scope, $http, $timeout) {
+    var JobsCtrl = function ($scope, $http, $timeout, ngTableParams, $filter) {
+        $scope.jobs = [];
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
+
+        $scope.$watch("filter.$", function () {
+            if ($scope.tableParams.settings().$scope) {
+                $scope.tableParams.reload();
+            }
+        });
+
+        $scope.tableParams = new ngTableParams({
+            //page: 1,                     // show first page
+            count: $scope.jobs.length,    // count per page
+            sorting: {
+                name: 'asc'
+            }
+        }, {
+            groupBy: 'cronParent',
+            counts:[],
+            total: $scope.jobs.length,    // length of data
+            getData: function($defer, params) {
+                var filteredData = $filter('filter')($scope.jobs, $scope.filter);
+                var orderedData = params.sorting() ? $filter('orderBy')(filteredData, params.orderBy()) : filteredData;
+                $defer.resolve(orderedData);
+            }
+        });
 
         /** fetch all jobs and their logs */
         $scope.fetchJobs = function() {
@@ -15,6 +39,7 @@ define([], function () {
                     }
                     $scope.jobs = data.jobs;
                     $scope.jobCount = data.count;
+                    $scope.tableParams.reload();
                 })
                 .error(function(data, status) {
                     $scope.status = status;
@@ -60,6 +85,10 @@ define([], function () {
              return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData != null && job.logData.count != 0;
         };
 
+        $scope.toggleShowGroup = function(group) {
+            return group.$hideRows = !group.$hideRows
+        };
+
         function jobStatus(job) {
             if(jobIsRunning(job)) return "Running";
             else if(jobIsDisabled(job) && jobHasErrorLogs(job)) return "Disabled";
@@ -89,5 +118,5 @@ define([], function () {
         $scope.fetchJobs();
     };
 
-    return ['$scope', '$http', '$timeout', JobsCtrl]
+    return ['$scope', '$http', '$timeout', 'ngTableParams', '$filter', JobsCtrl]
 });

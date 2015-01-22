@@ -35,6 +35,24 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
 
   import scala.slick.driver.JdbcDriver.simple._
 
+  def getCronParent(jobId: JobID, jobs: List[DropJob]): Option[JobID] = {
+    val jobOpt = jobs.find(_.jobID == Option(jobId))
+
+    jobOpt match {
+      case Some(job) => {
+        job.parents.flatMap {
+          _.headOption match {
+            case Some(parentJobId) => getCronParent(parentJobId, jobs)
+            case None => Option(jobId)
+          }
+        }.orElse(Option(jobId))
+      }
+      case None => {
+        None
+      }
+    }
+  }
+
   def receive = {
     case GetJobForCompletion(jobID, f) => {
       log.debug(s"job lookup for jobID:$jobID with completion")
@@ -43,7 +61,13 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
       val jobs = db.getJobsSorted()
-      f(DropJobList(jobs))
+
+      // Populate cron parent for display purposes
+      val jobsWithCronParent = jobs.map(job => {
+        job.copy(cronParent = getCronParent(job.jobID.get, jobs))
+      })
+
+      f(DropJobList(jobsWithCronParent))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")

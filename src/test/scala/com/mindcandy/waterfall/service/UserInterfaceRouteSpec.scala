@@ -22,22 +22,22 @@ class UserInterfaceRouteSpec extends Specification with ScalaCheck with Grouped 
 
   def getUIByRootPath = Get("/") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
-      (response.entity.asString must contain("<div ng-view></div>")) and
+      (response.entity.asString must contain("<div class=\"container-fluid\" ng-view></div>")) and
       (mediaType must be_==(MediaTypes.`text/html`))
   }
 
   def getUIByUiPath = Get("/ui") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
-      (response.entity.asString must contain("<div ng-view></div>")) and
+      (response.entity.asString must contain("<div class=\"container-fluid\" ng-view></div>")) and
       (mediaType must be_==(MediaTypes.`text/html`))
   }
 
-  def getUIAssets = Get("/assets/css/main.css") ~> route ~> check {
+  def getUIAssets = Get("/css/main.css") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
       (mediaType must be_==(MediaTypes.`text/css`))
   }
 
-  def getJsonMapAssets = Get("/assets/bootstrap/css/bootstrap.css.map") ~> route ~> check {
+  def getJsonMapAssets = Get("/bootstrap/css/bootstrap.css.map") ~> route ~> check {
     status must be_==(StatusCodes.OK) and
       (mediaType must be_==(MediaTypes.`application/json`))
   }
