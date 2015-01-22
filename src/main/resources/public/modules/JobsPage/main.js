@@ -9,7 +9,7 @@ define([
     JobsCtrl,
     JobsPartial
 ) {
-    var JobsPage = angular.module('JobsPage', ['ngRoute']);
+    var JobsPage = angular.module('JobsPage', ['ngRoute', 'ngTable']);
 
     JobsPage.config(function ($routeProvider) {
         $routeProvider

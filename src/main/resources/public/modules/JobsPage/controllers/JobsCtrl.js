@@ -1,5 +1,6 @@
 define([], function () {
-    var JobsCtrl = function ($scope, $http, $timeout) {
+    var JobsCtrl = function ($scope, $http, $timeout, ngTableParams, $filter) {
+        $scope.jobs = [];
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
@@ -117,5 +118,5 @@ define([], function () {
         $scope.fetchJobs();
     };
 
-    return ['$scope', '$http', '$timeout', JobsCtrl]
+    return ['$scope', '$http', '$timeout', 'ngTableParams', '$filter', JobsCtrl]
 });

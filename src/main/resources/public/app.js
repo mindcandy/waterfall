@@ -6,6 +6,7 @@ requirejs.config({
         'angular-route': 'lib/angular-route.min',
         'jquery': 'lib/jquery-1.11.1',
         'highcharts': 'lib/highcharts',
+        'ng-table': 'lib/ng-table/ng-table',
 
         // page modules
         'JobsPage': 'modules/JobsPage',
@@ -26,7 +27,8 @@ requirejs.config({
         'highcharts' : {
             exports: 'Highcharts',
             deps: ['jquery']
-        }
+        },
+        'ng-table': ['angular']
     }
 });
 
@@ -35,7 +37,8 @@ define([
     'UserInterface',
     'angular-route',
     'jquery',
-    'highcharts'
+    'highcharts',
+    'ng-table'
 ], function (
     angular,
     UserInterface
