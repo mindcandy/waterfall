@@ -22,10 +22,13 @@ case class UserInterfaceRoute(implicit val actorRefFactory: ActorRefFactory) ext
         pathSuffixTest(".+?(css|html|js|gif|png|ttf|woff)$".r) { _ =>
           getFromResourceDirectory("public")
         } ~
-        pathSuffixTest(".+?(map)$".r) { _ =>
-          respondWithMediaType(MediaTypes.`application/json`)(getFromResourceDirectory("public"))
-        }
+          pathSuffixTest(".+?(map)$".r) { _ =>
+            respondWithMediaType(MediaTypes.`application/json`)(getFromResourceDirectory("public"))
+          }
       }
+    } ~
+    get {
+      getFromResource("public/index.html")
     }
     // format: ON
   }

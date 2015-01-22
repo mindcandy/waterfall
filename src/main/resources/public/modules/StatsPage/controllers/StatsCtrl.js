@@ -4,11 +4,6 @@ define([], function () {
         $scope.jobLogsBeingViewed = []; // a list of jobs logs being viewed (to be 'reopened' after refresh)
         $scope.refreshInterval = 300000; // refresh time in milliseconds (5min)
 
-        var DisplayFilter = {
-            SUCCESSES: 'successes',
-            FAILURES: 'failures'
-        };
-
         /** fetch all jobs and their logs */
         $scope.fetchJobs = function() {
             $scope.lastFetch = new Date();
@@ -92,17 +87,17 @@ define([], function () {
 
         /* Add days to a date */
         Date.prototype.addDays = function(days) {
-            var dat = new Date(this.valueOf())
+            var dat = new Date(this.valueOf());
             dat.setDate(dat.getDate() + days);
             return dat;
-        }
+        };
 
         /* Get all dates between a start and end date */
         function getDateRange(startDate, stopDate) {
-            var dateArray = new Array();
+            var dateArray = [];
             var currentDate = startDate;
             while (currentDate <= stopDate) {
-                dateArray.push(currentDate.getTime())
+                dateArray.push(currentDate.getTime());
                 currentDate = currentDate.addDays(1);
             }
             return dateArray;
@@ -202,7 +197,7 @@ define([], function () {
                         minDate = new Date(seriesData[i]['data'][j][0])
                     }
                 }
-            };
+            }
 
             // Get range of categories to be shown in graph
             var dateRange = getDateRange(minDate, new Date());
@@ -210,7 +205,7 @@ define([], function () {
             // Assign each series point to a category ID
             for (i = 0; i < seriesData.length; i++) {
                 for (j = 0; j < seriesData[i]['data'].length; j++) {
-                    var index = -1
+                    var index = -1;
                     for (k = 0; k < dateRange.length; k++) {
                         if (dateRange[k] == new Date(seriesData[i]['data'][j][0]).getTime()) {
                             index = k
@@ -218,14 +213,14 @@ define([], function () {
                     }
                     seriesData[i]['data'][j][0] = index
                 }
-            };
+            }
 
             return {seriesData: seriesData, dateRange: dateRange}
         }
 
         /* Organise data into 1 value for each date */
         function getTotalRuntimeSeriesData(seriesData) {
-            var minDate = new Date()
+            var minDate = new Date();
             if (seriesData.length > 0) {
                 // seriesData is sorted, so minDate is first in array
                 minDate = seriesData[0]['date'];
@@ -252,7 +247,7 @@ define([], function () {
 
             // Reformat as a flat array, as there is only 1 series
             seriesData = seriesData.sort(function(a,b) { return a.date.localeCompare(b.date)});
-            var outputArray = []
+            var outputArray = [];
             for (i = 0; i < seriesData.length; i++) {
                 outputArray.push(seriesData[i]['runtime'])
             }
@@ -263,11 +258,11 @@ define([], function () {
         /* Get jobs data from API */
         function getDropRuntimesChart() {
             // Get all logs for all jobs, formatted to be accepted by Highcharts
-            var dataArray = new Array();
+            var dataArray = [];
             for (i = 0; i < $scope.jobCount; i++) {
                 var job = {};
                 job['name'] = $scope.jobs[i]['name'];
-                job['data'] = new Array();
+                job['data'] = [];
                 for (j = 0; j < $scope.jobs[i]['logData'].length; j++) {
                     var logs = $scope.jobs[i]['logData'][j];
                     var start = new Date(logs['startTime']);
@@ -283,7 +278,7 @@ define([], function () {
             var seriesData = dataArray.sort(function(a,b) { return a.name.localeCompare(b.name)});
 
             // Get the dates to be used as x axis categories and the series data
-            var chartData = getDropRuntimeSeriesData(seriesData)
+            var chartData = getDropRuntimeSeriesData(seriesData);
 
             // Create the chart object
             return columnChartFormatting(chartData['seriesData'], chartData['dateRange'], 1, true, 500, 1500);
@@ -292,7 +287,7 @@ define([], function () {
         /* Get jobs data from API */
         function getTotalRuntimesChart() {
             // Get all logs for all jobs, formatted to be accepted by Highcharts
-            var dataArray = new Array();
+            var dataArray = [];
             for (i = 0; i < $scope.jobCount; i++) {
                 for (j = 0; j < $scope.jobs[i]['logData'].length; j++) {
                     var jobLogs = $scope.jobs[i]['logData'][j];
@@ -304,10 +299,10 @@ define([], function () {
                         var containsDate = false;
                         for (k = 0; k < dataArray.length; k++) {
                             if (dataArray[k]['date'] === jobDate) { // dataArray already contains an entry for this date
-                                dataArray[k]['runtime'] += jobRuntime
+                                dataArray[k]['runtime'] += jobRuntime;
                                 containsDate = true;
                                 break;
-                            };
+                            }
                         }
 
                         if (!containsDate) { // dataArray did not contain an entry for this date
@@ -323,7 +318,7 @@ define([], function () {
             var seriesData = dataArray.sort(function(a,b) { return a.date.localeCompare(b.date)});
 
             // Get the dates to be used as x axis categories and the series data
-            var chartData = getTotalRuntimeSeriesData(seriesData)
+            var chartData = getTotalRuntimeSeriesData(seriesData);
 
             // Create the chart object
             return columnChartFormatting([{data: chartData['seriesData']}], chartData['dateRange'], 3, false, 500, 700);
