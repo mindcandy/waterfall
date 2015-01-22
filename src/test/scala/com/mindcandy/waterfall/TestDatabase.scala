@@ -23,6 +23,10 @@ trait TestDatabase {
     testDropJob1, testDropJob2, testDropJob3
   )
 
+  def testDropJobsWithCronParents = List(
+    testDropJob1.copy(cronParent = Option(1)), testDropJob2.copy(cronParent = Option(2)), testDropJob3.copy(cronParent = Option(1))
+  )
+
   // As the actual reference time in the method may be just a few seconds
   // later than the passed in one, it's fine in the test
   private[this] val now = DateTime.now

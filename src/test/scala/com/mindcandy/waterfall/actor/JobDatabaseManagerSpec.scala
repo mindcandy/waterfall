@@ -188,7 +188,7 @@ class JobDatabaseManagerSpec
 
     probe.send(actor, GetJobsForCompletion(testFunc))
     val expectedDropJob = DropJobList(
-      testDropJobs
+      testDropJobsWithCronParents
     )
     probe.expectMsg(expectedDropJob.toString) must not(throwA[AssertionError])
   }
