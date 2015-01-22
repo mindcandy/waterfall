@@ -5,13 +5,22 @@
     <div class="col-md-10 col-lg-offset-1">
         <table ng-table="tableParams" class="table">
             <tbody ng-repeat="group in $groups">
-            <tr ng-repeat-start="job in group.data">
+            <tr class="ng-table-group">
+                <td colspan="{{$columns.length}}">
+                    <a href="" ng-click="group.$hideRows = !group.$hideRows">
+                        <span class="glyphicon" ng-class="{ 'glyphicon-chevron-right': group.$hideRows, 'glyphicon-chevron-down': !group.$hideRows }"></span>
+                        <strong>Cron job {{ group.value }}</strong>
+                    </a>
+                </td>
+            </tr>
+            <tr ng-repeat-start="job in group.data" ng-hide="group.$hideRows">
                 <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>
                 <td data-title="'Name'" sortable="'name'">{{job.name}}</td>
                 <td data-title="'Drop Id'" sortable="'dropUID'">{{job.dropUID}}</td>
                 <td data-title="'Description'" sortable="'description'">{{job.description}}</td>
                 <td data-title="'Enabled'" sortable="'enabled'">{{job.enabled}}</td>
                 <td data-title="'Cron'" sortable="'cron'">{{job.cron}}</td>
+                <td data-title="'Parent'">{{job.parents}}</td>
                 <td data-title="'Time frame'" sortable="'timeFrame'">{{job.timeFrame}}</td>
                 <td data-title="'Status'" sortable="'status'">
                     <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)"
