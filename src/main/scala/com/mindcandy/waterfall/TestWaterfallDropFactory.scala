@@ -8,6 +8,8 @@ import org.joda.time.DateTime
 
 import scala.util.{ Failure, Try }
 
+// Created for use with RunWaterfall in order to debug via IntelliJ
+
 case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
   val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)

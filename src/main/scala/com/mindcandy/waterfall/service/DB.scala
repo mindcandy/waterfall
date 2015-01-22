@@ -110,7 +110,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
   def getJobsSorted(): List[DropJob] = {
     executeInSession {
       val jobs: List[DropJob] = dropJobsSorted.list
-      jobs.map(dropJobWithParents _).map(dropJobWithCronParent _)
+      jobs.map(dropJobWithParents _)
     }
   }
 
@@ -119,10 +119,6 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
       case Nil => None
       case xs => Option(xs)
     })
-  }
-
-  def dropJobWithCronParent(job: DropJob): DropJob = {
-    return job
   }
 
   def getDropJobChildren(jobID: JobID): List[DropJob] = {

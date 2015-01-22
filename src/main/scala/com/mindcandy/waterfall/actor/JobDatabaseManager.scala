@@ -40,19 +40,14 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
 
     jobOpt match {
       case Some(job) => {
-        log.debug("Getting cron parent for job " + jobId)
         job.parents.flatMap {
           _.headOption match {
             case Some(parentJobId) => getCronParent(parentJobId, jobs)
-            case None => {
-              log.debug("Cron parent is " + jobId)
-              Option(jobId)
-            }
+            case None => Option(jobId)
           }
         }.orElse(Option(jobId))
       }
       case None => {
-        log.debug("No job so no cron parent")
         None
       }
     }
@@ -67,15 +62,12 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       log.debug(s"Get all jobs")
       val jobs = db.getJobsSorted()
 
-      // Populate cron parent
-      log.debug("Populating cron parent")
-      val jobs2 = jobs.map(job => {
-        val cronParent = getCronParent(job.jobID.get, jobs)
-        log.debug("Cron parent for " + job.jobID.get + " is " + cronParent)
-        job.copy(cronParent = cronParent)
+      // Populate cron parent for display purposes
+      val jobsWithCronParent = jobs.map(job => {
+        job.copy(cronParent = getCronParent(job.jobID.get, jobs))
       })
 
-      f(DropJobList(jobs2))
+      f(DropJobList(jobsWithCronParent))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")
@@ -121,9 +113,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
     case GetLogsForCompletion(jobID, time, status, dropUID, limit, offset, f) => {
       log.debug(s"Query logs for jobID:$jobID, time:$time, status:$status, dropUID:$dropUID, limit:$limit, offset:$offset")
-      // TODO: Undo
       val logs = db.executeInSession(db.selectDropLog(jobID, time, status, dropUID, limit, offset))
-      //      val logs = List(DropLog(UUID.randomUUID(), jobID.get, new DateTime(), Some(new DateTime()), Some("test"), None))
       f(DropHistory(logs))
     }
   }
