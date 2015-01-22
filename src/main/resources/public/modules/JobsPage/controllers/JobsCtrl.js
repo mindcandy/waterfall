@@ -22,11 +22,7 @@ define([], function () {
             total: $scope.jobs.length,    // length of data
             getData: function($defer, params) {
                 var filteredData = $filter('filter')($scope.jobs, $scope.filter);
-                //console.log('getting data', $scope.jobs);
-                //console.log(JSON.stringify(params.sorting()) + " " + params.orderBy());
                 var orderedData = params.sorting() ? $filter('orderBy')(filteredData, params.orderBy()) : filteredData;
-                //console.log(orderedData);
-                //var paginatedData = orderedData.slice((params.page() - 1) * params.count(), params.page() * params.count());
                 $defer.resolve(orderedData);
             }
         });
@@ -87,6 +83,10 @@ define([], function () {
         /* determines whether or not the given job logs are viewable */
         $scope.jobLogViewable = function(job) {
              return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData != null && job.logData.count != 0;
+        };
+
+        $scope.toggleShowGroup = function(group) {
+            return group.$hideRows = !group.$hideRows
         };
 
         function jobStatus(job) {

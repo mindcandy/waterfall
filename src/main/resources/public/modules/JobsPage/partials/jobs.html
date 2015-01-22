@@ -5,51 +5,51 @@
     <div class="col-md-10 col-lg-offset-1">
         <table ng-table="tableParams" class="table">
             <tbody ng-repeat="group in $groups">
-            <tr class="ng-table-group">
-                <td colspan="{{$columns.length}}">
-                    <a href="" ng-click="group.$hideRows = !group.$hideRows">
-                        <span class="glyphicon" ng-class="{ 'glyphicon-chevron-right': group.$hideRows, 'glyphicon-chevron-down': !group.$hideRows }"></span>
-                        <strong>Cron job {{ group.value }}</strong>
-                    </a>
-                </td>
-            </tr>
-            <tr ng-repeat-start="job in group.data" ng-hide="group.$hideRows">
-                <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>
-                <td data-title="'Name'" sortable="'name'">{{job.name}}</td>
-                <td data-title="'Drop Id'" sortable="'dropUID'">{{job.dropUID}}</td>
-                <td data-title="'Description'" sortable="'description'">{{job.description}}</td>
-                <td data-title="'Enabled'" sortable="'enabled'">{{job.enabled}}</td>
-                <td data-title="'Cron'" sortable="'cron'">{{job.cron}}</td>
-                <td data-title="'Parent'">{{job.parents}}</td>
-                <td data-title="'Time frame'" sortable="'timeFrame'">{{job.timeFrame}}</td>
-                <td data-title="'Status'" sortable="'status'">
-                    <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)"
-                       ng-click="jobLogClicked(job)">{{job.status}}</a>
-                </td>
-            </tr>
-            <tr ng-repeat-end ng-show="jobLogViewable(job)">
-                <td colspan="9">
-                    <table class="table table-condensed table-hover">
-                        <tr>
-                            <td>Log Id</td>
-                            <td>Start time</td>
-                            <td>End time</td>
-                            <td>Output</td>
-                            <td>Exception</td>
-                        </tr>
+                <tr class="ng-table-group">
+                    <td colspan="{{$columns.length}}">
+                        <a href="" ng-click="toggleShowGroup(group)">
+                            <span class="glyphicon" ng-class="{ 'glyphicon-chevron-right': group.$hideRows, 'glyphicon-chevron-down': !group.$hideRows }"></span>
+                            <strong>Cron job {{ group.value }}</strong>
+                        </a>
+                    </td>
+                </tr>
+                <tr ng-repeat-start="job in group.data" ng-hide="group.$hideRows">
+                    <td data-title="'Job ID'" sortable="'jobID'">{{job.jobID}}</td>
+                    <td data-title="'Name'" sortable="'name'">{{job.name}}</td>
+                    <td data-title="'Drop Id'" sortable="'dropUID'">{{job.dropUID}}</td>
+                    <td data-title="'Description'" sortable="'description'">{{job.description}}</td>
+                    <td data-title="'Enabled'" sortable="'enabled'">{{job.enabled}}</td>
+                    <td data-title="'Cron'" sortable="'cron'">{{job.cron}}</td>
+                    <td data-title="'Parent'">{{job.parents}}</td>
+                    <td data-title="'Time frame'" sortable="'timeFrame'">{{job.timeFrame}}</td>
+                    <td data-title="'Status'" sortable="'status'">
+                        <a href class="btn btn-xs statusButtonWidth" ng-class="jobStateButtonClass(job)"
+                           ng-click="jobLogClicked(job)">{{job.status}}</a>
+                    </td>
+                </tr>
+                <tr ng-repeat-end ng-show="jobLogViewable(job)">
+                    <td colspan="9">
+                        <table class="table table-condensed table-hover">
+                            <tr>
+                                <td>Log Id</td>
+                                <td>Start time</td>
+                                <td>End time</td>
+                                <td>Output</td>
+                                <td>Exception</td>
+                            </tr>
 
-                        <tbody>
-                        <tr ng-repeat="log in job.logData.logs">
-                            <td class="idWidth">{{log.runID}}</td>
-                            <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                            <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                            <td>{{log.logOutput}}</td>
-                            <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
+                            <tbody>
+                            <tr ng-repeat="log in job.logData.logs">
+                                <td class="idWidth">{{log.runID}}</td>
+                                <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                                <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                                <td>{{log.logOutput}}</td>
+                                <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
