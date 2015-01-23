@@ -6,6 +6,7 @@ requirejs.config({
         'angular-route': 'lib/angular-route.min',
         'jquery': 'lib/jquery-1.11.1',
         'highcharts': 'lib/highcharts',
+        'moment': 'lib/moment.min',
         'ng-table': 'lib/ng-table/ng-table',
 
         // page modules
@@ -35,17 +36,20 @@ requirejs.config({
 define([
     'angular',
     'UserInterface',
+    'moment',
     'angular-route',
     'jquery',
     'highcharts',
     'ng-table'
 ], function (
     angular,
-    UserInterface
+    UserInterface,
+    moment
 ) {
     angular.element(document).ready(function () {
         angular.bootstrap(document, [
             UserInterface.name
         ]);
     });
+    moment().format();
 });
