@@ -697,10 +697,10 @@ define([], function () {
         /* Get all dates between a start and end date */
         function getDateRange(startDate, stopDate) {
             var dateArray = [];
-            var currentDate = startDate.unix();
+            var currentDate = startDate.clone();
             while (!stopDate.isBefore(currentDate)) {
-                dateArray.push(currentDate);
-                currentDate = moment(currentDate).add(1, 'days').unix();
+                dateArray.push(currentDate.unix());
+                currentDate = currentDate.add(1, 'days');
             }
             return dateArray;
         }
@@ -741,7 +741,7 @@ define([], function () {
             var minDate = moment();
             if (seriesData.length > 0) {
                 // seriesData is sorted, so minDate is first in array
-                minDate = seriesData[0].date;
+                minDate = moment(seriesData[0].date, "YYYY-MM-DD");
             } else {
                 console.error("No logs present");
             }
