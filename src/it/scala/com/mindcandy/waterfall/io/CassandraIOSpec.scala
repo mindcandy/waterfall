@@ -18,16 +18,6 @@ class CassandraIOSpec extends Specification {
       receive two lines correctly from a column family $receiveTwoLines
   """
 
-  /*
-  CREATE TABLE testing.waterfall_cassandra_spec (
-    userID TEXT,
-    joined TIMESTAMP,
-    age INT,
-    name TEXT,
-    PRIMARY KEY (userID, joined)
-  ) WITH DEFAULT_TIME_TO_LIVE = 300;
-  */
-
   case class CassandraTestData(userID: String, joined: DateTime, age: Int, name: String)
 
   object CassandraTestData extends IntermediateFormatCompanion[CassandraTestData] {
