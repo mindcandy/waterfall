@@ -38,16 +38,7 @@ class CassandraIOSpec extends Specification {
         input.name
       )
     }
-
-    val keyField = "userID"
   }
-
-  val clusterConfig = CassandraIOClusterConfig(
-    name = "WaterfallTesting",
-    seedHosts = "FILLIN_HOST",
-    keySpace = "waterfall_testing",
-    localDatacenter = ""
-  )
 
   def storeTwoLines = {
     val intermediate: MemoryIntermediate[CassandraTestData] = new MemoryIntermediate("memory:source")
@@ -55,7 +46,11 @@ class CassandraIOSpec extends Specification {
       CassandraTestData("dg7327fds2a", new DateTime(2013, 10, 30, 23, 11, 23, 0, DateTimeZone.UTC), 35, "Test User One"),
       CassandraTestData("afrds2363", new DateTime(2014, 5, 2, 7, 45, 12, 0, DateTimeZone.UTC), 21, "Test User Two")
     ))
-    val cassandraConfig = CassandraIOConfig(clusterConfig, "cassandra_io_test", CassandraTestData.keyField)
+    val cassandraConfig = CassandraIOConfig(
+      "insert into testing.waterfall_cassandra_spec (userid, joined, age, name) values (?, ?, ?, ?)",
+      List("userID", "joined", "age", "name"),
+      List("int-spark-cass-i5850c11a.mclabs.io")
+    )
     val cassandraSink = CassandraIO[CassandraTestData](cassandraConfig)
     val result = cassandraSink.storeFrom(intermediate)
     result must beSuccessfulTry
@@ -65,7 +60,11 @@ class CassandraIOSpec extends Specification {
     intermediate.write(Iterator(
       CassandraTestData("335lgkhkh", new DateTime(2014, 6, 2, 7, 45, 12, 0, DateTimeZone.UTC), 90, "Test User Three")
     ))
-    val cassandraConfig = CassandraIOConfig(clusterConfig, "cassandra_io_test", CassandraTestData.keyField, Map("age" -> "mappedAge"))
+    val cassandraConfig = CassandraIOConfig(
+      "insert into testing.waterfall_cassandra_spec (userid, joined, age, name) values (?, ?, ?, ?)",
+      List("userID", "joined", "age", "userID"),
+      List("int-spark-cass-i5850c11a.mclabs.io")
+    )
     val cassandraSink = CassandraIO[CassandraTestData](cassandraConfig)
     val result = cassandraSink.storeFrom(intermediate)
     result must beSuccessfulTry

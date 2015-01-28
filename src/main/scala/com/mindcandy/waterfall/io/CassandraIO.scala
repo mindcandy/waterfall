@@ -1,24 +1,30 @@
 package com.mindcandy.waterfall.io
 
+import java.net.InetSocketAddress
+
+import com.datastax.driver.core.policies.AddressTranslater
 import com.mindcandy.waterfall._
-import com.netflix.astyanax.AstyanaxContext
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType
-import com.netflix.astyanax.connectionpool.impl.{ ConnectionPoolConfigurationImpl, ConnectionPoolType, CountingConnectionPoolMonitor }
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl
-import com.netflix.astyanax.model.{ ColumnFamily, ConsistencyLevel }
-import com.netflix.astyanax.serializers.StringSerializer
-import com.netflix.astyanax.thrift.ThriftFamilyFactory
 import com.typesafe.scalalogging.slf4j.Logging
+import com.datastax.driver.core.{ BoundStatement, Session, ProtocolVersion, Cluster }
 import org.joda.time.DateTime
 
 import scala.util.Try
 
-case class CassandraIOClusterConfig(name: String, keySpace: String, seedHosts: String, localDatacenter: String,
-                                    maxConnsPerHost: Int = 3, maxFailoverCount: Int = 3, defaultReadConsistencyLevelPolicy: ConsistencyLevel = ConsistencyLevel.CL_ONE,
-                                    defaultWriteConsistencyLevelPolicy: ConsistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM, nodeDiscoveryType: NodeDiscoveryType = NodeDiscoveryType.RING_DESCRIBE,
-                                    connectionPoolType: ConnectionPoolType = ConnectionPoolType.TOKEN_AWARE)
-case class CassandraIOConfig(clusterConfig: CassandraIOClusterConfig, columnFamily: String, keyField: String, fieldToColumnMapping: Map[String, String] = Map()) extends IOConfig {
+case class CassandraIOConfig(query: String, fieldSelector: List[String], seedHosts: List[String], addressTranslation: Option[Map[String, String]] = None) extends IOConfig {
   val url = "cassandra:cluster"
+
+  class LookUpAddressTranslator(translations: Map[String, String]) extends AddressTranslater {
+    val lookUp: Map[InetSocketAddress, InetSocketAddress] =
+      translations
+        .collect {
+          case (source, destination) => (new InetSocketAddress(source, 9042), new InetSocketAddress(destination, 9042))
+        }.toMap
+    override def translate(address: InetSocketAddress): InetSocketAddress = {
+      lookUp.getOrElse(address, address)
+    }
+  }
+
+  val lookUpAddressTranslator: Option[LookUpAddressTranslator] = addressTranslation.map(new LookUpAddressTranslator(_))
 }
 
 case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
@@ -31,40 +37,30 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
     Try(())
   }
 
-  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = {
-    intermediate.read { iterator =>
+  def storeFrom[I <: Intermediate[A]](intermediate: I)(implicit format: IntermediateFormat[A]): Try[Unit] = getSession.flatMap { session =>
+    val result = intermediate.read { iterator =>
       Try {
+        val statement = session.prepare(config.query)
         iterator.foreach { input =>
           val fields = getFields(input)
-          val keyValue = fields(config.keyField).toString
-          val columnValues = if (config.fieldToColumnMapping.isEmpty) {
-            fields - config.keyField
-          } else {
-            fields -- (fields.keySet &~ config.fieldToColumnMapping.keySet)
+          val values = config.fieldSelector.map { field =>
+            fields.get(field) match {
+              case Some(timestamp: DateTime) => timestamp.toDate
+              case Some(value) => value
+              case _ => throw new IllegalArgumentException(s"field [$field] in field selector but not in data object with fields ${fields.keys.toList}")
+            }
           }
-          val mutationBatch = keySpace.prepareMutationBatch()
-          val columnListMutation = mutationBatch.withRow(columnFamily, keyValue)
-          columnValues.foreach {
-            case (name, value) =>
-              val properName = config.fieldToColumnMapping.get(name).getOrElse(name)
-              value match {
-                case b: Boolean => columnListMutation.putColumn(properName, b)
-                case i: Int => columnListMutation.putColumn(properName, i)
-                case l: Long => columnListMutation.putColumn(properName, l)
-                case f: Float => columnListMutation.putColumn(properName, f)
-                case d: Double => columnListMutation.putColumn(properName, d)
-                case timestamp: DateTime => columnListMutation.putColumn(properName, timestamp.toDate)
-                case _ => columnListMutation.putColumn(properName, value.toString)
-              }
-          }
-          mutationBatch.execute()
+          val boundStatement = new BoundStatement(statement)
+          session.execute(boundStatement.bind(values: _*))
         }
       }
     }
+    session.close()
+    result
   }
 
   def getFields(caseClass: A) =
-    (Map[String, Any]() /: caseClass.getClass.getDeclaredFields) { (result, field) =>
+    (Map[String, AnyRef]() /: caseClass.getClass.getDeclaredFields) { (result, field) =>
       field.setAccessible(true)
       if (field.getName.startsWith("$")) { // eliminate compiler generated fields
         result
@@ -73,28 +69,10 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
       }
     }
 
-  val cassandraContext = {
-    val context = new AstyanaxContext.Builder()
-      .forCluster(config.clusterConfig.name)
-      .forKeyspace(config.clusterConfig.keySpace)
-      .withAstyanaxConfiguration(new AstyanaxConfigurationImpl()
-        .setDiscoveryType(config.clusterConfig.nodeDiscoveryType)
-        .setConnectionPoolType(config.clusterConfig.connectionPoolType)
-        .setDefaultReadConsistencyLevel(config.clusterConfig.defaultReadConsistencyLevelPolicy)
-        .setDefaultWriteConsistencyLevel(config.clusterConfig.defaultWriteConsistencyLevelPolicy)
-      )
-      .withConnectionPoolConfiguration(new ConnectionPoolConfigurationImpl(config.clusterConfig.name)
-        .setPort(9160)
-        .setMaxConnsPerHost(config.clusterConfig.maxConnsPerHost)
-        .setMaxFailoverCount(config.clusterConfig.maxFailoverCount)
-        .setSeeds(config.clusterConfig.seedHosts)
-        .setLocalDatacenter(config.clusterConfig.localDatacenter)
-      )
-      .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-      .buildKeyspace(ThriftFamilyFactory.getInstance())
-    context.start()
-    context
+  val cassandraCluster: Cluster = {
+    val builder = Cluster.builder().addContactPoints(config.seedHosts: _*).withProtocolVersion(ProtocolVersion.V2)
+    val translatedBuilder = config.lookUpAddressTranslator.fold(builder)(builder.withAddressTranslater(_))
+    translatedBuilder.build()
   }
-  val keySpace = cassandraContext.getClient
-  val columnFamily = ColumnFamily.newColumnFamily(config.columnFamily, StringSerializer.get(), StringSerializer.get())
+  def getSession: Try[Session] = Try { cassandraCluster.connect() }
 }

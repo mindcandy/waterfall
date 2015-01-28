@@ -25,9 +25,7 @@ object WaterfallBuild extends Build {
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",
     libraryDependencies += "commons-daemon" % "commons-daemon" % "1.0.5",
-    libraryDependencies += "com.netflix.astyanax" % "astyanax-cassandra" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
-    libraryDependencies += "com.netflix.astyanax" % "astyanax-thrift" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12"),
-    libraryDependencies += "com.netflix.astyanax" % "astyanax-recipes" % astyanaxVersion exclude ("javax.servlet", "servlet-api") exclude("org.slf4j", "slf4j-log4j12")
+    libraryDependencies += "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4"
   )
     
   lazy val sprayDependencies: Seq[Setting[_]] = Seq(
