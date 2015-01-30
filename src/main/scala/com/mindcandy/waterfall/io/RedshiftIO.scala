@@ -60,7 +60,7 @@ case class RedshiftIOSink[A <: AnyRef](config: RedshiftIOSinkConfig, s3Config: O
         ).execute
       }
       StaticQuery.updateNA(
-        s"COPY ${config.tableName} ${columns} FROM '${combinedS3Url}' CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"
+        s"COPY ${config.tableName} ${columns} FROM '${combinedS3Url}' STATUPDATE ON CREDENTIALS 'aws_access_key_id=${s3Intermediate.awsAccessKey};aws_secret_access_key=${s3Intermediate.awsSecretKey}' DELIMITER '\\t'"
       ).execute
     })
   }
