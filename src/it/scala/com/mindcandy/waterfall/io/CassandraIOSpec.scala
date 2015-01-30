@@ -15,10 +15,12 @@ class CassandraIOSpec extends Specification {
     CassandroIO should
       store two lines correctly in a column family $storeTwoLines
       store one line in a differently named column $storeOneLineMapped
+      store two lines correctly in a column family with decimal $storeTwoLinesDecimal
       receive two lines correctly from a column family $receiveTwoLines
   """
 
   case class CassandraTestData(userID: String, joined: DateTime, age: Int, name: String)
+  case class CassandraTestDataDecimal(date: DateTime, currency: String, inGbp: BigDecimal, inUsd: BigDecimal)
 
   object CassandraTestData extends IntermediateFormatCompanion[CassandraTestData] {
     object format extends IntermediateFormat[CassandraTestData] {
@@ -36,6 +38,26 @@ class CassandraIOSpec extends Specification {
         input.joined.toString(ISODateTimeFormat.dateTime.withZoneUTC()),
         input.age.toString,
         input.name
+      )
+    }
+  }
+  
+  object CassandraTestDataDecimal extends IntermediateFormatCompanion[CassandraTestDataDecimal] {
+    object format extends IntermediateFormat[CassandraTestDataDecimal] {
+      def convertTo(input: Seq[String]) = {
+        CassandraTestDataDecimal(
+          ISODateTimeFormat.dateTime.parseDateTime(input(0)),
+          input(1),
+          BigDecimal(input(2)),
+          BigDecimal(input(3))
+        )
+      }
+
+      def convertFrom(input: CassandraTestDataDecimal) = Seq[String](
+        input.date.toString(ISODateTimeFormat.dateTime.withZoneUTC()),
+        input.currency,
+        input.inGbp.toString,
+        input.inUsd.toString
       )
     }
   }
@@ -66,6 +88,21 @@ class CassandraIOSpec extends Specification {
       List("int-spark-cass-i5850c11a.mclabs.io")
     )
     val cassandraSink = CassandraIO[CassandraTestData](cassandraConfig)
+    val result = cassandraSink.storeFrom(intermediate)
+    result must beSuccessfulTry
+  }
+  def storeTwoLinesDecimal = {
+    val intermediate: MemoryIntermediate[CassandraTestDataDecimal] = new MemoryIntermediate("memory:source")
+    intermediate.write(Iterator(
+      CassandraTestDataDecimal(new DateTime(2013, 6, 2, 7, 45, 12, 0, DateTimeZone.UTC), "EURO", BigDecimal("0.75"), BigDecimal("1.13")),
+      CassandraTestDataDecimal(new DateTime(2014, 7, 23, 13, 12, 9, 0, DateTimeZone.UTC), "YEN", BigDecimal("0.0085"), BigDecimal("0.0056"))
+    ))
+    val cassandraConfig = CassandraIOConfig(
+      "insert into testing.waterfall_cassandra_spec_decimal (date, currency, in_gbp, in_usd) values (?, ?, ?, ?)",
+      List("date", "currency", "inGbp", "inUsd"),
+      List("int-spark-cass-i5850c11a.mclabs.io")
+    )
+    val cassandraSink = CassandraIO[CassandraTestDataDecimal](cassandraConfig)
     val result = cassandraSink.storeFrom(intermediate)
     result must beSuccessfulTry
   }

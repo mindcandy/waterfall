@@ -46,6 +46,7 @@ case class CassandraIO[A <: AnyRef](config: CassandraIOConfig)
           val values = config.fieldSelector.map { field =>
             fields.get(field) match {
               case Some(timestamp: DateTime) => timestamp.toDate
+              case Some(decimal: BigDecimal) => decimal.bigDecimal
               case Some(value) => value
               case _ => throw new IllegalArgumentException(s"field [$field] in field selector but not in data object with fields ${fields.keys.toList}")
             }
