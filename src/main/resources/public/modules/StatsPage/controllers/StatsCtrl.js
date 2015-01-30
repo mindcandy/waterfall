@@ -25,12 +25,6 @@ define([], function () {
                     $scope.jobs = data.jobs || "Request failed";
                     console.error("failed to get jobs!");
                 });
-
-
-            //// perform refresh after interval
-            //$timeout(function () {
-            //    $scope.fetchJobs();
-            //}, $scope.refreshInterval);
         };
 
         /* fetch the logs for the given job */
@@ -45,57 +39,6 @@ define([], function () {
                     console.error("failed to get logs for job " + jsonJob.jobID + "!");
                 });
         }
-        //
-        ///** job status button display */
-        //$scope.jobStateButtonClass = function (job) {
-        //    if (jobIsRunning(job)) { return "btn-info"; }
-        //    else if (jobIsDisabled(job) && jobHasErrorLogs(job)) { return "btn-default"; }
-        //    else if (jobIsDisabled(job)) { return "btn-default"; }
-        //    else if (jobHasErrorLogs(job)) { return "btn-danger"; }
-        //    else if (jobIsNeverRun(job)) { return "btn-primary"; }
-        //    else { return "btn-success"; }
-        //};
-        //
-        ///* tracks jobs whose logs are being viewed so that those logs are again viewed after refresh */
-        //$scope.jobLogClicked = function (job) {
-        //    var index = $scope.jobLogsBeingViewed.indexOf(job.jobID);
-        //    if (index === -1) { $scope.jobLogsBeingViewed.push(job.jobID); }
-        //    else { $scope.jobLogsBeingViewed.splice(index, 1); }
-        //};
-        //
-        ///* determines whether or not the given job logs are viewable */
-        //$scope.jobLogViewable = function (job) {
-        //     return $scope.jobLogsBeingViewed.indexOf(job.jobID) > -1 && job.logData !== null && job.logData.count !== 0;
-        //};
-        //
-        //function jobStatus(job) {
-        //    if (jobIsRunning(job)) { return "Running"; }
-        //    else if (jobIsDisabled(job) && jobHasErrorLogs(job)) { return "Disabled"; }
-        //    else if (jobIsDisabled(job)) { return "Disabled"; }
-        //    else if (jobHasErrorLogs(job)) { return "Failure"; }
-        //    else if (jobIsNeverRun(job)) { return "Never Run"; }
-        //    else { return "Success"; }
-        //}
-        //
-        //function jobIsNeverRun(job) {
-        //    return job.logData === null || job.logData[0] === null;
-        //}
-        //
-        //function jobIsDisabled(job) {
-        //    return job.enabled === false;
-        //}
-        //
-        //function jobIsRunning(job) {
-        //    if (job.logData === null) { return false; }
-        //    else if (job.logData.length === 0) { return false; }
-        //    else { return job.logData[0] !== null && job.logData[0].endTime === null; }
-        //}
-        //
-        //function jobHasErrorLogs(job) {
-        //    if (job.logData === null) { return false; }
-        //    else if (job.logData.length === 0) { return false; }
-        //    else { return job.logData[0] !== null && job.logData[0].exception !== null; }
-        //}
 
         /* Create the JSON for displaying the chart */
         function columnChartFormatting(seriesData, xAxisDateRange, xAxisLabelStep, isLegend, height, width) {
