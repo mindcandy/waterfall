@@ -24,7 +24,7 @@ trait TestDatabase {
   )
 
   def testDropJobsWithCronParents = List(
-    testDropJob1.copy(cronParent = Option(1)), testDropJob2.copy(cronParent = Option(2)), testDropJob3.copy(cronParent = Option(1))
+    testDropJob1.copy(cronParent = Option(1)), testDropJob2, testDropJob3.copy(cronParent = Option(1))
   )
 
   // As the actual reference time in the method may be just a few seconds
