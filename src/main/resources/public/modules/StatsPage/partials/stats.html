@@ -11,18 +11,18 @@
             <br/>
             <highchart chart='{{drop_runtime_chart}}'/>
         </div>
-        <div class="col-md-10 col-lg-offset-1">
-            <div class="col-md-4 col-lg-4 white-background">
-                <div class="drops-chart">
-                    <h2>Total Runtimes</h2>
-                    <div class="btn-group">
-                        <button type="button" ng-click="selectFilter(TotalDisplayFilter.SUCCESSES)" class="btn btn-default" ng-class="{ 'active': selectedFilter == TotalDisplayFilter.SUCCESSES }">Successes</button>
-                        <button type="button" ng-click="selectFilter(TotalDisplayFilter.FAILURES)" class="btn btn-default" ng-class="{ 'active': selectedFilter == TotalDisplayFilter.FAILURES }">Failures</button>
-                    </div>
-                </div>
-                <br/>
-                <highchart chart="{{total_runtime_chart}}"/>
-            </div>
-        </div>
+        <!--<div class="col-md-10 col-lg-offset-1">-->
+            <!--<div class="col-md-4 col-lg-4 white-background">-->
+                <!--<div class="drops-chart">-->
+                    <!--<h2>Total Runtimes</h2>-->
+                    <!--<div class="btn-group">-->
+                        <!--<button type="button" ng-click="selectFilter(TotalDisplayFilter.SUCCESSES)" class="btn btn-default" ng-class="{ 'active': selectedFilter == TotalDisplayFilter.SUCCESSES }">Successes</button>-->
+                        <!--<button type="button" ng-click="selectFilter(TotalDisplayFilter.FAILURES)" class="btn btn-default" ng-class="{ 'active': selectedFilter == TotalDisplayFilter.FAILURES }">Failures</button>-->
+                    <!--</div>-->
+                <!--</div>-->
+                <!--<br/>-->
+                <!--<highchart chart="{{total_runtime_chart}}"/>-->
+            <!--</div>-->
+        <!--</div>-->
     </div>
 </section>
