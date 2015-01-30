@@ -35,24 +35,6 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
 
   import scala.slick.driver.JdbcDriver.simple._
 
-  def getCronParent(jobId: JobID, jobs: List[DropJob]): Option[JobID] = {
-    val jobOpt = jobs.find(_.jobID == Option(jobId))
-
-    jobOpt match {
-      case Some(job) => {
-        job.parents.flatMap {
-          _.headOption match {
-            case Some(parentJobId) => getCronParent(parentJobId, jobs)
-            case None => Option(jobId)
-          }
-        }.orElse(Option(jobId))
-      }
-      case None => {
-        None
-      }
-    }
-  }
-
   def receive = {
     case GetJobForCompletion(jobID, f) => {
       log.debug(s"job lookup for jobID:$jobID with completion")
@@ -61,13 +43,7 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     case GetJobsForCompletion(f) => {
       log.debug(s"Get all jobs")
       val jobs = db.getJobsSorted()
-
-      // Populate cron parent for display purposes
-      val jobsWithCronParent = jobs.map(job => {
-        job.copy(cronParent = getCronParent(job.jobID.get, jobs))
-      })
-
-      f(DropJobList(jobsWithCronParent))
+      f(DropJobList(getJobsWithCronParents(jobs)))
     }
     case GetJobsWithDropUIDForCompletion(dropUID, f) => {
       log.debug(s"Get all jobs with dropUID: $dropUID")
@@ -117,4 +93,48 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
       f(DropHistory(logs))
     }
   }
+
+
+  def getCronParent(jobId: JobID, jobs: List[DropJob]): Option[JobID] = {
+    val jobOpt = jobs.find(_.jobID == Option(jobId))
+
+    jobOpt match {
+      case Some(job) => {
+        job.parents.flatMap {
+          _.headOption match {
+            case Some(parentJobId) => getCronParent(parentJobId, jobs)
+            case None => Option(jobId)
+          }
+        }.orElse(Option(jobId))
+      }
+      case None => {
+        None
+      }
+    }
+  }
+
+  def getJobsWithCronParents(jobs: List[DropJob]): List[DropJob] = {
+
+    val jobsWithCronParent = jobs.map(job => {
+      job.copy(cronParent = getCronParent(job.jobID.get, jobs))
+    })
+
+    val jobsWithStandaloneJobsGrouped = jobsWithCronParent.map(job1 =>
+      if (job1.cron.isDefined) {
+        val dependencies = jobsWithCronParent.filter(job2 =>
+          job2.jobID != job2.cronParent && job2.cronParent == job1.jobID
+        )
+        if (dependencies.isEmpty) {
+          job1.copy(cronParent = None)
+        } else {
+          job1
+        }
+      } else {
+        job1
+      }
+    )
+
+    jobsWithStandaloneJobsGrouped
+  }
+
 }
