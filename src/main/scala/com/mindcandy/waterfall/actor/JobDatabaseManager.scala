@@ -94,7 +94,6 @@ class JobDatabaseManager(db: DB) extends Actor with ActorLogging {
     }
   }
 
-
   def getCronParent(jobId: JobID, jobs: List[DropJob]): Option[JobID] = {
     val jobOpt = jobs.find(_.jobID == Option(jobId))
 
