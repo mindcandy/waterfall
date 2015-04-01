@@ -9,6 +9,7 @@ import com.amazonaws.services.s3.model.{ GetObjectRequest, ObjectListing }
 import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall._
 import com.typesafe.scalalogging.slf4j.Logging
+import org.joda.time.chrono.ISOChronology
 import resource._
 
 import scala.annotation.tailrec
@@ -16,10 +17,10 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 case class S3IntermediateConfig(url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
-                                keyDate: DateTime = DateTime.now, columnSeparator: Option[String] = Option("\t")) extends IOConfig
+                                keyDate: DateTime = DateTime.now(ISOChronology.getInstanceUTC), columnSeparator: Option[String] = Option("\t")) extends IOConfig
 
 case class S3Intermediate[A <: AnyRef](url: String, awsAccessKey: String, awsSecretKey: String, bucketName: String, keyPrefix: String,
-                                       keyDate: DateTime = DateTime.now, override val columnSeparator: Option[String] = Option("\t"))
+                                       keyDate: DateTime = DateTime.now(ISOChronology.getInstanceUTC), override val columnSeparator: Option[String] = Option("\t"))
     extends Intermediate[A]
     with IOOps[A]
     with IntermediateOps

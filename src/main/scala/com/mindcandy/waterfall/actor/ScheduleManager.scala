@@ -6,6 +6,7 @@ import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.StartJob
 import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
 import com.mindcandy.waterfall.actor.Protocol.Cron
+import org.joda.time.chrono.ISOChronology
 import org.quartz.CronExpression
 
 import scala.concurrent.duration._
@@ -18,7 +19,7 @@ object ScheduleManager {
 
   def calculateNextFireTime(cron: Cron): Try[FiniteDuration] = Try {
     val cronExpression = new CronExpression(cron)
-    val now = DateTime.now
+    val now = DateTime.now(ISOChronology.getInstanceUTC)
     val next = new DateTime(cronExpression.getNextValidTimeAfter(now.toDate))
     (now to next).millis millis
   }

@@ -20,7 +20,7 @@ object WaterfallBuild extends Build {
     libraryDependencies += "net.logstash.logback" % "logstash-logback-encoder" % "1.0",
     libraryDependencies += "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3",
-    libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0",
+    libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "1.8.0",
     libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.6.1",
     libraryDependencies += "org.apache.commons" % "commons-vfs2" % "2.0",
     libraryDependencies += "commons-httpclient" % "commons-httpclient" % "3.1",

@@ -9,6 +9,7 @@ import com.mindcandy.waterfall.WaterfallDropFactory._
 import com.mindcandy.waterfall.actor.{ LogStatus, TimeFrame }
 import com.mindcandy.waterfall.config.{ DatabaseConfig, DatabaseContainer }
 import org.joda.time.DateTime
+import org.joda.time.chrono.ISOChronology
 import org.quartz.CronExpression
 
 class DB(val config: DatabaseConfig) extends DatabaseContainer {
@@ -218,7 +219,7 @@ class DB(val config: DatabaseConfig) extends DatabaseContainer {
     } yield (log, job)
 
     val filterByTime: Option[LogQuery => LogQuery] = period.map(p => { q: LogQuery =>
-      val timeFrom = DateTime.now - p.hour
+      val timeFrom = DateTime.now(ISOChronology.getInstanceUTC) - p.hour
       q.filter {
         case (log, job) =>
           (log.endTime.isDefined && log.endTime >= timeFrom) || (log.endTime.isEmpty && log.startTime >= timeFrom)

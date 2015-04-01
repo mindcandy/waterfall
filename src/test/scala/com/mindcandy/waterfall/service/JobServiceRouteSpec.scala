@@ -5,6 +5,7 @@ import com.github.nscala_time.time.Imports._
 import com.mindcandy.waterfall.actor.Protocol.{ DropHistory, DropJob, DropJobList }
 import com.mindcandy.waterfall.actor.{ DropSupervisor, JobDatabaseManager, TimeFrame }
 import com.mindcandy.waterfall.{ TestDatabase, TestWaterfallDropFactory }
+import org.joda.time.chrono.ISOChronology
 import org.specs2.ScalaCheck
 import org.specs2.specification.Grouped
 import org.specs2.specification.script.Specification
@@ -181,7 +182,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   }
 
   def getLogs = Get("/logs") ~> route ~> check {
-    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString))
+    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.getMillis, x.jobID, x.runUID.toString))
   }
 
   def getLogsWithJobID = Get("/logs?jobid=1") ~> route ~> check {
@@ -192,8 +193,8 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   def getLogsWithPeriod = Get("/logs?period=1") ~> route ~> check {
     val dropHistory = responseAs[DropHistory]
     (dropHistory.count === 8) and (dropHistory.logs.count(log => log.endTime match {
-      case Some(endTime) => endTime > DateTime.now - 1.hour
-      case None => log.startTime > DateTime.now - 1.hour
+      case Some(endTime) => endTime > DateTime.now(ISOChronology.getInstanceUTC) - 1.hour
+      case None => log.startTime > DateTime.now(ISOChronology.getInstanceUTC) - 1.hour
     }) === 8)
   }
 
@@ -240,7 +241,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
   }
 
   def getLogsWithOffset = Get("/logs?offset=3") ~> route ~> check {
-    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.millis, x.jobID, x.runUID.toString)).drop(3)
+    responseAs[DropHistory].logs === testDropLogs.sortBy(x => (-x.startTime.getMillis, x.jobID, x.runUID.toString)).drop(3)
   }
 
   def postRunJob = Post("/jobs/1/run") ~> route ~> check {

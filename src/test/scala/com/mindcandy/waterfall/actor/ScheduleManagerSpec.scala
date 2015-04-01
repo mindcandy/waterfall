@@ -9,6 +9,7 @@ import com.mindcandy.waterfall.actor.JobDatabaseManager.GetSchedule
 import com.mindcandy.waterfall.actor.Protocol.{ DropJobSchedule, DropJob }
 import com.mindcandy.waterfall.actor.ScheduleManager.CheckJobs
 import com.typesafe.config.ConfigFactory
+import org.joda.time.chrono.ISOChronology
 import org.specs2.SpecificationLike
 import org.specs2.mock.Mockito
 import org.specs2.specification.Step
@@ -65,7 +66,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(5)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(5)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
     val request = DropJobSchedule(Map(1 -> dropJob))
@@ -79,8 +80,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime1 = DateTime.now + Period.seconds(3)
-    val currentTime2 = DateTime.now + Period.seconds(6)
+    val currentTime1 = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
+    val currentTime2 = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(6)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime1)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime2)
@@ -95,7 +96,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
     val request = DropJobSchedule(Map(1 -> dropJob))
@@ -111,7 +112,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime)
@@ -129,7 +130,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime)
@@ -148,8 +149,8 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor, FiniteDuration(5, SECONDS))
-    val currentTime1 = DateTime.now + Period.seconds(3)
-    val currentTime2 = DateTime.now + Period.seconds(7)
+    val currentTime1 = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
+    val currentTime2 = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(7)
 
     val dropJob1 = createDropJob("EXRATE1", "Exchange Rate", currentTime1)
     val dropJob2 = createDropJob("EXRATE2", "Exchange Rate", currentTime2)
@@ -167,7 +168,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
 
     val dropUID = "EXRATE"
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
     val dropJob1 = createDropJob(dropUID, "Exchange Rate", currentTime)
     val dropJob2 = createDropJob(dropUID, "Exchange Rate", currentTime)
     val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
@@ -182,13 +183,13 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
 
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
     val request = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
 
-    val newTime = DateTime.now + Period.seconds(3)
+    val newTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
     val newDropJob = createDropJob("EXRATE", "Exchange Rate", newTime)
     val rescheduleRequest = DropJobSchedule(Map(2 -> newDropJob))
 
@@ -201,7 +202,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val databaseManager: TestProbe = TestProbe()
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor)
-    val currentTime = DateTime.now + Period.seconds(3)
+    val currentTime = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
 
     val dropJob = createDropJob("EXRATE", "Exchange Rate", currentTime)
     val request = DropJobSchedule(Map(1 -> dropJob))
