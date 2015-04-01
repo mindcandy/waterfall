@@ -8,6 +8,7 @@ import com.mindcandy.waterfall.actor.{ JobDatabaseManager, TimeFrame }
 import com.mindcandy.waterfall.config.DatabaseConfig
 import com.mindcandy.waterfall.service.DB
 import org.joda.time.DateTime
+import org.joda.time.chrono.ISOChronology
 
 trait TestDatabase {
 
@@ -29,7 +30,7 @@ trait TestDatabase {
 
   // As the actual reference time in the method may be just a few seconds
   // later than the passed in one, it's fine in the test
-  private[this] val now = DateTime.now
+  private[this] val now = DateTime.now(ISOChronology.getInstanceUTC)
   private[this] val beforeReference1 = now - 1.hour
   private[this] val beforeReference2 = now - 2.hour
   private[this] val afterReference = now + 1.hour

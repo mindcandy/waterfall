@@ -9,6 +9,7 @@ import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
 import org.joda.time.Period
+import org.joda.time.chrono.ISOChronology
 import org.joda.time.format.PeriodFormat
 
 import scala.language.postfixOps
@@ -19,11 +20,14 @@ object DropSupervisor {
   case class JobResult(runUID: RunUID, result: Try[Unit])
   case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
 
-  def calculateDate(timeFrame: TimeFrame) = timeFrame match {
-    case DAY_TODAY => Some(DateTime.now)
-    case DAY_YESTERDAY => Some(DateTime.now - 1.day)
-    case DAY_TWO_DAYS_AGO => Some(DateTime.now - 2.days)
-    case DAY_THREE_DAYS_AGO => Some(DateTime.now - 3.days)
+  def calculateDate(timeFrame: TimeFrame) = {
+    val now = DateTime.now(ISOChronology.getInstanceUTC)
+    timeFrame match {
+      case DAY_TODAY => Some(now)
+      case DAY_YESTERDAY => Some(now - 1.day)
+      case DAY_TWO_DAYS_AGO => Some(now - 2.days)
+      case DAY_THREE_DAYS_AGO => Some(now - 3.days)
+    }
   }
 
   def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
@@ -53,7 +57,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   }
 
   def processResult(runUID: RunUID, result: Try[Unit]) = {
-    val endTime = DateTime.now
+    val endTime = DateTime.now(ISOChronology.getInstanceUTC)
     runningJobs.get(runUID) match {
       case Some((worker, startTime, jobID)) => {
         val runtime = PeriodFormat.getDefault().print(new Period((startTime to endTime)))
@@ -80,7 +84,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
 
   def runJob(jobID: JobID, job: DropJob) = {
     val runUID = UUID.randomUUID()
-    val startTime = DateTime.now
+    val startTime = DateTime.now(ISOChronology.getInstanceUTC)
     (job.parallel, runningJobs.values.map(_._3).toSet.contains(jobID)) match {
       case (false, true) => {
         val error = s"job $jobID with drop uid ${job.dropUID} and name ${job.name} has already been running, run $runUID cancelled"

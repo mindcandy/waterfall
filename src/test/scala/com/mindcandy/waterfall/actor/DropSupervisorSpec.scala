@@ -11,6 +11,7 @@ import com.mindcandy.waterfall.actor.JobDatabaseManager.{ GetChildrenWithJobIDFo
 import com.mindcandy.waterfall.actor.Protocol.DropJob
 import com.mindcandy.waterfall.{ TestPassThroughWaterfallDrop, TestWaterfallDropFactory }
 import com.typesafe.config.ConfigFactory
+import org.joda.time.chrono.ISOChronology
 import org.specs2.SpecificationLike
 import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
@@ -196,7 +197,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
   }
 
   private def createStartJob(frame: TimeFrame.TimeFrame = TimeFrame.DAY_TODAY): StartJob = {
-    val now = DateTime.now + Period.seconds(3)
+    val now = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
     StartJob(1, DropJob(Some(1), "test1", "Exchange Rate", "description", true, Option(s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?"), frame, Map()))
   }
 }
