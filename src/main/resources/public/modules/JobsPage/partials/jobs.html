@@ -41,8 +41,8 @@
                             <tbody>
                             <tr ng-repeat="log in job.logData.logs">
                                 <td class="idWidth">{{log.runID}}</td>
-                                <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                                <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                                <td class="dateWidth">{{log.startTime | date:'yyyy-MM-dd HH:mm:ss Z'}}</td>
+                                <td class="dateWidth">{{log.endTime | date:'yyyy-MM-dd HH:mm:ss Z'}}</td>
                                 <td>{{log.logOutput}}</td>
                                 <td ng-class="{'error': log.exception != null}">{{log.exception}}</td>
                             </tr>
