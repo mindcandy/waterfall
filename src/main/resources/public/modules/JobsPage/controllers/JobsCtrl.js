@@ -52,7 +52,7 @@ define([], function () {
 
         /* fetch the logs for the given job */
         function fetchLogs(jsonJob) {
-            $http.get('/logs?jobid=' + jsonJob.jobID + "&period=168&limit=5")
+            $http.get('/logs?jobid=' + jsonJob.jobID + "&limit=5")
                 .success(function (data) {
                     jsonJob['logData'] = data;
                     jsonJob['status'] = jobStatus(jsonJob);
