@@ -20,12 +20,12 @@ object DropSupervisor {
   case class RunJobImmediately(jobID: JobID, runDate: Option[LocalDate], completionFunction: Option[DropJob] => Unit)
 
   def calculateDropDate(timeFrame: TimeFrame, runDate: LocalDate) = {
-    timeFrame match {
+    (timeFrame match {
       case DAY_TODAY => runDate
       case DAY_YESTERDAY => runDate - 1.day
       case DAY_TWO_DAYS_AGO => runDate - 2.days
       case DAY_THREE_DAYS_AGO => runDate - 3.days
-    }
+    }).toDateTimeAtStartOfDay
   }
 
   def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
@@ -55,8 +55,6 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     }
     completion(maybeJob)
   }
-
-  def test(job: DropJob, runDate: Option[LocalDate]) = self ! StartJob(job.jobID.getOrElse(-1), job, runDate)
 
   def processResult(runUID: RunUID, runDate: LocalDate, result: Try[Unit]) = {
     val endTime = DateTime.now(ISOChronology.getInstanceUTC)
@@ -94,7 +92,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
       case (_, _) => {
-        val dropDate = calculateDropDate(job.timeFrame, runDate).toDateTimeAtStartOfDay
+        val dropDate = calculateDropDate(job.timeFrame, runDate)
         dropFactory.getDropByUID(job.dropUID, Some(dropDate), job.configuration) match {
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor
