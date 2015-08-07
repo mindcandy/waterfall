@@ -5,8 +5,8 @@ import java.util.UUID
 import argonaut.Argonaut._
 import argonaut._
 import com.mindcandy.waterfall.WaterfallDropFactory.DropUID
-import org.joda.time.DateTime
-import spray.httpx.unmarshalling.{ Deserializer, MalformedContent }
+import com.github.nscala_time.time.Imports._
+import spray.httpx.unmarshalling._
 
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
@@ -19,7 +19,9 @@ object TimeFrame extends Enumeration {
   implicit val TimeFrameEncodeJson: EncodeJson[TimeFrame] = EncodeJson(a => jString(a.toString))
   implicit val TimeFrameDecodeJson: DecodeJson[TimeFrame] = DecodeJson(hcursor =>
     DecodeResult(hcursor.as[String].result.flatMap { value =>
-      \/.fromTryCatch { TimeFrame.withName(value) }.leftMap { exception =>
+      \/.fromTryCatch {
+        TimeFrame.withName(value)
+      }.leftMap { exception =>
         (s"Invalid TimeFrame value: $value", CursorHistory(List.empty[CursorOp]))
       }
     })
@@ -33,7 +35,9 @@ object LogStatus extends Enumeration {
   implicit val LogStatusEncodeJson: EncodeJson[LogStatus] = EncodeJson(a => jString(a.toString))
   implicit val LogStatusDecodeJson: DecodeJson[LogStatus] = DecodeJson(hcursor =>
     DecodeResult(hcursor.as[String].result.flatMap { value =>
-      \/.fromTryCatch { LogStatus.withName(value) }.leftMap { exception =>
+      \/.fromTryCatch {
+        LogStatus.withName(value)
+      }.leftMap { exception =>
         (s"Invalid LogStatus value: $value", CursorHistory(List.empty[CursorOp]))
       }
     })
@@ -85,20 +89,26 @@ object Protocol {
   case class DropJobList(jobs: List[DropJob]) {
     val count = jobs.size
   }
+
   case class DropJobSchedule(jobs: Map[JobID, DropJob]) {
     val count = jobs.size
   }
+
   case class DropLog(runUID: RunUID, jobID: JobID, startTime: DateTime, endTime: Option[DateTime], logOutput: Option[String], exception: Option[String])
+
   case class DropHistory(logs: List[DropLog]) {
     val count = logs.size
   }
+
   case class DropJobDependency(parentJobID: JobID, childJobID: JobID)
 
   implicit val DateTimeEncodeJson: EncodeJson[DateTime] = EncodeJson(a => jString(a.toString))
   implicit val OptionDateTimeEncodeJson: EncodeJson[Option[DateTime]] = OptionEncodeJson(DateTimeEncodeJson)
   implicit val DateTimeDecodeJson: DecodeJson[DateTime] = DecodeJson(hcursor =>
     DecodeResult(hcursor.as[String].result.flatMap { value =>
-      \/.fromTryCatch { DateTime.parse(value) }.leftMap { exception =>
+      \/.fromTryCatch {
+        DateTime.parse(value)
+      }.leftMap { exception =>
         (exception.getMessage, CursorHistory(List.empty[CursorOp]))
       }
     })
@@ -107,8 +117,10 @@ object Protocol {
 
   implicit def DropJobCodecJson = casecodec11(DropJob.apply, DropJob.unapply)(
     "jobID", "dropUID", "name", "description", "enabled", "cron", "timeFrame", "configuration", "parallel", "parents", "cronParent")
+
   implicit def DropLogCodecJson = casecodec6(DropLog.apply, DropLog.unapply)(
     "runID", "jobID", "startTime", "endTime", "logOutput", "exception")
+
   implicit def DropJobListCodecJson: CodecJson[DropJobList] = CodecJson(
     (dropJobList: DropJobList) =>
       ("count" := dropJobList.count) ->:
@@ -118,6 +130,7 @@ object Protocol {
       jobs <- (json --\ "jobs").as[List[DropJob]]
     } yield DropJobList(jobs)
   )
+
   implicit def DropHistoryCodecJson: CodecJson[DropHistory] = CodecJson(
     (dropHistory: DropHistory) =>
       ("count" := dropHistory.count) ->:
@@ -127,13 +140,16 @@ object Protocol {
       logs <- (json --\ "logs").as[List[DropLog]]
     } yield DropHistory(logs)
   )
+
   implicit def UUIDCodecJson: CodecJson[UUID] = CodecJson(
     (uuid: UUID) =>
       jString(uuid.toString),
     hcursor =>
       DecodeResult(
         hcursor.as[String].result.flatMap { value =>
-          \/.fromTryCatch { UUID.fromString(value) }.leftMap { exception =>
+          \/.fromTryCatch {
+            UUID.fromString(value)
+          }.leftMap { exception =>
             (exception.getMessage, CursorHistory(List.empty[CursorOp]))
           }
         }
@@ -152,6 +168,17 @@ object Protocol {
       case Success(integer) if integer >= 0 => Right(integer)
       case _ => Left(MalformedContent(s"'$value' is not a valid non-negative integer"))
     }
+  }
+
+  // type FromStringOptionDeserializer[T] = Deserializer[Option[String], T]
+  implicit def string2LocalDate = new FromStringDeserializer[LocalDate] {
+    def apply(value: String): Deserialized[LocalDate] =
+      Try {
+        LocalDate.parse(value)
+      } match {
+        case Failure(ex) => Left(new MalformedContent("invalid datetime format"))
+        case Success(date) => Right(date)
+      }
   }
 }
 

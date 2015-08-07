@@ -10,7 +10,7 @@ import scala.util.{ Failure, Try }
 
 // Created for use with RunWaterfall in order to debug via IntelliJ
 
-case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
+case class TestPassThroughWaterfallDrop(val date: Option[DateTime]) extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
   val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
@@ -18,7 +18,7 @@ case class TestPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[Plain
   val sink = MemoryIO[PlainTextFormat](BaseIOConfig("memory:sink"))
 }
 
-case class TestFailingPassThroughWaterfallDrop() extends PassThroughWaterfallDrop[PlainTextFormat] {
+case class TestFailingPassThroughWaterfallDrop(val date: Option[DateTime]) extends PassThroughWaterfallDrop[PlainTextFormat] {
   val fileUrl: String = "memory:intermediate"
   val sharedIntermediate = MemoryIntermediate[PlainTextFormat](fileUrl)
   val sharedIntermediateFormat = PlainTextFormat.format
@@ -29,8 +29,8 @@ case class TestFailingPassThroughWaterfallDrop() extends PassThroughWaterfallDro
 
 class TestWaterfallDropFactory extends WaterfallDropFactory {
   def getDropByUID(dropUID: DropUID, date: Option[DateTime] = None, configuration: Map[String, String] = Map()): Option[WaterfallDrop[_ <: AnyRef, _ <: AnyRef]] = dropUID match {
-    case "test1" => Some(TestPassThroughWaterfallDrop())
-    case "test2" => Some(TestFailingPassThroughWaterfallDrop())
+    case "test1" => Some(TestPassThroughWaterfallDrop(date))
+    case "test2" => Some(TestFailingPassThroughWaterfallDrop(date))
     case _ => None
   }
 }
