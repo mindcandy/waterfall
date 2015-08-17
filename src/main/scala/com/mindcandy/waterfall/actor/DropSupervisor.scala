@@ -8,7 +8,6 @@ import com.mindcandy.waterfall.WaterfallDropFactory
 import com.mindcandy.waterfall.actor.JobDatabaseManager._
 import com.mindcandy.waterfall.actor.Protocol.{ DropJob, JobID, RunUID }
 import com.mindcandy.waterfall.actor.TimeFrame._
-import org.joda.time.Period
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.format.PeriodFormat
 
@@ -16,18 +15,17 @@ import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
 object DropSupervisor {
-  case class StartJob(jobID: JobID, job: DropJob)
-  case class JobResult(runUID: RunUID, result: Try[Unit])
-  case class RunJobImmediately(jobID: JobID, completionFunction: Option[DropJob] => Unit)
+  case class StartJob(jobID: JobID, job: DropJob, runDate: Option[LocalDate] = None)
+  case class JobResult(runUID: RunUID, runDate: LocalDate, result: Try[Unit])
+  case class RunJobImmediately(jobID: JobID, runDate: Option[LocalDate], completionFunction: Option[DropJob] => Unit)
 
-  def calculateDate(timeFrame: TimeFrame) = {
-    val now = DateTime.now(ISOChronology.getInstanceUTC)
-    timeFrame match {
-      case DAY_TODAY => Some(now)
-      case DAY_YESTERDAY => Some(now - 1.day)
-      case DAY_TWO_DAYS_AGO => Some(now - 2.days)
-      case DAY_THREE_DAYS_AGO => Some(now - 3.days)
-    }
+  def calculateDropDate(timeFrame: TimeFrame, runDate: LocalDate) = {
+    (timeFrame match {
+      case DAY_TODAY => runDate
+      case DAY_YESTERDAY => runDate - 1.day
+      case DAY_TWO_DAYS_AGO => runDate - 2.days
+      case DAY_THREE_DAYS_AGO => runDate - 3.days
+    }).toDateTimeAtStartOfDay
   }
 
   def props(jobDatabaseManager: ActorRef, dropFactory: WaterfallDropFactory, dropWorkerFactory: ActorFactory = DropWorker): Props =
@@ -40,23 +38,25 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
   private[this] var runningJobs = Map[RunUID, (ActorRef, DateTime, JobID)]()
 
   def receive = {
-    case StartJob(jobID, job) => runJob(jobID, job)
-    case JobResult(runUID, result) => processResult(runUID, result)
-    case RunJobImmediately(jobID, f) => {
+    case StartJob(jobID, job, runDate) => runJob(jobID, job, runDate.getOrElse(LocalDate.now(ISOChronology.getInstanceUTC)))
+    case JobResult(runUID, runDate, result) => processResult(runUID, runDate, result)
+    case RunJobImmediately(jobID, runDate, completion) => {
       log.debug(s"Got Run job:$jobID immediately request")
       jobDatabaseManager ! GetJobForCompletion(
         jobID,
-        maybeJob => {
-          maybeJob.map { job =>
-            self ! StartJob(job.jobID.getOrElse(-1), job)
-          }
-          f(maybeJob)
-        }
+        startJob(runDate, completion)
       )
     }
   }
 
-  def processResult(runUID: RunUID, result: Try[Unit]) = {
+  def startJob(runDate: Option[LocalDate], completion: Option[DropJob] => Unit): Option[DropJob] => Unit = (maybeJob: Option[DropJob]) => {
+    maybeJob.foreach { job =>
+      self ! StartJob(job.jobID.getOrElse(-1), job, runDate)
+    }
+    completion(maybeJob)
+  }
+
+  def processResult(runUID: RunUID, runDate: LocalDate, result: Try[Unit]) = {
     val endTime = DateTime.now(ISOChronology.getInstanceUTC)
     runningJobs.get(runUID) match {
       case Some((worker, startTime, jobID)) => {
@@ -65,7 +65,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
           case Success(_) => {
             log.info(s"success for run $runUID with job $jobID after $runtime")
             jobDatabaseManager ! FinishDropLog(runUID, endTime, None, None)
-            runChildren(jobID)
+            runChildren(jobID, runDate)
           }
           case Failure(exception) => {
             log.error(s"failure for run $runUID with job $jobID after $runtime", exception)
@@ -82,7 +82,7 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     }
   }
 
-  def runJob(jobID: JobID, job: DropJob) = {
+  def runJob(jobID: JobID, job: DropJob, runDate: LocalDate) = {
     val runUID = UUID.randomUUID()
     val startTime = DateTime.now(ISOChronology.getInstanceUTC)
     (job.parallel, runningJobs.values.map(_._3).toSet.contains(jobID)) match {
@@ -92,11 +92,12 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
         jobDatabaseManager ! StartAndFinishDropLog(runUID, jobID, startTime, startTime, None, Some(new IllegalArgumentException(error)))
       }
       case (_, _) => {
-        dropFactory.getDropByUID(job.dropUID, calculateDate(job.timeFrame), job.configuration) match {
+        val dropDate = calculateDropDate(job.timeFrame, runDate)
+        dropFactory.getDropByUID(job.dropUID, Some(dropDate), job.configuration) match {
           case Some(drop) => {
             val worker = dropWorkerFactory.createActor
             runningJobs += (runUID -> (worker, startTime, jobID))
-            worker ! DropWorker.RunDrop(runUID, drop)
+            worker ! DropWorker.RunDrop(runUID, runDate, drop)
             jobDatabaseManager ! StartDropLog(runUID, jobID, startTime)
             log.info(s"starting run $runUID with job $jobID for dropUID ${job.dropUID} and name ${job.name}")
           }
@@ -110,12 +111,12 @@ class DropSupervisor(val jobDatabaseManager: ActorRef, val dropFactory: Waterfal
     }
   }
 
-  def runChildren(jobID: JobID) = {
+  def runChildren(jobID: JobID, runDate: LocalDate) = {
     jobDatabaseManager ! GetChildrenWithJobIDForCompletion(
       jobID,
       jobList => {
         jobList.jobs.map { job =>
-          self ! StartJob(job.jobID.getOrElse(-1), job)
+          self ! StartJob(job.jobID.getOrElse(-1), job, Some(runDate))
         }
       }
     )

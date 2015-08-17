@@ -47,7 +47,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val dropSupervisor: TestProbe = TestProbe()
     val actor: ActorRef = createScheduleActor(databaseManager, dropSupervisor, checkJobsPeriod = FiniteDuration(3, SECONDS))
 
-    databaseManager.expectMsg(GetSchedule()) must not(throwA[AssertionError])
+    databaseManager.expectMsg(FiniteDuration(10, SECONDS), GetSchedule()) must not(throwA[AssertionError])
   }
 
   def checkJobs = {
@@ -72,7 +72,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val request = DropJobSchedule(Map(1 -> dropJob))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsg(StartJob(1, dropJob)) must not(throwA[AssertionError])
+    dropSupervisor.expectMsg(FiniteDuration(10, SECONDS), StartJob(1, dropJob)) must not(throwA[AssertionError])
   }
 
   def scheduleTwoJobsAtDifferentTimes = {
@@ -88,7 +88,7 @@ class ScheduleManagerSpec extends TestKit(ActorSystem("ScheduleManagerSpec", Con
     val request = DropJobSchedule(Map(1 -> dropJob1, 2 -> dropJob2))
 
     probe.send(actor, request)
-    dropSupervisor.expectMsgAllOf(StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
+    dropSupervisor.expectMsgAllOf(FiniteDuration(10, SECONDS), StartJob(1, dropJob1), StartJob(2, dropJob2)) must not(throwA[AssertionError])
   }
 
   def cancelOneJob = {

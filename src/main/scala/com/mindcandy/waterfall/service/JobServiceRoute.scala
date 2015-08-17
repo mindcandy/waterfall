@@ -50,10 +50,12 @@ case class JobServiceRoute(jobDatabaseManager: ActorRef, dropSupervisor: ActorRe
           } ~
             path("run") {
               post {
-                // force a job to run
-                produce(instanceOf[Option[DropJob]]) { completionFunction =>
-                  context =>
-                    dropSupervisor ! RunJobImmediately(id, completionFunction)
+                anyParams('date.as(string2LocalDate).?) { runDate =>
+                  // force a job to run
+                  produce(instanceOf[Option[DropJob]]) { completionFunction =>
+                    context =>
+                      dropSupervisor ! RunJobImmediately(id, runDate, completionFunction)
+                  }
                 }
               }
             } ~

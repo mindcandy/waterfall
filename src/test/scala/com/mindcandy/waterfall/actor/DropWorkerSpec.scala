@@ -8,6 +8,7 @@ import com.mindcandy.waterfall.TestWaterfallDropFactory
 import com.mindcandy.waterfall.actor.DropSupervisor.JobResult
 import com.mindcandy.waterfall.actor.DropWorker.RunDrop
 import com.typesafe.config.ConfigFactory
+import org.joda.time.LocalDate
 import org.specs2.SpecificationLike
 import org.specs2.specification.Step
 import org.specs2.time.NoTimeConversions
@@ -31,17 +32,19 @@ class DropWorkerSpec
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
+    val request = RunDrop(runUID, LocalDate.now, new TestWaterfallDropFactory().getDropByUID("test1").get)
 
     probe.send(actor, request)
-    probe.expectMsgClass(classOf[JobResult]).result must beSuccessfulTry
+    val jobResult = probe.expectMsgClass(classOf[JobResult])
+    jobResult.result must beSuccessfulTry
+    jobResult.runDate must_== LocalDate.now
   }
 
   def runFailingDrop = {
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test2").get)
+    val request = RunDrop(runUID, LocalDate.now, new TestWaterfallDropFactory().getDropByUID("test2").get)
 
     probe.send(actor, request)
     probe.expectMsgClass(classOf[JobResult]).result must beFailedTry
@@ -51,7 +54,7 @@ class DropWorkerSpec
     val runUID = UUID.randomUUID()
     val probe: TestProbe = TestProbe()
     val actor: ActorRef = system.actorOf(DropWorker.props)
-    val request = RunDrop(runUID, new TestWaterfallDropFactory().getDropByUID("test1").get)
+    val request = RunDrop(runUID, LocalDate.now, new TestWaterfallDropFactory().getDropByUID("test1").get)
     probe.watch(actor)
 
     probe.send(actor, request)
