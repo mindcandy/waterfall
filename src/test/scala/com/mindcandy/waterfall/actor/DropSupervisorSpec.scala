@@ -33,9 +33,11 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
       rerun a job if previous run finished $reRunAfterFinished
       log to database if the drop not in factory $logToErrorIfNoFactoryDrop
       log to database if result not in running list $logToErrorIfResultNotInList
-      run the job for older date when it receives a start job message $runJobForOldDropDateOnStartJob
-      run the job for older date and timeframe when it receives a start job message $runJobForOldDropDateAndTimeframeOnStartJob
-      run the job immediately receives a run job immediately message $runJobImmediately
+      start the job for current date when it receives a start job message with no date $startJobForDefaultDateOnStartJob
+      start the job for specified date when it receives a start job message with date $startJobForSpecifiedDropDateOnStartJob
+      start the job for specified date and timeframe when it receives a start job message with date and timeframe is not current $startJobForSpecifiedDropDateAndTimeframeOnStartJob
+      run the job for current date when it receives a run job immediately message with no date $runJobImmediatelyWithDefaultDate
+      run the job for specified date when it receives a run job immediately message with a date $runJobImmediatelyWithDefaultDate
 
   """ ^ Step(afterAll)
 
@@ -200,7 +202,19 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     }
   }
 
-  def runJobForOldDropDateOnStartJob = {
+  def startJobForDefaultDateOnStartJob = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+    val request = createStartJob(runDate = None)
+
+    probe.send(actor, request)
+    val drop = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]]).waterfallDrop
+    drop must_== TestPassThroughWaterfallDrop(Some(LocalDate.now.toDateTimeAtStartOfDay))
+  }
+
+  def startJobForSpecifiedDropDateOnStartJob = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
@@ -212,7 +226,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     drop must_== TestPassThroughWaterfallDrop(Some(LocalDate.lastWeek.toDateTimeAtStartOfDay))
   }
 
-  def runJobForOldDropDateAndTimeframeOnStartJob = {
+  def startJobForSpecifiedDropDateAndTimeframeOnStartJob = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
@@ -224,7 +238,7 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
     drop must_== TestPassThroughWaterfallDrop(Some(LocalDate.lastWeek.minusDays(3).toDateTimeAtStartOfDay))
   }
 
-  def runJobImmediately = {
+  def runJobImmediatelyWithDefaultDate = {
     val probe = TestProbe()
     val jobDatabaseManager = TestProbe()
     val worker = TestProbe()
@@ -244,6 +258,30 @@ class DropSupervisorSpec extends TestKit(ActorSystem("DropSupervisorSpec", Confi
 
     val runDrop = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
     runDrop.waterfallDrop must_== TestPassThroughWaterfallDrop(Some(LocalDate.now.toDateTimeAtStartOfDay))
+
+    run must_== true
+  }
+
+  def runJobImmediatelyWithSpecifiedDate = {
+    val probe = TestProbe()
+    val jobDatabaseManager = TestProbe()
+    val worker = TestProbe()
+    val actor = system.actorOf(DropSupervisor.props(jobDatabaseManager.ref, new TestWaterfallDropFactory, TestDropWorkerFactory(worker.ref)))
+
+    var run: Boolean = false
+    val completionFunc = (job: Option[DropJob]) => {
+      run = true
+    }
+
+    val request = RunJobImmediately(1, runDate = Some(LocalDate.lastWeek), completionFunc)
+    probe.send(actor, request)
+    val getJobForCompletion = jobDatabaseManager.expectMsgClass(classOf[GetJobForCompletion])
+
+    val now = DateTime.now(ISOChronology.getInstanceUTC) + Period.seconds(3)
+    getJobForCompletion.completionFunction(Some(DropJob(Some(1), "test1", "Exchange Rate", "description", true, Option(s"${now.secondOfMinute.getAsString} ${now.minuteOfHour.getAsString} ${now.hourOfDay.getAsString} * * ?"), TimeFrame.DAY_TODAY, Map())))
+
+    val runDrop = worker.expectMsgClass(classOf[RunDrop[_ <: AnyRef, _ <: AnyRef]])
+    runDrop.waterfallDrop must_== TestPassThroughWaterfallDrop(Some(LocalDate.lastWeek.toDateTimeAtStartOfDay))
 
     run must_== true
   }

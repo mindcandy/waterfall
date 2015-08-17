@@ -56,7 +56,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     GET /logs?dropUID=EXRATE1 ${getLogsWithUnknownParameter}
     GET /logs?dropuid=EXRATE1 ${getLogsWithDropUID}
     POST /jobs/1/run ${postRunJob}
-    POST /jobs/1/run ${postRunJobWithDate}
+    POST /jobs/1/run?date=2015-07-14 ${postRunJobWithDate}
     POST /jobs/100/run with unknown jobID ${postRunJobWithUnknownJobID}
 
     POST /jobs/1 with cron and parents ${postJobWithCronAndParents}
@@ -249,7 +249,7 @@ class JobServiceRouteSpec extends Specification with ScalaCheck with Grouped wit
     responseAs[Option[DropJob]] === Option(testDropJobs(0))
   }
 
-  def postRunJobWithDate = Post("/jobs/1/run?data=2015-07-14") ~> route ~> check {
+  def postRunJobWithDate = Post("/jobs/1/run?date=2015-07-14") ~> route ~> check {
     val jobOpt = responseAs[Option[DropJob]]
     jobOpt === Option(testDropJobs(0))
   }
