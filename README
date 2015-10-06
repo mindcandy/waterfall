@@ -1,6 +1,5 @@
 # Waterfall
 
-[Waterfall](http://confluence.tool.mindcandy.com/display/PLAT/Waterfall) is a SBT project with a simple UI.
 Waterfall is a batch progressing and ETL system. Handles scheduling, dependency and provides a rich library of sources and sinks.
 
 To run the UI __for now__:
